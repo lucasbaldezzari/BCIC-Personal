@@ -1,0 +1,20 @@
+name: taller2-BCIC
+channels:
+- defaults
+dependencies:
+- python>=3.7
+- matplotlib
+- pip
+- pip:
+  - mne
+  - h5py
+  - Keras
+  - Keras-Preprocessing
+  - numpy
+  - pandas
+  - scikit-learn
+  - scipy
+  - tensorboard
+  - tensorboard-plugin-wit
+  - tensorflow
+  - tensorflow-estimator

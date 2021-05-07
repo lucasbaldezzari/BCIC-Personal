@@ -11,7 +11,18 @@ Pasos a seguir:
 - Abrir la consola de Anaconda, de Windows o Linux.
 - Ejecutar: conda install --name base nb_conda_kernels
 - Moverse hasta el directorio donde se almacenará el trabajo
-- Ejecutar: conda env update --file dependencias.yml (Nota: el nombre por defecto del enviroment es "teller2-BCIC", para cambiarlo debe editarse el archivo dependencias.yml)
+- Ejecutar: conda env update --file dependencias.yml (Nota: el nombre por defecto del enviroment es "taller2-BCIC", para cambiarlo debe editarse el archivo dependencias.yml)
+- _Activar el ambiente:_ conda activate taller2-BCIC
+
+Al finalizar el proceso deberían ver un mensaje similar a este:
+
+To activate this environment, use
+
+     $ conda activate taller2-BCIC
+
+ To deactivate an active environment, use
+
+     $ conda deactivate
 
 ## Dependencias
 
