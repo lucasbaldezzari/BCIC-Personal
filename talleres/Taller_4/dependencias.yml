@@ -1,0 +1,17 @@
+name: taller4-BCIC
+channels:
+- defaults
+dependencies:
+- python>=3.7
+- pip
+- pip:
+  - numpy
+  - PyQt6
+  - PySide6
+  - scipy
+  - PyOpenGL
+  - PyOpenGL_accelerate
+  - matplotlib
+  - scikit-learn
+  - brainflow
+  - pyqtgraph 
