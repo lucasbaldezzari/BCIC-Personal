@@ -42,14 +42,14 @@ print(setSubjects["s1"]["eeg"].shape) #imprimimos la forma del dato en "eeg"
 """Grafiquemos los datos obtenidos para el sujeto 1 en los 8 canales y el blanco de 9.25Hz"""
 
 
-sujeto = 1
+sujeto = 7
 eeg = setSubjects[f"s{sujeto}"]["eeg"]
 clases = eeg.shape[0] #clases del sujeto 1
 channels = eeg.shape[1] #canales del sujeto 
 samples= eeg.shape[2] #cantidad de muestras
 trials= eeg.shape[3] # cantidad de trials
 
-target = 5 #el máximo es 12
+target = 7 #el máximo es 12
 
 fm = 256.0
 
@@ -96,7 +96,7 @@ frecStimulus = np.array([9.25, 11.25, 13.25, 9.75, 11.75, 13.75, 10.25, 12.25, 1
 
 ventana = 4
 solapamiento = ventana*1
-canal = 1
+canal = 5
 
 #Realizo la segmentación de mi señal de EEG con ventana y el solapamiento dados
 eegSSegmentedo = segmentingEpochs(eegfiltrado, ventana, solapamiento, fm)

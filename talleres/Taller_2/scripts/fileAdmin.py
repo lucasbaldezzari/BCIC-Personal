@@ -34,7 +34,8 @@ def loadData(path ="/dataset", subjects = [1]):
         Number of trials : 15
         Sampling rate [Hz] : 256
         """
-        
+        actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
+        path = os.path.join(actualFolder,"dataset")
         dataSet = sciio.loadmat(f"{path}/s{subject}.mat")
         
         dataSet["eeg"] = np.array(dataSet['eeg'], dtype='float32') #convierto los datos a flotantes

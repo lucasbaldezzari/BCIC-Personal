@@ -6,6 +6,8 @@ dependencies:
 - pip
 - pip:
   - numpy
+  - pandas
+  - mne
   - PyQt6
   - PySide6
   - scipy
