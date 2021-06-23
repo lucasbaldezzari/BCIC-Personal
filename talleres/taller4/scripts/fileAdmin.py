@@ -16,6 +16,8 @@ from os.path import isfile, join
 import numpy as np
 import scipy.io as sciio #Para manejar archivos de matlab .mat
 
+from brainflow.data_filter import DataFilter
+
 def loadData(path ="/dataset", subjects = [1]):
     setSubjects = {}
     for subject in subjects:
@@ -66,15 +68,16 @@ def csvGenerator(path ="dataset", subject = 2, trial = 1, target = 1, filename =
     path = os.path.join(actualFolder, path)
     
     dataSet = sciio.loadmat(f"{path}\s{subject}.mat")
-    dataSet["eeg"] = np.array(dataSet['eeg'], dtype='float32') #convierto los datos a flotantes
+    dataSet["eeg"] = np.array(dataSet['eeg']) #convierto los datos a flotantes
     eeg = dataSet['eeg'][target-1,:,:,trial-1]
-    data = np.zeros((eeg.shape[0]+1,eeg.shape[1]))
+    data = np.zeros((eeg.shape[0]*4+1,eeg.shape[1]))
+    eeg = np.repeat(eeg,4,axis = 0)
+    
+    DataFilter.write_file(eeg, filename, 'w')
+    
+    
     samples = np.arange(0,eeg.shape[1])
-    data[0] = samples
-    data[1:] = eeg
-    np.savetxt(filename, data.T, delimiter=" ")
-
-
-
-
+    # data[0] = samples
+    # data[1:] = eeg
+    # np.savetxt(filename, data.T, delimiter=" ")
 

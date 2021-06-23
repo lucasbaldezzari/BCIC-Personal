@@ -5,6 +5,7 @@ dependencies:
 - python>=3.7
 - pip
 - pip:
+  - keyboard
   - numpy
   - pandas
   - mne

@@ -47,3 +47,4 @@ Paquetes necesarios.
 - pandas
 - scikit-learn
 - scipy
+- keyboard
