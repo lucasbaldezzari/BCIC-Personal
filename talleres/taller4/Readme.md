@@ -22,13 +22,13 @@ Pasos propuestos a seguir:
 - _Ejecutar:_ conda install --name base nb_conda_kernels
 - _Moverse hasta el directorio donde se almacenará el trabajo_
 - _Ejecutar:_ conda env update --file dependencias.yml (Nota: el nombre por defecto del enviroment es "taller4-BCIC", para cambiarlo debe editarse el archivo dependencias.yml)
-- _Activar el ambiente:_ conda activate taller4-BCIC
+- _Activar el ambiente:_ conda activate taller4-bcic
 
 Al finalizar el proceso deberían ver un mensaje similar a este:
 
 _To activate this environment, use_
 
-     $ conda activate taller2-BCIC
+     $ conda activate taller4-bcic
 
 _To deactivate an active environment, use_
 
@@ -38,7 +38,7 @@ _To deactivate an active environment, use_
 
 Paquetes necesarios.
 
-- python>=3.7
+- python3.8
 - matplotlib
 - pip
 - brainflow

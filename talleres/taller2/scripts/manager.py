@@ -23,7 +23,7 @@ from utils import plotSpectrum
 from scipy.fftpack import fft, fftfreq
 import scipy.fftpack
 
-path = "E:/reposBCICompetition/BCIC-Personal/Taller_2/scripts/dataset" #directorio donde estan los datos
+path = "E:/reposBCICompetition/BCIC-Personal/taller_2/scripts/dataset" #directorio donde estan los datos
 
 sujetos = [1,2,3,4,5,6,7,8,9,10] #sujetos 1 y 2
 
@@ -42,7 +42,7 @@ print(setSubjects["s1"]["eeg"].shape) #imprimimos la forma del dato en "eeg"
 """Grafiquemos los datos obtenidos para el sujeto 1 en los 8 canales y el blanco de 9.25Hz"""
 
 
-sujeto = 7
+sujeto = 8
 eeg = setSubjects[f"s{sujeto}"]["eeg"]
 clases = eeg.shape[0] #clases del sujeto 1
 channels = eeg.shape[1] #canales del sujeto 
@@ -87,7 +87,7 @@ espectroSujeto = dict()
 
 fftpar = {
     'resolución': 0.25, #fm/cantidad de muestras
-    'frecuencia inicio': 0.0,
+    'frecuencia inicio': 3.0,
     'frecuencia final': 35.0,
     'fm': 256.0
 } #parámetros importantes para aplicar la FFT
@@ -96,7 +96,7 @@ frecStimulus = np.array([9.25, 11.25, 13.25, 9.75, 11.75, 13.75, 10.25, 12.25, 1
 
 ventana = 4
 solapamiento = ventana*1
-canal = 5
+canal = 7
 
 #Realizo la segmentación de mi señal de EEG con ventana y el solapamiento dados
 eegSSegmentedo = segmentingEpochs(eegfiltrado, ventana, solapamiento, fm)
@@ -105,4 +105,4 @@ espectroSujeto[f"s{sujeto}"] = getSpectrum(eegSSegmentedo, fftpar)
 
 #Grafico el espectro para todos los blancos para el canal propuesto
 plotSpectrum(espectroSujeto[f"s{sujeto}"], fftpar["resolución"], clases, 
-              sujeto, canal, frecStimulus, save = True)
+              sujeto, canal, frecStimulus, save = False)

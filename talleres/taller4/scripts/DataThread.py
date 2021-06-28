@@ -1,15 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Created on Wed Jun 23 11:27:24 2021
 
-@author: Lucas
-"""
-
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Jun 23 11:27:24 2021
-
-@author: Lucas
+@author: Lucas BALDEZZARI
 """
 
 import time

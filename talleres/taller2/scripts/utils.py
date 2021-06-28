@@ -211,7 +211,7 @@ def segmentingEpochs(eeg, window, corriemiento, fm):
     #se computa la cantidad de segmentos en base a la ventana y el solapamiento producido por el corrimiento
     segmentos = int(math.ceil((samples - solapamiento) / (duration - solapamiento)))
     
-    segmentedEEG = np.zeros((clases, channels, samples, segmentos, duration))
+    segmentedEEG = np.zeros((clases, channels, trials, segmentos, duration))
 
     for target in range(0, clases):
         for channel in range(0, channels):
