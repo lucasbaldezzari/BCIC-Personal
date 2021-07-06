@@ -310,7 +310,7 @@ def computeComplexSpectrum(segmentedData, fftparms):
     return featuresData
 
 def plotSpectrum(espectroSujeto, resol, blancos, sujeto, canal, frecStimulus,
-                  save = False, title = "", folder = "figs"):
+                  startFrecGraph = 3.0, save = False, title = "", folder = "figs"):
     
     fig, plots = plt.subplots(4, 3, figsize=(16, 14), gridspec_kw=dict(hspace=0.45, wspace=0.3))
     plots = plots.reshape(-1)
@@ -322,8 +322,9 @@ def plotSpectrum(espectroSujeto, resol, blancos, sujeto, canal, frecStimulus,
     
     for blanco in range(blancos):
         fft_axis = np.arange(espectroSujeto.shape[0]) * resol
-        plots[blanco].plot(fft_axis, np.mean(np.squeeze(espectroSujeto[:, canal, blanco, :, :]), 
-                                          axis=1), color = "#403e7d")
+        plots[blanco].plot(fft_axis + startFrecGraph,
+                           np.mean(np.squeeze(espectroSujeto[:, canal, blanco, :, :]),
+                                   axis=1), color = "#403e7d")
         plots[blanco].set_xlabel('Frecuencia [Hz]')
         plots[blanco].set_ylabel('Amplitud [uV]')
         plots[blanco].set_title(f'Estímulo {frecStimulus[blanco]}Hz del sujeto {sujeto}')

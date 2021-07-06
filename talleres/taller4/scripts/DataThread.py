@@ -22,11 +22,9 @@ class DataThread(threading.Thread):
         self.keep_alive = True
         self.board = board
         
-        # print(self.sampling_rate)
-        
     def run (self):
         
-        window_size = 4
+        window_size = 4 #secs
         sleep_time = 1 #secs
         points_per_update = window_size * self.sampling_rate
         
@@ -34,7 +32,7 @@ class DataThread(threading.Thread):
             time.sleep (sleep_time)
             # get current board data doesnt remove data from the buffer
             data = self.board.get_current_board_data(int(points_per_update))
-            print(data[12][:10])
+            print(points_per_update) #data[12][:10]
             
 def main():
     BoardShim.enable_dev_board_logger()
