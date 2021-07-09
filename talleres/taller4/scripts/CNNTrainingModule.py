@@ -194,6 +194,8 @@ class CNNTrainingModule():
                                      self.PRE_PROCES_PARAMS["shiftLen"],
                                      self.PRE_PROCES_PARAMS["sampling_rate"])
         
+        print("eegSegmented, ", eegSegmented.shape)
+        
         self.CSF = computeComplexSpectrum(eegSegmented, self.FFT_PARAMS)
         
         return self.CSF
@@ -207,15 +209,16 @@ class CNNTrainingModule():
         """
         
         print("Generating training data")
-        # print("Original MSF shape: ", MSF.shape)
+        # print("Original features shape: ", features.shape)
         featuresData = np.reshape(features, (features.shape[0], features.shape[1],features.shape[2],
                                              features.shape[3]*features.shape[4]))
+        
         # print("featuresData shape: ", featuresData.shape)
         
         trainingData = featuresData[:, :, 0, :].T
-        # print("trainData shape (1), ",trainingData.shape)
+        # print("Transpose trainData shape(1), ", trainingData.shape)
         
-        #Reshaping the data into dim [classes x trials x segments*channels*features]
+        #Reshaping the data into dim [classes*trials x channels x features]
         for target in range(1, featuresData.shape[2]):
             trainingData = np.vstack([trainingData, np.squeeze(featuresData[:, :, target, :]).T])
             
@@ -224,7 +227,7 @@ class CNNTrainingModule():
         trainingData = np.reshape(trainingData, (trainingData.shape[0], trainingData.shape[1], 
                                              trainingData.shape[2], 1))
         
-        # print("trainData shape (3), ",trainingData.shape)
+        # print("Final trainData shape (3), ",trainingData.shape)
         
         epochsPerClass = featuresData.shape[3]
         featuresData = []
@@ -232,7 +235,10 @@ class CNNTrainingModule():
         classLabels = np.arange(self.CNN_PARAMS['num_classes'])
         labels = (npm.repmat(classLabels, epochsPerClass, 1).T).ravel()
         
-        labels = to_categorical(labels)        
+        labels = to_categorical(labels)     
+        
+        # print(labels[:,1])
+        # print("Labels shape: ", labels.shape)
         
         return trainingData, labels
     
@@ -338,9 +344,17 @@ class CNNTrainingModule():
                 actualSscore = self.model.evaluate(xValuesTest, yValuesTest, verbose=0) 
                 
                 if saveBestWeights:
+                    
+                    try:
+                        actualFolder = os.getcwd()
+                        os.makedirs("models")    
+                        print("Directory 'models' created ")
+                    except FileExistsError:
+                        print("")
+                        
                     if actualSscore[1] > score:
                         score = actualSscore[1]
-                        self.model.save_weights(f'bestWeightss_{self.modelName}.h5')
+                        self.model.save_weights(f'models/bestWeightss_{self.modelName}.h5')
                 
                 accu[fold, :] = actualSscore[1]*100
                 
@@ -361,10 +375,18 @@ class CNNTrainingModule():
         if not self.model: #Check if themodel is empty
             print("Empty model")
             
-            self.model.save(f"{self.modelName}.h5")
+        else:
+            try:
+                actualFolder = os.getcwd()
+                os.makedirs("models")    
+                print("Directory 'models' created ")
+            except FileExistsError:
+                print("")
+                
+            self.model.save(f"models/{self.modelName}.h5")
             modelInJson = self.model.to_json()
-            with open(f"{self.modelName}.json", "w") as json_file:
-                json_file.write(modelInJson)
+            with open(f"models/{self.modelName}.json", "w") as jsonFile:
+                jsonFile.write(modelInJson)
     
 def main():
         
@@ -392,8 +414,8 @@ def main():
     rawEEG = rawEEG[:,:, :tiempoTotal ,:]
     
     PRE_PROCES_PARAMS = {
-                    'lfrec': 3.,
-                    'hfrec': 80.,
+                    'lfrec': 5.,
+                    'hfrec': 38.,
                     'order': 4,
                     'sampling_rate': fm,
                     'window': 4,
@@ -414,8 +436,8 @@ def main():
     
     FFT_PARAMS = {
                     'resolution': resolution,#0.2930,
-                    'start_frequency': 3.0,
-                    'end_frequency': 35.0,
+                    'start_frequency': 5.0,
+                    'end_frequency': 38.0,
                     'sampling_rate': fm
                     }
     
@@ -430,9 +452,9 @@ def main():
     #Computing and getting the magnitude Spectrum Features
     magnitudFeatures = magnitudCNN.computeMSF()
     
-    plotSpectrum(magnitudCNN.MSF, resolution, 12, subjects[0], 7, frecStimulus,
-                 startFrecGraph = FFT_PARAMS['start_frequency'],
-                 save = False, title = "", folder = "figs")
+    plotSpectrum(magnitudFeatures, resolution, 12, subjects[0], 7, frecStimulus,
+                  startFrecGraph = FFT_PARAMS['start_frequency'],
+                  save = False, title = "", folder = "figs")
     
     
     # Get the training and testing data for CNN using Magnitud Spectrum Features
@@ -443,7 +465,7 @@ def main():
     #Create the CNN model
     magnitudCNN.createModel(inputshape)
     #Training the CNN model suing the training data
-    accu_CNN_using_MSF = magnitudCNN.trainCNN(trainingData_MSF, labels_MSF, nFolds = 4)
+    accu_CNN_using_MSF = magnitudCNN.trainCNN(trainingData_MSF, labels_MSF, nFolds = 10)
     
     #save the model
     magnitudCNN.saveCNNModel()
@@ -463,10 +485,10 @@ def main():
     #inputshape [Number of Channels x Number of Features x 1]
     inputshape = np.array([trainingData_CSF.shape[1], trainingData_CSF.shape[2], trainingData_CSF.shape[3]])
     
-    #Create the CNN model
+    # Create the CNN model
     complexCNN.createModel(inputshape)
     
-    accu_CNN_using_CSF = complexCNN.trainCNN(trainingData_CSF, labels_CSF, nFolds = 4)
+    accu_CNN_using_CSF = complexCNN.trainCNN(trainingData_CSF, labels_CSF, nFolds = 10)
     
     complexCNN.saveCNNModel()
         
@@ -476,6 +498,4 @@ if __name__ == "__main__":
 
 
 
-    
-        
         

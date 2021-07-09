@@ -312,7 +312,10 @@ def computeComplexSpectrum(segmentedData, fftparms):
 def plotSpectrum(espectroSujeto, resol, blancos, sujeto, canal, frecStimulus,
                   startFrecGraph = 3.0, save = False, title = "", folder = "figs"):
     
-    fig, plots = plt.subplots(4, 3, figsize=(16, 14), gridspec_kw=dict(hspace=0.45, wspace=0.3))
+    rows = len(frecStimulus)//4
+    columns = len(frecStimulus)//3
+    
+    fig, plots = plt.subplots(columns, rows, figsize=(16, 14), gridspec_kw=dict(hspace=0.45, wspace=0.3))
     plots = plots.reshape(-1)
     
     if not title:
@@ -333,6 +336,36 @@ def plotSpectrum(espectroSujeto, resol, blancos, sujeto, canal, frecStimulus,
                              label = "Frec. Estímulo",
                              linestyle='--', color = "#e37165", alpha = 0.9)
         plots[blanco].legend()
+        
+    if save:
+        pathACtual = os.getcwd()
+        newPath = os.path.join(pathACtual, folder)
+        os.chdir(newPath)
+        plt.savefig(title, dpi = 500)
+        os.chdir(pathACtual)
+        
+    plt.show()
+    
+def plotOneSpectrum(espectroSujeto, resol, blanco, sujeto, canal, frecStimulus,
+                  startFrecGraph = 3.0, save = False, title = "", folder = "figs"):
+    
+    if not title:
+        title = f"Spectrum for channel {canal} - sibject {sujeto}"
+    
+    # fig.suptitle(title, fontsize = 20)
+    
+    fft_axis = np.arange(espectroSujeto.shape[0]) * resol
+    plt.plot(fft_axis + startFrecGraph,
+                       np.mean(np.squeeze(espectroSujeto[:, canal, :, :, :]),
+                               axis=1), color = "#403e7d")
+    plt.xlabel('Frecuency [Hz]')
+    plt.ylabel('Amplitud [uV]')
+    plt.title(title)
+    # plt.xaxis.grid(True)
+    plt.axvline(x = frecStimulus, ymin = 0., ymax = max(fft_axis),
+                         label = "Stimulus Frec.",
+                         linestyle='--', color = "#e37165", alpha = 0.9)
+    plt.legend()
         
     if save:
         pathACtual = os.getcwd()
