@@ -192,7 +192,7 @@ def segmentingEEG(eeg, window, corriemiento, fm):
 
     Retorna:
         - Señal de EEG segmentada. 
-        [targets, canales, trials, cantidad de segmentos, duración].
+        [targets, canales, trials, segments, duration]
     '''
     # Estructura de los datos en la señal de eeg
     # [Number of targets, Number of channels, Number of sampling points, Number of trials]

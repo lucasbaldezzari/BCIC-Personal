@@ -1,4 +1,4 @@
-name: taller4-BCIC
+name: taller4
 channels:
 - defaults
 dependencies:
@@ -11,8 +11,6 @@ dependencies:
   - PyQt6
   - PySide6
   - scipy
-  - PyOpenGL
-  - PyOpenGL_accelerate
   - matplotlib
   - scikit-learn
   - brainflow

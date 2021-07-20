@@ -32,6 +32,8 @@ from GraphModule import GraphModule as Graph
         
 
 def main():
+    
+    #First we need to load the Board using BrainFlow
    
     BoardShim.enable_dev_board_logger()
     logging.basicConfig(level=logging.DEBUG)
