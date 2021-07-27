@@ -34,7 +34,7 @@ class GraphModule(threading.Thread):
 
         self.board_id = board_shim.get_board_id()
         self.board_shim = board_shim
-        self.exg_channels = BoardShim.get_exg_channels(self.board_id)[8:16]
+        self.exg_channels = BoardShim.get_exg_channels(self.board_id)[0:8]
         self.sampling_rate = BoardShim.get_sampling_rate(self.board_id)
         self.update_speed_ms = 1
         self.window_size = 4

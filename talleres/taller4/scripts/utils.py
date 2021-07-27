@@ -376,3 +376,37 @@ def plotOneSpectrum(espectroSujeto, resol, blanco, sujeto, canal, frecStimulus,
         
     plt.show()
 
+def barPlotSubjects(medias, varianzas,
+                    etiquetas = ["s1", "s2", "s3", "s4", "s5", "s6","s7","s8","s9","s10"],
+                    savePlots = False,
+                    path = "",
+                    title = "Bar plot"):
+
+    xRange= np.arange(len(etiquetas))
+    fig, ax = plt.subplots()
+    
+    colores = ["#fbb351","#e15b64","#4c6a8d","#05a679","#433451","#e75244"]
+    
+    plt.grid(True, 'major', 'x', linestyle='--', linewidth =.9, c='b', alpha=0.8, zorder = 1.0)
+    plt.grid()
+    
+    ax.bar(xRange, medias, yerr=varianzas, align='center', alpha=0.8, ecolor='black', capsize=10,
+            color= colores, edgecolor='black', zorder = 2.0)
+    ax.set_ylabel('Accuracy in %', fontsize = "medium")
+    ax.set_xticks(xRange)
+    ax.set_xticklabels(etiquetas, fontsize = "medium")
+    title = title
+    ax.set_title(title, fontsize = "medium")
+
+    plt.tight_layout()
+
+    if savePlots:
+        pathACtual = os.getcwd()
+        folder = "figs"
+        newPath = os.path.join(path, folder)
+        
+        os.chdir(newPath)
+        plt.savefig(f'{title}.png',dpi = 600)
+            
+        os.chdir(pathACtual)
+

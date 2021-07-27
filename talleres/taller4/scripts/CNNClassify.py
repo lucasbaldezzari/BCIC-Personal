@@ -172,7 +172,7 @@ class CNNClassify():
         """
         
         print("Generating data for classification")
-        print("Original features shape: ", features.shape)
+        # print("Original features shape: ", features.shape)
         featuresData = np.reshape(features, (features.shape[0], features.shape[1],features.shape[2],
                                              features.shape[3]*features.shape[4]))
         
@@ -195,125 +195,118 @@ class CNNClassify():
         return dataForClassification
         
 def main():
+
+    import fileAdmin as fa
     
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join(actualFolder,"dataset")
-    # dataSet = sciio.loadmat(f"{path}/s{subject}.mat")
     
-# if __name__ == "__main__":
-#     main()
-
-import fileAdmin as fa
-
-actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-path = os.path.join(actualFolder,"dataset")
-
-subjects = [8]
+    subjects = [2]
+        
+    fm = 256.0
+    tiempoTotal = int(4*fm) #cantidad de muestras para 4segundos
+    muestraDescarte = 39
+    frecStimulus = np.array([9.25, 11.25, 13.25,
+                              9.75, 11.75, 13.75,
+                              10.25, 12.25, 14.25,
+                              10.75, 12.75, 14.75])
     
-fm = 256.0
-tiempoTotal = int(4*fm) #cantidad de muestras para 4segundos
-muestraDescarte = 39
-frecStimulus = np.array([9.25, 11.25, 13.25,
-                         9.75, 11.75, 13.75,
-                         10.25, 12.25, 14.25,
-                         10.75, 12.75, 14.75])
+    """
+    **********************************************************************
+    Loading and plotting the EEG
+    IMPORTANT: In real time BCI, the "loading data" will be replaced
+    for real data coming from the OpenBCI board
+    **********************************************************************
+    """
+    
+    rawEEG = fa.loadData(path = path, subjects = subjects)[f"s{subjects[0]}"]["eeg"]
+    
+    #selec the last 3 trials
+    rawEEG = rawEEG[:, :, :, 12:]
+    
+    stimulus = 1 #slected stimulus for classification
+    trial = 1 #selected trial
+     
+    #get the selected trial and stimulus from rawEEG
+    data = rawEEG[stimulus-1,:,:,trial-1].reshape(1, rawEEG.shape[1],rawEEG.shape[2],1)
+    path = os.path.join(actualFolder,"models")
+    
+    samples = rawEEG.shape[2]
+    resolution = fm/samples
+    
+    rawEEG = rawEEG[:,:, muestraDescarte: ,:]
+    rawEEG = rawEEG[:,:, :tiempoTotal ,:]
+    
+    PRE_PROCES_PARAMS = {
+                    'lfrec': 3.,
+                    'hfrec': 36.,
+                    'order': 4,
+                    'sampling_rate': fm,
+                    'window': 4,
+                    'shiftLen':4
+                    }
+    
+    
+    FFT_PARAMS = {
+                    'resolution': resolution,#0.2930,
+                    'start_frequency': 5.0,
+                    'end_frequency': 38.0,
+                    'sampling_rate': fm
+                    }
+    
+    """
+    **********************************************************************
+    First step: Create CNNClassify object in order to load a trained model
+    and classify new data
+    **********************************************************************
+    """
+    
+    # create an CNNClassify object in order to work with magnitud features
+    magnitudcomplexCNNClassifier = CNNClassify(modelFile = "CNN_UsingMagnitudFeatures_Subject8",
+                                weightFile = "bestWeightss_CNN_UsingMagnitudFeatures_Subject8",
+                                PRE_PROCES_PARAMS = PRE_PROCES_PARAMS,
+                                FFT_PARAMS = FFT_PARAMS,
+                                classiName = f"CNN_Classifier",
+                                frecStimulus = frecStimulus.tolist())
+    
+    # create an CNNClassify object in order to work with magnitud and complex features
+    complexCNNClassifier = CNNClassify(modelFile = "CNN_UsingComplexFeatures_Subject8",
+                                weightFile = "bestWeightss_CNN_UsingComplexFeatures_Subject8",
+                                PRE_PROCES_PARAMS = PRE_PROCES_PARAMS,
+                                FFT_PARAMS = FFT_PARAMS,
+                                classiName = f"CNN_Classifier",
+                                frecStimulus = frecStimulus.tolist())
+    
+    """
+    **********************************************************************
+    Second step: Create CNNClassify object in order to load a trained model
+    and classify new data
+    **********************************************************************
+    """
+    
+    # get the features for my data
+    magnitudFeatures = magnitudcomplexCNNClassifier.computeMSF(data)
+    # complexFeatures = complexCNNClassifier.computeCSF(data)
+    
+    # Prepare my data for classification. This is important, the input data for classification
+    # must be the same shape the CNN was trained.
+    # complexDataForClassification = complexCNNClassifier.getDataForClassification(complexFeatures)
+    magnitudDataForClassification = magnitudcomplexCNNClassifier.getDataForClassification(magnitudFeatures)
+    
+    # Get a classification. The classifyEEGSignal() method give us a stimulus
+    # complexClassification = complexCNNClassifier.classifyEEGSignal(complexDataForClassification)
+    magnitudClassification = magnitudcomplexCNNClassifier.classifyEEGSignal(magnitudDataForClassification)
+    
+    
+    print("The stimulus classified using magnitud features is: ", magnitudClassification)
+    # print("The stimulus classified using complex features is: ", complexClassification)
+    
+    plotOneSpectrum(magnitudFeatures, resolution, 12, subjects[0], 5, [magnitudClassification],
+                  startFrecGraph = FFT_PARAMS['start_frequency'],
+                  save = False,
+                  title = f"Stimulus classified using magnitud features: {magnitudClassification}", folder = "figs")
 
-"""
-**********************************************************************
-Loading and plotting the EEG
-
-IMPORTANT: In real time BCI, the "loading data" will be replaced
-for real data coming from the OpenBCI board
-**********************************************************************
-"""
-
-rawEEG = fa.loadData(path = path, subjects = subjects)[f"s{subjects[0]}"]["eeg"]
-
-#selec the last 3 trials
-rawEEG = rawEEG[:, :, :, 12:]
-
-stimulus = 1 #slected stimulus for classification
-trial = 1 #selected trial
- 
-#get the selected trial and stimulus from rawEEG
-data = rawEEG[stimulus-1,:,:,trial-1].reshape(1, rawEEG.shape[1],rawEEG.shape[2],1)
-path = os.path.join(actualFolder,"models")
-
-samples = rawEEG.shape[2]
-resolution = fm/samples
-
-rawEEG = rawEEG[:,:, muestraDescarte: ,:]
-rawEEG = rawEEG[:,:, :tiempoTotal ,:]
-
-PRE_PROCES_PARAMS = {
-                'lfrec': 3.,
-                'hfrec': 36.,
-                'order': 4,
-                'sampling_rate': fm,
-                'window': 4,
-                'shiftLen':4
-                }
-
-
-FFT_PARAMS = {
-                'resolution': resolution,#0.2930,
-                'start_frequency': 5.0,
-                'end_frequency': 38.0,
-                'sampling_rate': fm
-                }
-
-"""
-**********************************************************************
-First step: Create CNNClassify object in order to load a trained model
-and classify new data
-**********************************************************************
-"""
-
-# create an CNNClassify object in order to work with magnitud features
-magnitudcomplexCNNClassifier = CNNClassify(modelFile = "CNN_UsingMagnitudFeatures_Subject8",
-                           weightFile = "bestWeightss_CNN_UsingMagnitudFeatures_Subject8",
-                           PRE_PROCES_PARAMS = PRE_PROCES_PARAMS,
-                           FFT_PARAMS = FFT_PARAMS,
-                           classiName = f"CNN_Classifier",
-                           frecStimulus = frecStimulus.tolist())
-
-# create an CNNClassify object in order to work with magnitud and complex features
-complexCNNClassifier = CNNClassify(modelFile = "CNN_UsingComplexFeatures_Subject8",
-                           weightFile = "bestWeightss_CNN_UsingComplexFeatures_Subject8",
-                           PRE_PROCES_PARAMS = PRE_PROCES_PARAMS,
-                           FFT_PARAMS = FFT_PARAMS,
-                           classiName = f"CNN_Classifier",
-                           frecStimulus = frecStimulus.tolist())
-
-"""
-**********************************************************************
-Second step: Create CNNClassify object in order to load a trained model
-and classify new data
-**********************************************************************
-"""
-
-# get the features for my data
-magnitudFeatures = magnitudcomplexCNNClassifier.computeMSF(data)
-complexFeatures = complexCNNClassifier.computeCSF(data)
-
-# Prepare my data for classification. This is important, the input data for classification
-# must be the same shape the CNN was trained.
-complexDataForClassification = complexCNNClassifier.getDataForClassification(complexFeatures)
-magnitudDataForClassification = magnitudcomplexCNNClassifier.getDataForClassification(magnitudFeatures)
-
-# Get a classification. The classifyEEGSignal() method give us a stimulus
-complexClassification = complexCNNClassifier.classifyEEGSignal(complexDataForClassification)
-magnitudClassification = magnitudcomplexCNNClassifier.classifyEEGSignal(magnitudDataForClassification)
-
-
-print("The stimulus classified using magnitud features is: ", magnitudClassification)
-print("The stimulus classified using complex features is: ", complexClassification)
-
-plotOneSpectrum(magnitudFeatures, resolution, 12, subjects[0], 5, [magnitudClassification],
-              startFrecGraph = FFT_PARAMS['start_frequency'],
-              save = False,
-              title = f"Stimulus classified using magnitud features: {magnitudClassification}", folder = "figs")
-
-
+if __name__ == "__main__":
+    main()
 
 

@@ -32,7 +32,8 @@ class DataThread(threading.Thread):
             time.sleep (sleep_time)
             # get current board data doesnt remove data from the buffer
             data = self.board.get_current_board_data(int(points_per_update))
-            print(f"New data {data[:10]}")
+            # print(f"New data {data[:10]}")
+            print(f"New data {data.shape}")
             
 def main():
     BoardShim.enable_dev_board_logger()
