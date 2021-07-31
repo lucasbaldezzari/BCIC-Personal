@@ -8,8 +8,8 @@ Ejemplo de configuración de Interrupciónes usando los Timer0, Timer1 y Timer2 
 /*Declaración de variables generales*/
 
 char uartIn = 0; //para recepción de UART
-char bufferSize = 5;
-unsigned int incomingData[5];
+char bufferSize = 6;
+unsigned int incomingData[6];
 char bufferIndex = 0;
 bool sendDataFlag = 0;
 bool newMessage = false;
@@ -20,25 +20,27 @@ char sessionState = 0; //Sesión sin iniciar
 
 String inputString = "";         // a String to hold incoming data
 bool stringComplete = false;  // whether the string is complete
-char inDataLen = 5;
+char inDataLen = 6;
 
 /* Declaración de variables para control de estímulos*/
 
 
-int frecTimer = 10000; //en Hz
+int frecTimer = 5000; //en Hz
 
-char estimIzq = 13;
+char estimIzq = 11;
 bool estimIzqON = 0;//Esado que define si el LED se apgará o prenderá.
 int frecEstimIzq = 14;
 int acumEstimIzq = 0;
+const int estimIzqMaxValue = (1/float(frecEstimIzq))*frecTimer;
 
 //estímulo derecho
-char estimDer = 11;
+char estimDer = 7;
 bool estimDerON = 0;//Esado que define si el LED se apgará o prenderá.
-
 int frecEstimDer = 16;
 int acumEstimDer = 0;
-const int estimIzqMaxValue = 714;//(1/float(frecEstimIzq))*frecTimer;
+const int estimDerMaxValue = (1/float(frecEstimDer))*frecTimer;
+
+char flagLED = 13; //led de testeo
 
 unsigned int timeON = 4*frecTimer; //Los estímulos estarán encendidos por 4 segundos 
 int timeOFF = 2*frecTimer; //Los estímulos estarán apagados por 2 segundos
@@ -53,10 +55,9 @@ void setup()
   noInterrupts();//Deshabilito todas las interrupciones
   pinMode(estimIzq,OUTPUT);
   pinMode(estimDer,OUTPUT);
-  // reservo 5 bytes para el string de datos
-  //iniUART();
-  iniTimer0();
-  Serial.begin(19200);
+  pinMode(flagLED,OUTPUT);
+  iniTimer0(); //inicio timer 0
+  Serial.begin(19200); //iniciamos comunicación serie
   interrupts();//Habilito las interrupciones
 }
 
@@ -70,7 +71,6 @@ if (Serial.available() > 0)
     incomingData[bufferIndex] = val;
     checkMessage();    
     Serial.write("OK\n");
-    //digitalWrite(estimDer,1);
     }
 };
 
@@ -82,13 +82,12 @@ ISR(TIMER0_COMPA_vect)//Rutina interrupción Timer0. Se configuró para 0.1ms
     digitalWrite(estimIzq,0);
     digitalWrite(estimDer,0);
   }
-  //if(!sessionState) digitalWrite(estimDer,1);
 };
 
 void stimuliControl()
 {
-  acumuladorStimuliON++;
   
+  acumuladorStimuliON++;
   switch(stimuli)
   {
     case ON:
@@ -100,14 +99,24 @@ void stimuliControl()
         acumEstimIzq = 0; 
       } 
 
+    //control estímulo derecho
+      if (++acumEstimDer >= estimDerMaxValue)
+      {
+        estimDerON = !estimDerON;
+        digitalWrite(estimDer,estimDerON);
+        acumEstimDer = 0; 
+      } 
+
       //Control tiempo de estímulos encendidos
       if (acumuladorStimuliON >= timeON)
       {
         //Fin de tiempo estímulos encendidos
-        stimuli = OFF;
+        //stimuli = OFF;
         //Apagamos todos los leds y reiniciamos sus contadores
         digitalWrite(estimIzq,0);
         acumEstimIzq = 0;
+        digitalWrite(estimDer,0);
+        acumEstimDer = 0;
       } 
       break;
 
@@ -116,10 +125,11 @@ void stimuliControl()
       if (acumuladorStimuliON >= maxTrialTime)
       {
         //comenzamos un nuevo trial y debemos encender los estímulos
-        stimuli = ON;
+        //stimuli = ON;
         trialNumber++; //Sumamos un nuevo trial
         acumuladorStimuliON = 0; //reiniciamos acumulador para temporizar cada trial
-        sendDataFlag = 1;
+        acumEstimIzq = 0;
+        acumEstimDer = 0;
       } 
       break;
   }
@@ -133,7 +143,11 @@ void checkMessage()
       if (incomingData[bufferIndex] == 1) sessionState = RUNNING;
       else sessionState = STOP;
       //else sessionState = STOP;
-      
+      break;
+    case 1:
+      if (incomingData[bufferIndex] == 1) stimuli = ON;
+      else stimuli = OFF;
+      //else sessionState = STOP;
       break;
   }
   bufferIndex++;

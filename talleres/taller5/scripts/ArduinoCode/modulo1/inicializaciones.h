@@ -8,6 +8,8 @@
 
 #define F_CPU 16000000UL // Defining the CPU Frequency
 
+#define FREC_INTERRUPT  1000
+
 #include <avr/io.h>      // Contains all the I/O Register Macros
 #include <util/delay.h>  // Generates a Blocking Delay
 #include <avr/interrupt.h> // Contains all interrupt vectors
@@ -41,16 +43,16 @@ void iniUART();
 
 void iniTimer0()
 {
-//Seteamos el Timer0 para que trabaje a 1000Hz = 0.1ms
+//Seteamos el Timer0 para que trabaje a 5000Hz = 0.2ms
   TCCR0A = 0;// pongo a cero el registro de control del timer1
   TCCR0B = 0;// Lo mismo para el TCCR0B
   TCNT0  = 0;//initialize counter value to 0
   // Cargamos el comparador del Timer0 para que nos de una interrupción aproximadamente de 0.1ms
-  OCR0A = 200;// = (16MHz/(preScaler*frecuencia de Interrupción))-1
+  OCR0A = 49;// = (16MHz/(preScaler*frecuencia de Interrupción))-1
   // turn on CTC mode
   TCCR0A |= (1 << WGM01);//Ponemos un 1 en el Bit WGM01 del registro TCCR0A - Modo CTC (ver página 107)
   // Seteamos el PreScaler en 64 (ver página 109 de la hoja de datos)
-  TCCR0B |= (0 << CS02) | (1 << CS01) | (0 << CS00);
+  TCCR0B |= (0 << CS02) | (1 << CS01) | (1 << CS00);
   //Habilito la interrupción (ver pagina 110 de hoja de datos)
   TIMSK0 |= (1 << OCIE0A);
   }
