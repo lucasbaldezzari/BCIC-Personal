@@ -5,10 +5,12 @@ Created on Fri Jul 30 12:26:03 2021
 
 import serial
 import time
+import keyboard
 
 class Arduino:
     def __init__(self, port, trialDuration = 6, stimONTime = 4,
-                 timeSleep = 0.1, timerFrecuency = 1000, timing = 1):
+                 timeSleep = 0.1, timerFrecuency = 1000, timing = 1,
+                 trials = None):
         
         self.dev = serial.Serial(port, baudrate=19200)
         
@@ -17,6 +19,7 @@ class Arduino:
         self.stimOFFTime = int((trialDuration - stimONTime))/timing*timerFrecuency
         self.stimStatus = "on"
         self.trial = 1
+        self.trialsNumber = trials
         
  
         self.sessionStatus = b"1" #sesión en marcha
@@ -44,7 +47,7 @@ class Arduino:
     def timer(self):
         if(self.timerInteFlag == 0 and
            time.time()*self.timerFrecuency - self.initialTime >= self.timing):
-            self.initialTime = time.time()*self.timerFrecuency#/1000
+            self.initialTime = time.time()*self.timerFrecuency
             self.timerInteFlag = 1
             
     def iniTimer(self):
@@ -87,6 +90,7 @@ class Arduino:
         self.sendStimuliState()
         self.iniTimer()
         print("Sesión iniciada")
+        print("Trial inicial")
 
         
     def endSesion(self):
@@ -107,6 +111,7 @@ class Arduino:
         
         self.sendStimuliState()
         print("Sesión Finalizada")
+        print(f"Trial final {self.trial}")
         
     def trialControl(self):
 
@@ -130,16 +135,29 @@ class Arduino:
     
     def generalControl(self):
         
-        self.timer()        
-        if self.timerInteFlag: #timerInteFlag se pone en 1 a la cantidad de milisegundos de self.timing
-            self.trialControl()
-            self.timerInteFlag = 0 #reiniciamos flag de interrupción
-
+        if self.stimuliState[0] == b"1" and not self.trialsNumber:
+            
+            self.timer()        
+            if self.timerInteFlag: #timerInteFlag se pone en 1 a la cantidad de milisegundos de self.timing
+                self.trialControl()
+                self.timerInteFlag = 0 #reiniciamos flag de interrupción
+                
+        elif self.stimuliState[0] == b"1" and self.trial <= self.trialsNumber:
+                
+            self.timer()        
+            if self.timerInteFlag: #timerInteFlag se pone en 1 a la cantidad de milisegundos de self.timing
+                self.trialControl()
+                self.timerInteFlag = 0 #reiniciamos flag de interrupción
+        
+        else:
+            self.endSesion()
+                
+        return self.sessionStatus
     
 def main():
     initialTime = time.time()#/1000
 
-    ard = Arduino('COM3', timing = 500)
+    ard = Arduino('COM3', timing = 500, trials = 2)
 
     trials = 5 #número de trials a ejecutar
     
@@ -148,16 +166,15 @@ def main():
     
     # ard.iniTimer()
     ard.iniSesion()
+    
     print(f"Inicio trial número {actualTrial}")
     
-    while trials > 0:
-        ard.generalControl()
-        actualTrial = ard.trial
-        if actualTrial != passTrial:
-            passTrial = actualTrial
-            trials -= 1
-            print(f"Inicio trial número {actualTrial}")
-        
+    while ard.generalControl() == b"1":
+        # if ard.trial-1 == 2:
+        #     ard.endSesion()
+        pass
+
+       
     ard.endSesion()    
     ard.close()
     
