@@ -81,6 +81,7 @@ ISR(TIMER0_COMPA_vect)//Rutina interrupción Timer0. Se configuró para 0.1ms
   {
     digitalWrite(estimIzq,0);
     digitalWrite(estimDer,0);
+    digitalWrite(flagLED,1);
   }
 };
 
@@ -142,6 +143,7 @@ void checkMessage()
     case 0:
       if (incomingData[bufferIndex] == 1) sessionState = RUNNING;
       else sessionState = STOP;
+      digitalWrite(flagLED,0);
       //else sessionState = STOP;
       break;
     case 1:
