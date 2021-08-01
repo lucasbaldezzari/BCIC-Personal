@@ -1,4 +1,6 @@
-# Taller 4 - Primer competencia de vehículos robóticos controlados por interfaces cerebro computadora
+# Taller 5 - Primer competencia de vehículos robóticos controlados por interfaces cerebro computadora
+
+Taller dedicado a aprender comunicación entre PC y Arduino mediante Python. Comunicación entre Python y sitio en HTML. Sincronización de estímulos para evocar SSVEPs. Comunicación Bluetooth entre arduinos de los módulos 1 y 3.
 
 ## Requisitos
 
@@ -13,8 +15,11 @@ Se recomienda utilizar un editor de texto o un IDE para trabajar. Algunos recome
 - [Sublime Text](https://www.sublimetext.com/3): Es un editor de texto potente. Soporta la gran mayoría de los lenguajes existentes.
 - [Notepad++](https://notepad-plus-plus.org/downloads/): Es un editor de texto potente. Soporta la gran mayoría de los lenguajes existentes.
 - [Spyder](https://www.spyder-ide.org/): Es un entorno de desarrollo sumamente potente para trabajar con Python.
+- [VisualStudio](https://code.visualstudio.com/) Entorno de desarrollo sumamente potente para trabajar no sólo con Python, sino también con otros lenguajes.
 
 #### Instalar un Enviroment en Conda para trabajar durante el taller
+
+- [] NOTA: Los paquetes son los mismos que los utilizados en el taller 4 pero **agregando solamente la libreria Pyserial**. De esta manera podrían usar el mismo enviroment del taller4 pero instalando la libreria mencionada.
 
 Pasos propuestos a seguir:
 
@@ -28,7 +33,7 @@ Al finalizar el proceso deberían ver un mensaje similar a este:
 
 _To activate this environment, use_
 
-     $ conda activate taller4-bcic
+     $ conda activate taller5-bcic
 
 _To deactivate an active environment, use_
 
@@ -48,3 +53,4 @@ Paquetes necesarios.
 - scikit-learn
 - scipy
 - keyboard
+- Pyserial

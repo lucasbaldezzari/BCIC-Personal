@@ -1,15 +1,22 @@
 """
 Created on Fri Jul 30 12:26:03 2021
 @author: Lucas
+
+Clase Arduino.
+
+Clase para comunicación entre Arduino y PC utilizando la libreria PYSerial
 """
 
 import serial
 import time
 import keyboard
 
-class Arduino:
+class ArduinoCommunication:
+    """
+    Clase para comunicación entre Arduino y PC utilizando la libreria PYSerial
+    """
     def __init__(self, port, trialDuration = 6, stimONTime = 4,
-                 timeSleep = 0.1, timerFrecuency = 1000, timing = 1,
+                 timerFrecuency = 1000, timing = 1, useExternalTimer = False,
                  trials = None):
         
         self.dev = serial.Serial(port, baudrate=19200)
@@ -35,43 +42,58 @@ class Arduino:
                              self.backStim,
                              self.upperforwardStim]
         
+        self.useExternalTimer = useExternalTimer
         self.timerEnable = 0
-        self.timing = timing #in miliseconds
+        self.timing = timing #en milisegundos
         self.timerFrecuency = timerFrecuency #1000Hz
-        self.initialTime = 0 #get the time in miliseconds
+        self.initialTime = 0 #tiempo inicial en milisegundos
         self.counter = 0
-        self.timerInteFlag = 0 #flag for timer interruption. Must be set to 0 for a new count
+        self.timerInteFlag = 0 #flag para la interrupción del timer. DEBE ponerse a 0 para inicar una cuenta nueva.
         
-        time.sleep(2)
+        time.sleep(2) #esperamos 2 segundos para una correcta conexión
         
     def timer(self):
+        """
+        Función para emular un timer como el de un microcontrolador
+        """
         if(self.timerInteFlag == 0 and
            time.time()*self.timerFrecuency - self.initialTime >= self.timing):
             self.initialTime = time.time()*self.timerFrecuency
             self.timerInteFlag = 1
             
     def iniTimer(self):
+        """Iniciamos conteo del timer"""
         self.initialTime = time.time()*1000
         self.timerInteFlag = 0
 
     def query(self, message):
+        """
+        Enviamos un byte a arduinot y recibimos un byte desde arduino
+        """
         self.dev.write(message)#.encode('ascii'))
         line = self.dev.readline().decode('ascii').strip()
         return line
     
     def sendStimuliState(self):
-        
+        """
+        Función para enviar una lista de bytes con diferentes variables de estado
+        hacia Arduino. Estas variables sirven para control de flujo del programa del
+        Arduino.
+        """
         incomingData = []
         for byte in self.stimuliState:
             incomingData.append(self.query(byte))
             
         return incomingData
 
-
     def close(self):
+        """Cerramos comunicción serie"""
         self.dev.close()
         
     def iniSesion(self):
+        """
+        Se inicia sesión.
+        """
         
         self.sessionStatus = b"1" #sesión en marcha
         self.stimuliStatus = b"1"; #empiezo a estimular
@@ -94,6 +116,9 @@ class Arduino:
 
         
     def endSesion(self):
+        """
+        Se finaliza sesión.
+        """
         
         self.sessionStatus = b"0" #sesión en marcha
         self.stimuliStatus = b"0"; #empiezo a estimular
@@ -114,6 +139,14 @@ class Arduino:
         print(f"Trial final {self.trial}")
         
     def trialControl(self):
+        """
+        Función que ayuda a controlar los estímulos en arduino.
+            - La variable self.counter es utilizada como contador para sincronizar
+            los momentos en que los estímulos están encendidos o opagados.
+            - Es IMPORTANTE para un correcto funcionamiento que la variable self.counter
+            se incremente en 1 de un tiempo adecuado. Para esto se debe tener en cuenta
+            las variables 
+        """
 
         self.counter += 1
         
@@ -137,14 +170,16 @@ class Arduino:
         
         if self.stimuliState[0] == b"1" and not self.trialsNumber:
             
-            self.timer()        
+            if not self.useExternalTimer:
+                self.timer()        
             if self.timerInteFlag: #timerInteFlag se pone en 1 a la cantidad de milisegundos de self.timing
                 self.trialControl()
                 self.timerInteFlag = 0 #reiniciamos flag de interrupción
                 
         elif self.stimuliState[0] == b"1" and self.trial <= self.trialsNumber:
-                
-            self.timer()        
+            
+            if not self.useExternalTimer:    
+                self.timer()        
             if self.timerInteFlag: #timerInteFlag se pone en 1 a la cantidad de milisegundos de self.timing
                 self.trialControl()
                 self.timerInteFlag = 0 #reiniciamos flag de interrupción
@@ -155,26 +190,27 @@ class Arduino:
         return self.sessionStatus
     
 def main():
+    
     initialTime = time.time()#/1000
 
-    ard = Arduino('COM3', timing = 500, trials = 2)
+    """
+    #creamos un objeto ArduinoCommunication para establecer una conexión
+    #entre arduino y nuestra PC en el COM3, con un timing de 500ms y esperamos ejecutar
+    #2 trials.
+    #Pasado estos dos trials se finaliza la sesión.
+    #En el caso de querer ejecutar Trials de manera indeterminada,
+    #debe hacerse trials = None (default)
+    """
+    ard = ArduinoCommunication('COM3', timing = 500, trials = 2)
 
-    trials = 5 #número de trials a ejecutar
-    
-    actualTrial = 1
-    passTrial = actualTrial
-    
     # ard.iniTimer()
     ard.iniSesion()
-    
-    print(f"Inicio trial número {actualTrial}")
     
     while ard.generalControl() == b"1":
         # if ard.trial-1 == 2:
         #     ard.endSesion()
         pass
 
-       
     ard.endSesion()    
     ard.close()
     
