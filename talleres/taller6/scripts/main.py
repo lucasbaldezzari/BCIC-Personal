@@ -46,11 +46,14 @@ def main():
     parser.add_argument('--ip-protocol', type=int, help='ip protocol, check IpProtocolType enum', required=False,
                         default=0)
     parser.add_argument('--ip-address', type=str, help='ip address', required=False, default='')
+    # parser.add_argument('--serial-port', type=str, help='serial port', required=False, default='')
     parser.add_argument('--serial-port', type=str, help='serial port', required=False, default='')
     parser.add_argument('--mac-address', type=str, help='mac address', required=False, default='')
     parser.add_argument('--other-info', type=str, help='other info', required=False, default='')
     parser.add_argument('--streamer-params', type=str, help='streamer params', required=False, default='')
     parser.add_argument('--serial-number', type=str, help='serial number', required=False, default='')
+    # parser.add_argument('--board-id', type=int, help='board id, check docs to get a list of supported boards',
+    #                     required=False, default=BoardIds.SYNTHETIC_BOARD)
     parser.add_argument('--board-id', type=int, help='board id, check docs to get a list of supported boards',
                         required=False, default=BoardIds.SYNTHETIC_BOARD)
     parser.add_argument('--file', type=str, help='file', required=False, default='')

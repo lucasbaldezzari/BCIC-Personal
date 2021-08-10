@@ -97,14 +97,14 @@ def main():
     BoardShim.enable_dev_board_logger()
     
     # use synthetic board for demo only
-    params = BrainFlowInputParams ()
+    params = BrainFlowInputParams()
     board_id = BoardIds.SYNTHETIC_BOARD.value
-    board = BoardShim (board_id, params)
-    board.prepare_session ()
-    board.start_stream ()
+    board = BoardShim(board_id, params)
+    board.prepare_session()
+    board.start_stream()
     
     data_thread = DataThread(board, board_id, dictionary) #Creo un  objeto del tipo DataThread
-    data_thread.start () #Se ejecuta el método run() del objeto data_thread
+    data_thread.starts() #Se ejecuta el método run() del objeto data_thread
     
     try:
         while True:
