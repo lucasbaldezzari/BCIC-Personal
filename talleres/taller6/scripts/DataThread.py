@@ -12,19 +12,33 @@ import threading
 from brainflow.board_shim import BoardShim, BrainFlowInputParams, LogLevels, BoardIds
 from brainflow.data_filter import DataFilter, FilterTypes, AggOperations
 
+
 class DataThread(threading.Thread):
     
     def __init__(self, board, board_id):
         threading.Thread.__init__(self)
         
         self.eeg_channels = BoardShim.get_eeg_channels(board_id)
+        self.acel_channels = BoardShim.get_accel_channels(board_id)
         self.sampling_rate = BoardShim.get_sampling_rate(board_id)
         self.keep_alive = True
         self.board = board
+        self.trialDuration = 4 #secs
+        
+    def getData (self, duration, channels = 8):
+
+        data = self.board.get_current_board_data(int(duration*self.sampling_rate))
+        eeg = []        
+        eeg = [data[canal] for canal in self.eeg_channels]
+        eeg = np.asarray(eeg)
+        
+        return eeg
+        
+        # return self.board.get_current_board_data(int(duration*self.sampling_rate))[:channels]
         
     def run (self):
         
-        window_size = 4 #secs
+        window_size = self.trialDuration
         sleep_time = 1 #secs
         points_per_update = window_size * self.sampling_rate
         

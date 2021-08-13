@@ -21,9 +21,9 @@ from utils import plotSpectrum, plotOneSpectrum
 
 from brainflow.data_filter import DataFilter
 
-def loadData(path ="/dataset", subjects = [1]):
+def loadData(path ="/dataset", filenames = ["s1"]):
     setSubjects = {}
-    for subject in subjects:
+    for filename in filenames:
         
         """
         Referencia: "A Comparison Study of Canonical Correlation Analysis Based Methods for Detecting Steady-State Visual Evoked Potentials"
@@ -40,11 +40,11 @@ def loadData(path ="/dataset", subjects = [1]):
         Sampling rate [Hz] : 256
         """
         
-        dataSet = sciio.loadmat(f"{path}\s{subject}.mat")
+        dataSet = sciio.loadmat(f"{path}\{filename}.mat")
         
         dataSet["eeg"] = np.array(dataSet['eeg'], dtype='float32') #convierto los datos a flotantes
         
-        setSubjects[f"s{subject}"] = dataSet #guardo los datos para el sujeto correspondiente
+        setSubjects[f"{filename}"] = dataSet #guardo los datos para el sujeto correspondiente
         
     return setSubjects
 

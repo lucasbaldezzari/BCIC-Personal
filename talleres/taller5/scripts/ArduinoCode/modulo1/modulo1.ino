@@ -29,14 +29,14 @@ int frecTimer = 5000; //en Hz
 
 char estimIzq = 11;
 bool estimIzqON = 0;//Esado que define si el LED se apgará o prenderá.
-int frecEstimIzq = 14;
+int frecEstimIzq = 11;
 int acumEstimIzq = 0;
 const int estimIzqMaxValue = (1/float(frecEstimIzq))*frecTimer;
 
 //estímulo derecho
 char estimDer = 7;
 bool estimDerON = 0;//Esado que define si el LED se apgará o prenderá.
-int frecEstimDer = 16;
+int frecEstimDer = 11;
 int acumEstimDer = 0;
 const int estimDerMaxValue = (1/float(frecEstimDer))*frecTimer;
 

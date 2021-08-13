@@ -168,7 +168,7 @@ class ArduinoCommunication:
     
     def generalControl(self):
         
-        if self.stimuliState[0] == b"1" and not self.trialsNumber:
+        if self.stimuliState[0] == b"1" and not self.trialsNumber: #Para trials indefinidos
             
             if not self.useExternalTimer:
                 self.timer()        
@@ -176,7 +176,7 @@ class ArduinoCommunication:
                 self.trialControl()
                 self.timerInteFlag = 0 #reiniciamos flag de interrupción
                 
-        elif self.stimuliState[0] == b"1" and self.trial <= self.trialsNumber:
+        elif self.stimuliState[0] == b"1" and self.trial <= self.trialsNumber: #Para cantidad de trials definido
             
             if not self.useExternalTimer:    
                 self.timer()        
@@ -196,12 +196,12 @@ def main():
     """
     #creamos un objeto ArduinoCommunication para establecer una conexión
     #entre arduino y nuestra PC en el COM3, con un timing de 500ms y esperamos ejecutar
-    #2 trials.
-    #Pasado estos dos trials se finaliza la sesión.
+    #n trials.
+    #Pasado estos n trials se finaliza la sesión.
     #En el caso de querer ejecutar Trials de manera indeterminada,
     #debe hacerse trials = None (default)
     """
-    ard = ArduinoCommunication('COM3', timing = 500, trials = 2)
+    ard = ArduinoCommunication('COM3', timing = 500, trials = 12)
 
     # ard.iniTimer()
     ard.iniSesion()
