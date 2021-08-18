@@ -1,6 +1,6 @@
-# Taller 5 - Primer competencia de vehículos robóticos controlados por interfaces cerebro computadora
+# Taller 5
 
-Taller dedicado a aprender comunicación entre PC y Arduino mediante Python. Comunicación entre Python y sitio en HTML. Sincronización de estímulos para evocar SSVEPs. Comunicación Bluetooth entre arduinos de los módulos 1 y 3.
+Comunicación entre PC y Arduino mediante Python para sincronizar estímulos y recepción/envío de información.  Comunicación entre Python y sitio en HTML para sincronizar estímulos. Protocolo de adquisición de señales de EEG para entrenar clasificadores que serán utilizados en la BCI de manera online. Manejo de versiones en archivos de firmware y hardware.
 
 ## Requisitos
 
@@ -19,7 +19,7 @@ Se recomienda utilizar un editor de texto o un IDE para trabajar. Algunos recome
 
 #### Instalar un Enviroment en Conda para trabajar durante el taller
 
-- [] NOTA: Los paquetes son los mismos que los utilizados en el taller 4 pero **agregando solamente la libreria Pyserial**. De esta manera podrían usar el mismo enviroment del taller4 pero instalando la libreria mencionada.
+<span style="color: red;">IMPORTANTE:</span> Los paquetes son los mismos que los utilizados en el taller 4 pero **agregando solamente la libreria Pyserial**. De esta manera podrían usar el mismo enviroment del taller4 pero instalando la libreria mencionada. No obstante, pueden crear un nuevo enviroment si lo desean.
 
 Pasos propuestos a seguir:
 
