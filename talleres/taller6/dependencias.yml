@@ -1,4 +1,4 @@
-name: taller4
+name: taller6
 channels:
 - defaults
 dependencies:
@@ -16,3 +16,4 @@ dependencies:
   - brainflow
   - pyqtgraph 
   - tensorflow
+  - Pyserial
