@@ -19,16 +19,7 @@ Se recomienda utilizar un editor de texto o un IDE para trabajar. Algunos recome
 
 #### Instalar un Enviroment en Conda para trabajar durante el taller
 
-
-
-```diff
-- IMPORTANTE
-```
-
-```html
-   <span style="color: red;">IMPORTANTE:</span> Los paquetes son los mismos que los utilizados en el taller 4 pero **agregando solamente la libreria Pyserial**. De esta manera podrían usar el mismo enviroment del taller4 pero instalando la libreria mencionada. No obstante, pueden crear un nuevo enviroment si lo desean.
-```
-
+![#f03c15](https://via.placeholder.com/15/f03c15/000000?text=+) `IMPORTANTE: Los paquetes son los mismos que los utilizados en el taller 4 pero agregando solamente la libreria Pyserial. De esta manera podrían usar el mismo enviroment del taller4 pero instalando la libreria mencionada. No obstante, pueden crear un nuevo enviroment si lo desean.`
 
 Pasos propuestos a seguir:
 
