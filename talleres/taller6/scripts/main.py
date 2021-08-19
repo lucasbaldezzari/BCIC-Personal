@@ -11,13 +11,14 @@ Principal module in orer to ejecute the entire system.
 - Graphication (GRAPH) module
 """
 
+import os
 import argparse
 import time
 import logging
 import numpy as np
 import threading
 import keyboard
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui, QtCore
@@ -27,14 +28,14 @@ from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds, Brai
 from brainflow.data_filter import DataFilter, FilterTypes, AggOperations, WindowFunctions, DetrendOperations
 from ArduinoCommunication import ArduinoCommunication as AC
 
-import os
-
 from DataThread import DataThread as DT
-from GraphModule import GraphModule as Graph       
+# from GraphModule import GraphModule as Graph       
 import fileAdmin as fa
 
 def main():
     
+    """INICIO DE CARGA DE PARÁMETROS PARA PLACA OPENBCI"""
+    """Primeramente seteamos los datos necesarios para configurar la OpenBCI"""
     #First we need to load the Board using BrainFlow
    
     BoardShim.enable_dev_board_logger()
@@ -48,16 +49,17 @@ def main():
     parser.add_argument('--ip-protocol', type=int, help='ip protocol, check IpProtocolType enum', required=False,
                         default=0)
     parser.add_argument('--ip-address', type=str, help='ip address', required=False, default='')
-    # parser.add_argument('--serial-port', type=str, help='serial port', required=False, default='')
+
+    #IMPORTENTE: Chequear en que puerto esta conectada la OpenBCI. En este ejemplo esta en el COM4    
     parser.add_argument('--serial-port', type=str, help='serial port', required=False, default='COM4')
     parser.add_argument('--mac-address', type=str, help='mac address', required=False, default='')
     parser.add_argument('--other-info', type=str, help='other info', required=False, default='')
     parser.add_argument('--streamer-params', type=str, help='streamer params', required=False, default='')
     parser.add_argument('--serial-number', type=str, help='serial number', required=False, default='')
-    # parser.add_argument('--board-id', type=int, help='board id, check docs to get a list of supported boards',
-    #                     required=False, default=BoardIds.SYNTHETIC_BOARD)
     parser.add_argument('--board-id', type=int, help='board id, check docs to get a list of supported boards',
-                        required=False, default=BoardIds.CYTON_BOARD)
+                        required=False, default=BoardIds.SYNTHETIC_BOARD)
+    # parser.add_argument('--board-id', type=int, help='board id, check docs to get a list of supported boards',
+    #                     required=False, default=BoardIds.CYTON_BOARD)
     parser.add_argument('--file', type=str, help='file', required=False, default='')
     args = parser.parse_args()
 
@@ -72,44 +74,65 @@ def main():
     params.timeout = args.timeout
     params.file = args.file
     
-    board_shim = BoardShim(args.board_id, params)
+    """FIN DE CARGA DE PARÁMETROS PARA PLACA OPENBCI"""
+    
+    board_shim = BoardShim(args.board_id, params) #genero un objeto para control de placas de Brainflow
     board_shim.prepare_session()
     time.sleep(2) #esperamos 2 segundos
     
-    board_shim.start_stream(450000, args.streamer_params) #iniciamos board
-    time.sleep(4)
+    board_shim.start_stream(450000, args.streamer_params) #iniciamos OpenBCI. Ahora estamos recibiendo datos.
+    time.sleep(4) #esperamos 4 segundos
     
-    data_thread = DT(board_shim, args.board_id)
+    data_thread = DT(board_shim, args.board_id) #genero un objeto DataThread para extraer datos de la OpenBCI
     time.sleep(1)
+
+    """Defino variables para control de Trials"""
     
-    trials = 15
-    ard = AC('COM3', timing = 500, trials = trials)
-    time.sleep(2) 
-    
-    ard.iniSesion()
-    
-    trialDuration = 4 #secs
-    oldTrial = -1
-    actualTrial = ard.trial
+    trials = 1 #cantidad de trials. Sirve para la sesión de entrenamiento.
+    #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
+    trialDuration = 2 #secs
+    stimuliDuration = 1 #secs
+
     saveData = True
     
     EEGdata = []
     fm = 250.
     
-    samplePoints = int(fm*trialDuration)
+    samplePoints = int(fm*stimuliDuration)
     channels = 8
     stimuli = 1 #one stimulus
     
-    path = "recordedEEG"
+    """Inicio comunicación con Arduino instanciando un objeto AC (ArduinoCommunication)
+    en el COM3, con un timing de 100ms
     
+    - El objeto ArduinoCommunication generará una comunicación entre la PC y el Arduino
+    una cantidad de veces dada por el parámetro "ntrials". Pasado estos n trials se finaliza la sesión.
+    
+    - En el caso de querer comunicar la PC y el Arduino por un tiempo indeterminado debe hacerse
+    ntrials = None (default)
+    """
+    #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
+    #En este ejemplo esta conectada en el COM3
+    ard = AC('COM3', trialDuration = trialDuration, stimONTime = stimuliDuration,
+             timing = 100, ntrials = trials)
+    time.sleep(2) 
+    
+    path = "recordedEEG" #directorio donde se almacenan los registros de EEG.
+    
+    #El siguiente diccionario se usa para guardar información relevante cómo así también los datos de EEG
+    #registrados durante la sesión de entrenamiento.
     dictionary = {
-                'subject': 'LucasB-PruebaSSVEPs(11Hz)-Num1',
+                'subject': 'Test',
                 'date': '12/08/2021',
-                'generalInformation': 'Datos desde Cyton. Testeando SSVEPs en 11Hz. Descartar trial 1',
-                "channels": "[1,2,3,4]", 
+                'generalInformation': 'Test',
+                "channels": "[1,2,3,4,5,6,7,8]", 
                  'dataShape': [stimuli, channels, samplePoints, trials],
                   'eeg': None
                     }
+    
+    oldTrial = -1
+    actualTrial = ard.trial
+    ard.iniSesion() #Inicio sesión en el Arduino.
     # graph = Graph(board_shim)
 
     try:
@@ -124,13 +147,11 @@ def main():
             # if ard.trial-1 == 2:
             #     ard.endSesion()
             if saveData and ard.stimuliState[1] == b"0":
-                currentData = data_thread.getData(trialDuration)
+                currentData = data_thread.getData(stimuliDuration)
                 EEGdata.append(currentData)
                 saveData = False
             elif saveData == False and  ard.stimuliState[1] == b"1":
                 saveData = True
-            # if actualTrial != ard.trial: #tenemos nuevo trial
-            # pass
         
     except BaseException as e:
         logging.warning('Exception', exc_info=True)
@@ -143,6 +164,9 @@ def main():
         if board_shim.is_prepared():
             logging.info('Releasing session')
             board_shim.release_session()
+            
+        estadoRobot = ard.requestStatus() #Solicitamos lo que esta viendo el robot
+        print("El robot nos infroma:", estadoRobot)
         ard.endSesion()    
         ard.close()
         
@@ -151,14 +175,6 @@ def main():
         rawEEG = rawEEG.swapaxes(1,2).swapaxes(2,3)
         dictionary["eeg"] = rawEEG
         fa.saveData(path = path, dictionary = dictionary, fileName = dictionary["subject"])
-        
-        # print(rawEEG.shape)
-        # plt.plot(rawEEG[0,0,:250,0])
-        # plt.plot(rawEEG[0,1,:250,0])
-        # plt.plot(rawEEG[0,2,:,0])
-        # plt.plot(rawEEG[0,3,:,0])
-        # plt.plot(rawEEG[0,4,:,0])
-        # plt.show()
 
 
 if __name__ == "__main__":
