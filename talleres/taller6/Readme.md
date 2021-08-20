@@ -1,6 +1,6 @@
 # Taller 6
 
-Taller dedicado para aprender adquisición y procsamiento de EEG -a través de la placa Cyton de OpenBCI- en tiempo real usando Python. Protocolo de adquisición de señales de EEG para entrenar diferentes clasificadores de SSVEPs, comparar sus performances y utilizarlos para clasificar  de manera offline. 
+Taller dedicado para aprender adquisición y procesamiento de EEG -a través de la placa Cyton de OpenBCI- en tiempo real usando Python. Protocolo de adquisición de señales de EEG para entrenar diferentes clasificadores de SSVEPs, comparar sus performances y utilizarlos para clasificar  de manera offline. 
 
 ![#3ab06f](https://via.placeholder.com/15/3ab06f/000000?text=+) `Estos clasificadores serán utilizados en la BCI de manera online para detectar comandos y controlar el vehículo robótico.`
 

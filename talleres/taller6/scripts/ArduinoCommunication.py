@@ -9,15 +9,37 @@ Clase para comunicación entre Arduino y PC utilizando la libreria PYSerial
 
 import serial
 import time
-import keyboard
 
 class ArduinoCommunication:
-    """
-    Clase para comunicación entre Arduino y PC utilizando la libreria PYSerial
+    """Clase para comunicación entre Arduino y PC utilizando la libreria PYSerial.
+        Constructor del objeto ArduinoCommunication
+        
+        Parametros
+        ----------
+        port: String
+            Puerto serie por el cual nos conectaremos
+        trialDuration: int
+            Duración total de un trial [en segundos]
+        stimONTime: int
+            Duración total en que los estímulos están encendidos
+        timerFrecuency: int
+            Variable para "simular" la frecuencia [en Hz] de interrupción del timer
+        timing: int
+            Variable para temporizar interrupción - Por defecto es 1[ms]
+        useExternalTimer: bool
+            En el caso de querer que el timer funcione con una interrupción externa
+        ntrials: int
+            Cantidad de trials a ejecutar. Una vez pasados los ntrials, se deja de transmitir y recibir
+            información hacia y desde el Arduino - Por defecto el valor es 1[trial] - Si se quisiera una
+            ejecución por tiempo indeterminado se debe hacer ntrials = None
+            
+        Retorna
+        -------
+        Nada        
     """
     def __init__(self, port, trialDuration = 6, stimONTime = 4,
                  timerFrecuency = 1000, timing = 1, useExternalTimer = False,
-                 ntrials = None):
+                 ntrials = 1):
         
         self.dev = serial.Serial(port, baudrate=19200)
         
@@ -28,22 +50,21 @@ class ArduinoCommunication:
         self.trial = 1
         self.trialsNumber = ntrials
         
- 
         self.sessionStatus = b"1" #sesión en marcha
         self.stimuliStatus = b"0" #los estimulos empiezan apagados
-        self.leftStim = b"1" #estímulo izquierdo ON
-        self.rightStim = b"0" #estímulo derecho OFF
-        self.backStim = b"1" #estímulo hacia atras ON
-        self.forwardStim = b"1" #estímulo derecho ON
-        self.stimuliState = [self.sessionStatus,
+        self.moveOrder = b"0" #EL robot empieza en STOP
+        """
+        self.moveOrder
+        - 0: STOP
+        - 1: ADELANTE
+        - 2: DERECHA
+        - 3: ATRAS
+        - 4: IZQUIERDA
+        """
+        self.systemControl = [self.sessionStatus,
                              self.stimuliStatus,
-                             self.leftStim,
-                             self.rightStim,
-                             self.backStim,
-                             self.forwardStim]
-        
-        self.statusRequest = [b"2"]
-        
+                             self.moveOrder]
+         
         self.useExternalTimer = useExternalTimer
         self.timerEnable = 0
         self.timing = timing #en milisegundos
@@ -55,9 +76,7 @@ class ArduinoCommunication:
         time.sleep(2) #esperamos 2 segundos para una correcta conexión
         
     def timer(self):
-        """
-        Función para emular un timer como el de un microcontrolador
-        """
+        """Función para emular un timer como el de un microcontrolador"""
         if(self.timerInteFlag == 0 and
            time.time()*self.timerFrecuency - self.initialTime >= self.timing):
             self.initialTime = time.time()*self.timerFrecuency
@@ -68,17 +87,21 @@ class ArduinoCommunication:
         self.initialTime = time.time()*1000
         self.timerInteFlag = 0
 
-    def query(self, message):
+    def query(self, byte):
+        """Enviamos un byte a arduinot y recibimos un byte desde arduino
+        
+        Parametros
+        ----------
+        message (byte):
+            Byte que se desa enviar por puerto serie.
         """
-        Enviamos un byte a arduinot y recibimos un byte desde arduino
-        """
-        self.dev.write(message)#.encode('ascii'))
-        line = self.dev.readline().decode('ascii').strip()
-        return line
+        self.dev.write(byte)#.encode('ascii')) #enviamos byte por el puerto serie
+        respuesta = self.dev.readline().decode('ascii').strip() #recibimos una respuesta desde Arduino
+        
+        return respuesta
     
     def sendMessage(self, message):
-        """
-        Función para enviar una lista de bytes con diferentes variables de estado
+        """Función para enviar una lista de bytes con diferentes variables de estado
         hacia Arduino. Estas variables sirven para control de flujo del programa del
         Arduino.
         """
@@ -86,70 +109,51 @@ class ArduinoCommunication:
         for byte in message:
             incomingData.append(self.query(byte))
             
-        return incomingData
+        return incomingData[-1] #Retorno los últimos bytes recibidos
 
     def close(self):
         """Cerramos comunicción serie"""
         self.dev.close()
         
     def iniSesion(self):
-        """
-        Se inicia sesión.
-        """
+        """Se inicia sesión."""
         
         self.sessionStatus = b"1" #sesión en marcha
-        self.stimuliStatus = b"1"; #empiezo a estimular
-        self.leftStim = b"1" #estímulo izquierdo ON
-        self.rightStim = b"1" #estímulo derecho OFF
-        self.backStim = b"1" #estímulo hacia atras ON
-        self.forwardStim = b"1" #estímulo derecho ON
+        self.stimuliStatus = b"1" #encendemos estímulos
+        self.moveOrder = b"0" #EL robot empieza en STOP
         
-        self.stimuliState = [self.sessionStatus,
+        self.systemControl = [self.sessionStatus,
                              self.stimuliStatus,
-                             self.leftStim,
-                             self.rightStim,
-                             self.backStim,
-                             self.forwardStim]
+                             self.moveOrder]
         
-        self.sendMessage(self.stimuliState)
+        estadoRobot = self.sendMessage(self.systemControl)
+        print("Estado inicial del ROBOT:", estadoRobot)
+        
         self.iniTimer()
         print("Sesión iniciada")
         print("Trial inicial")
 
         
     def endSesion(self):
-        """
-        Se finaliza sesión.
+        """Se finaliza sesión.
+            Se envía información a Arduino para finalizar sesión. Se deben tomar acciones en el Arduino
+            una vez recibido el mensaje.
         """
         
-        self.sessionStatus = b"0" #sesión en marcha
-        self.stimuliStatus = b"0"; #empiezo a estimular
-        self.leftStim = b"0" #estímulo izquierdo ON
-        self.rightStim = b"0" #estímulo derecho OFF
-        self.backStim = b"0" #estímulo hacia atras ON
-        self.forwardStim = b"0" #estímulo derecho ON
-        
-        self.stimuliState = [self.sessionStatus,
+        self.sessionStatus = b"0" #sesión finalizada
+        self.stimuliStatus = b"0" #finalizo estimulación
+        self.moveOrder = b"0" #Paramos el rebot enviando un STOP
+        self.systemControl = [self.sessionStatus,
                              self.stimuliStatus,
-                             self.leftStim,
-                             self.rightStim,
-                             self.backStim,
-                             self.forwardStim]
+                             self.moveOrder]
         
-        self.sendMessage(self.stimuliState)
+        estadoRobot = self.sendMessage(self.systemControl)
+        print("Estado final del ROBOT:", estadoRobot)
         print("Sesión Finalizada")
-        print(f"Trial final {self.trial}")
-        
-    def requestStatus(self):
-        """
-        Solicitamos estado del vehículo robótico al Arduino
-        """
-        return self.sendMessage(self.statusRequest) #retorno el mensaje recibido desde Arduino
-        
+        print(f"Trial final {self.trial - 1}")
         
     def trialControl(self):
-        """
-        Función que ayuda a controlar los estímulos en arduino.
+        """Función que ayuda a controlar los estímulos en arduino.
             - La variable self.counter es utilizada como contador para sincronizar
             los momentos en que los estímulos están encendidos o opagados.
             - Es IMPORTANTE para un correcto funcionamiento que la variable self.counter
@@ -161,14 +165,13 @@ class ArduinoCommunication:
         
         if self.counter == self.stimONTime: #mandamos nuevo mensaje cuando comienza un trial
         
-            self.stimuliState[1] = b"0" #apagamos estímulos
-            self.sendMessage(self.stimuliState)
-            #estadoRobot = self.requestStatus()
-              
+            self.systemControl[1] = b"0" #apagamos estímulos
+            estadoRobot = self.sendMessage(self.systemControl)
+             
         if self.counter == self.trialDuration: 
             
-            self.stimuliState[1] = b"1"
-            self.sendMessage(self.stimuliState)
+            self.systemControl[1] = b"1"
+            estadoRobot = self.sendMessage(self.systemControl)
             print(f"Fin trial {self.trial}")
             print("")
             self.trial += 1 #incrementamos un trial
@@ -177,19 +180,22 @@ class ArduinoCommunication:
         return self.trial
     
     def generalControl(self):
+        """Función para llevar a cabo un control general de los procesos entre PC y Arduino."""
         
-        if self.stimuliState[0] == b"1" and not self.trialsNumber: #Para trials indefinidos
+        if self.systemControl[0] == b"1" and not self.trialsNumber: #Para trials indefinidos
             
             if not self.useExternalTimer:
                 self.timer()        
+                
             if self.timerInteFlag: #timerInteFlag se pone en 1 a la cantidad de milisegundos de self.timing
                 self.trialControl()
                 self.timerInteFlag = 0 #reiniciamos flag de interrupción
                 
-        elif self.stimuliState[0] == b"1" and self.trial <= self.trialsNumber: #Para cantidad de trials definido
+        elif self.systemControl[0] == b"1" and self.trial <= self.trialsNumber: #Para cantidad de trials definido
             
             if not self.useExternalTimer:    
-                self.timer()        
+                self.timer()   
+                
             if self.timerInteFlag: #timerInteFlag se pone en 1 a la cantidad de milisegundos de self.timing
                 self.trialControl()
                 self.timerInteFlag = 0 #reiniciamos flag de interrupción
@@ -211,18 +217,16 @@ def main():
     #En el caso de querer ejecutar Trials de manera indeterminada,
     #debe hacerse trials = None (default)
     """
-    ard = ArduinoCommunication('COM3', timing = 500, ntrials = 12)
+    ard = ArduinoCommunication('COM3', trialDuration = 2, stimONTime = 1,
+                               timing = 100, ntrials = 2)
 
-    # ard.iniTimer()
     ard.iniSesion()
     
     while ard.generalControl() == b"1":
-        # if ard.trial-1 == 2:
-        #     ard.endSesion()
         pass
 
-    ard.endSesion()    
-    ard.close()
+    #ard.endSesion()   
+    ard.close() #cerramos comunicación serie y liberamos puerto COM
     
     stopTime = time.time()#/1000
     

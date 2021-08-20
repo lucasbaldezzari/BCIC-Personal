@@ -4,11 +4,17 @@ Created on Wed Jun 23 09:57:43 2021
 
 @author: Lucas Baldezzari
 
-Principal module in orer to ejecute the entire system.
 
-- Signal Processing (SP) module
-- Classification (CLASS) module
-- Graphication (GRAPH) module
+Módulo de control utilizado para adquirir y almacenar datos de EEG.
+
+Los procesos principales son:
+    - Seteo de parámetros y conexión con placa OpenBCI (Synthetic, Cyton o Ganglion)
+    para adquirir datos en tiempo real.
+    - Comunicación con placa Arduino para control de estímulos.
+    - Adquisición de señales de EEG a partir de la placa OpenBCI.
+    - Control de trials: Pasado ntrials se finaliza la sesión.
+    - Registro de EEG: Finalizada la sesión se guardan los datos con saveData() de fileAdmin
+
 """
 
 import os
@@ -17,11 +23,10 @@ import time
 import logging
 import numpy as np
 import threading
-import keyboard
 # import matplotlib.pyplot as plt
 
-import pyqtgraph as pg
-from pyqtgraph.Qt import QtGui, QtCore
+# import pyqtgraph as pg
+# from pyqtgraph.Qt import QtGui, QtCore
 
 import brainflow
 from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds, BrainFlowError
@@ -51,7 +56,8 @@ def main():
     parser.add_argument('--ip-address', type=str, help='ip address', required=False, default='')
 
     #IMPORTENTE: Chequear en que puerto esta conectada la OpenBCI. En este ejemplo esta en el COM4    
-    parser.add_argument('--serial-port', type=str, help='serial port', required=False, default='COM4')
+    # parser.add_argument('--serial-port', type=str, help='serial port', required=False, default='COM4')
+    parser.add_argument('--serial-port', type=str, help='serial port', required=False, default='')
     parser.add_argument('--mac-address', type=str, help='mac address', required=False, default='')
     parser.add_argument('--other-info', type=str, help='other info', required=False, default='')
     parser.add_argument('--streamer-params', type=str, help='streamer params', required=False, default='')
@@ -88,15 +94,15 @@ def main():
 
     """Defino variables para control de Trials"""
     
-    trials = 1 #cantidad de trials. Sirve para la sesión de entrenamiento.
+    trials = 2 #cantidad de trials. Sirve para la sesión de entrenamiento.
     #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
-    trialDuration = 2 #secs
-    stimuliDuration = 1 #secs
+    trialDuration = 8 #secs
+    stimuliDuration = 4 #secs
 
     saveData = True
     
     EEGdata = []
-    fm = 250.
+    fm = 250
     
     samplePoints = int(fm*stimuliDuration)
     channels = 8
@@ -122,16 +128,14 @@ def main():
     #El siguiente diccionario se usa para guardar información relevante cómo así también los datos de EEG
     #registrados durante la sesión de entrenamiento.
     dictionary = {
-                'subject': 'Test',
-                'date': '12/08/2021',
+                'subject': 'Test2',
+                'date': '19/08/2021',
                 'generalInformation': 'Test',
                 "channels": "[1,2,3,4,5,6,7,8]", 
                  'dataShape': [stimuli, channels, samplePoints, trials],
                   'eeg': None
                     }
-    
-    oldTrial = -1
-    actualTrial = ard.trial
+
     ard.iniSesion() #Inicio sesión en el Arduino.
     # graph = Graph(board_shim)
 
@@ -144,13 +148,11 @@ def main():
         #         break
     
         while ard.generalControl() == b"1":
-            # if ard.trial-1 == 2:
-            #     ard.endSesion()
-            if saveData and ard.stimuliState[1] == b"0":
+            if saveData and ard.systemControl[1] == b"0":
                 currentData = data_thread.getData(stimuliDuration)
                 EEGdata.append(currentData)
                 saveData = False
-            elif saveData == False and  ard.stimuliState[1] == b"1":
+            elif saveData == False and ard.systemControl[1] == b"1":
                 saveData = True
         
     except BaseException as e:
@@ -165,17 +167,15 @@ def main():
             logging.info('Releasing session')
             board_shim.release_session()
             
-        estadoRobot = ard.requestStatus() #Solicitamos lo que esta viendo el robot
-        print("El robot nos infroma:", estadoRobot)
-        ard.endSesion()    
-        ard.close()
+        #ard.endSesion() #finalizo sesión (se apagan los estímulos)
+        ard.close() #cierro comunicación serie para liberar puerto COM
         
+        #Guardo los datos registrados por la placa
         EEGdata = np.asarray(EEGdata)
         rawEEG = EEGdata.reshape(1,EEGdata.shape[0],EEGdata.shape[1],EEGdata.shape[2])
         rawEEG = rawEEG.swapaxes(1,2).swapaxes(2,3)
         dictionary["eeg"] = rawEEG
-        fa.saveData(path = path, dictionary = dictionary, fileName = dictionary["subject"])
-
+        fa.saveData(path = path,dictionary = dictionary, fileName = dictionary["subject"])
 
 if __name__ == "__main__":
         main()
