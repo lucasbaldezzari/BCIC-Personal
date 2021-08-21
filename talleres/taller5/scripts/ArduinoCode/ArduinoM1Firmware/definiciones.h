@@ -4,8 +4,8 @@
 #define  ON         1
 #define  OFF        0
 
-#define  RUNNING    1
-#define  STOP       0
+#define  SESSION_RUNNING    1
+#define  SESSION_STOP       0
 
 #define   OBSTACULO_DETECTADO  'O' //79
 #define   SIN_OBSTACULO  'S' //83

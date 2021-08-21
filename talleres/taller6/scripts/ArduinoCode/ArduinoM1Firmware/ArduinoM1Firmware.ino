@@ -11,7 +11,7 @@
 /******************************************************************/
 
 char inBuffDataFromPC = 3;
-unsigned int incDataFromPC[3]; //variable para almacenar datos provenientes de la PC
+unsigned char incDataFromPC[3]; //variable para almacenar datos provenientes de la PC
 char bufferIndex = 0;
 bool sendDataFlag = 0;
 bool newMessage = false;
@@ -31,8 +31,8 @@ char incDataFromRobotIndex = 0;
   Variables para el control de flujo de programa
 ******************************************************************/
 char sessionState = 0; //Sesión sin iniciar
-char LEDVerde = 12; //led de testeo
-char LEDAzul = 13;
+char LEDVerde = 12; 
+char LEDTesteo = 13; //led de testeo
 
 /******************************************************************
   Declaración de variables para control de estímulos
@@ -76,7 +76,7 @@ void setup()
   pinMode(estimIzq,OUTPUT);
   pinMode(estimDer,OUTPUT);
   pinMode(LEDVerde,OUTPUT);
-  pinMode(LEDAzul,OUTPUT);
+  pinMode(LEDTesteo,OUTPUT);
   iniTimer0(frecTimer); //inicio timer 0
   Serial.begin(19200); //iniciamos comunicación serie
 
@@ -97,15 +97,15 @@ if (Serial.available() > 0)
   }
 };
 
-ISR(TIMER0_COMPA_vect)//Rutina interrupción Timer0. Se configuró para 0.1ms
+ISR(TIMER0_COMPA_vect)//Rutina interrupción Timer0.
 {
-  if(sessionState) stimuliControl(); //Si la sesión comenzó, empezamos a generar los estímulos  
+  if(sessionState == SESSION_RUNNING) stimuliControl(); //Si la sesión comenzó, empezamos a generar los estímulos  
   else
   {
     //apago estímulos
     digitalWrite(estimIzq,0);
     digitalWrite(estimDer,0);
-    digitalWrite(LEDAzul,1);
+    digitalWrite(LEDTesteo,1);
   }
 };
 
@@ -154,9 +154,9 @@ void checkMessage(char val)
   switch(bufferIndex)
   {
     case 0:
-      if (incDataFromPC[bufferIndex] == 1) sessionState = RUNNING;
-      else sessionState = STOP;
-      digitalWrite(LEDAzul,0);
+      if (incDataFromPC[bufferIndex] == 1) sessionState = SESSION_RUNNING;
+      else sessionState = SESSION_STOP;
+      digitalWrite(LEDTesteo,0);
       //else sessionState = STOP;
       break;
     case 1:
