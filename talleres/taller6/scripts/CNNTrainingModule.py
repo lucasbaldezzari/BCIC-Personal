@@ -386,6 +386,7 @@ def main():
     # path = "E:/reposBCICompetition/BCIC-Personal/taller4/scripts/dataset" #directorio donde estan los datos
     
     subjects = [8]
+    subjectsNames = ["s8"]
     
     fm = 256.0
     tiempoTotal = int(4*fm) #cantidad de muestras para 4segundos
@@ -399,7 +400,7 @@ def main():
     """
     
     """Loading the EEG data"""
-    rawEEG = fa.loadData(path = path, subjects = subjects)[f"s{subjects[0]}"]["eeg"]
+    rawEEG = fa.loadData(path = path, filenames = subjectsNames)[f"s{subjects[0]}"]["eeg"]
     
     #Selecting the first 12 trials
     rawEEG = rawEEG[:, :, :, 0:12]
