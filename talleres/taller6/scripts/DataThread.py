@@ -2,6 +2,8 @@
 Created on Wed Jun 23 11:27:24 2021
 
 @author: Lucas BALDEZZARI
+
+        VERSIÓN: SCT-01-RevA
 """
 
 import time

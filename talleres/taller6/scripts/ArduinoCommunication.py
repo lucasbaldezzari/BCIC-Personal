@@ -5,6 +5,9 @@ Created on Fri Jul 30 12:26:03 2021
 Clase Arduino.
 
 Clase para comunicación entre Arduino y PC utilizando la libreria PYSerial
+
+
+        VERSIÓN: SCT-01-RevA
 """
 
 import serial
@@ -217,7 +220,7 @@ def main():
     #En el caso de querer ejecutar Trials de manera indeterminada,
     #debe hacerse trials = None (default)
     """
-    ard = ArduinoCommunication('COM3', trialDuration = 2, stimONTime = 1,
+    ard = ArduinoCommunication('COM3', trialDuration = 8, stimONTime = 4,
                                timing = 100, ntrials = 2)
 
     ard.iniSesion()
@@ -234,9 +237,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-    
-
     
     
     

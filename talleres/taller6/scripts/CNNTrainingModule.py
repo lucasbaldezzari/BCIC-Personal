@@ -3,6 +3,8 @@
 Created on Thu Jun 24 16:53:29 2021
 
 @author: Lucas BALDEZZARI
+
+        VERSIÓN: SCT-01-RevA
 """
 
 import sys

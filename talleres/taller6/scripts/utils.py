@@ -5,6 +5,8 @@ utils
 Created on Sat May  8 10:31:22 2021
 
 @author: Lucas
+
+        VERSIÓN: SCT-01-RevA
 """
 
 import numpy as np
@@ -310,10 +312,11 @@ def computeComplexSpectrum(segmentedData, fftparms):
     return featuresData
 
 def plotSpectrum(espectroSujeto, resol, blancos, sujeto, canal, frecStimulus,
-                  startFrecGraph = 3.0, save = False, title = "", folder = "figs"):
+                  startFrecGraph = 3.0, save = False, title = "", folder = "figs",
+                  rows = 2, columns = 2):
     
-    rows = len(frecStimulus)//4
-    columns = len(frecStimulus)//3
+    # rows = len(frecStimulus)//4
+    # columns = len(frecStimulus)//3
     
     fig, plots = plt.subplots(columns, rows, figsize=(16, 14), gridspec_kw=dict(hspace=0.45, wspace=0.3))
     plots = plots.reshape(-1)

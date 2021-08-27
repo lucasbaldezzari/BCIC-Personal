@@ -14,6 +14,8 @@ Los procesos principales son:
     - Adquisición de señales de EEG a partir de la placa OpenBCI.
     - Control de trials: Pasado ntrials se finaliza la sesión.
     - Registro de EEG: Finalizada la sesión se guardan los datos con saveData() de fileAdmin
+    
+    VERSIÓN: SCT-01-RevA
 
 """
 
@@ -94,10 +96,10 @@ def main():
 
     """Defino variables para control de Trials"""
     
-    trials = 2 #cantidad de trials. Sirve para la sesión de entrenamiento.
+    trials = 5 #cantidad de trials. Sirve para la sesión de entrenamiento.
     #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
-    trialDuration = 8 #secs
-    stimuliDuration = 4 #secs
+    trialDuration = 3 #secs
+    stimuliDuration = 2 #secs
 
     saveData = True
     
@@ -128,10 +130,11 @@ def main():
     #El siguiente diccionario se usa para guardar información relevante cómo así también los datos de EEG
     #registrados durante la sesión de entrenamiento.
     dictionary = {
-                'subject': 'Test2',
-                'date': '19/08/2021',
-                'generalInformation': 'Test',
-                "channels": "[1,2,3,4,5,6,7,8]", 
+                'subject': 'Sujeto1Test1',
+                'date': '27/08/2021',
+                'generalInformation': 'Estímulo a 30cm. Color rojo. Probando en el taller 6.',
+                'stimFrec': "7",
+                'channels': [1,2,3,4,5,6,7,8], 
                  'dataShape': [stimuli, channels, samplePoints, trials],
                   'eeg': None
                     }

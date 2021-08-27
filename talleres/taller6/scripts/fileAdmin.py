@@ -6,6 +6,8 @@ fileAdmin
 Created on Fri May  7 19:05:10 2021
 
 @author: Lucas
+
+        VERSIÓN: SCT-01-RevA
 """
 
 import sys
