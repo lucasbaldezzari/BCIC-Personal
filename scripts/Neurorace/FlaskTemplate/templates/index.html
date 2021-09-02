@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Template</title>
+</head>
+<body>
+    
+    <h1>Template</h1>
+    <button onclick="adelante
+ ()">Adelante</button>
+    <button onclick="behind()">Atras</button>
+    <button onclick="rigth()">Derecha</button>
+    <button onclick="left()">Izquierda</button>
+
+    <script>
+        function adelante() {
+            fetch("/adelante").then(response=>{
+                // return success callback
+                response.json().then((data)=>{
+                    const {message} = data
+                    alert(message)
+                })
+            })
+            .catch((err)=>{
+                // return error callback
+                console.log(err);
+            })
+        }
+        function rigth() {
+            fetch("/rigth").then((response)=>{
+                response.json().then((data)=>{
+                    const {message} = data
+                    alert(message)
+                })
+            })
+            .catch((err)=>{
+                // return error callback
+            })
+        }
+        function left() {
+            fetch("/left").then((response)=>{
+                response.json().then((data)=>{
+                    const {message} = data
+                    alert(message)
+                })
+            })
+            .catch((err)=>{
+                // return error callback
+            })
+        }
+        function behind() {
+            fetch("/behind").then((response)=>{
+                response.json().then((data)=>{
+                    const {message} = data
+                    alert(message)
+                })
+            })
+            .catch((err)=>{
+                // return error callback
+            })
+        }
+    </script>
+</body>
+</html>
