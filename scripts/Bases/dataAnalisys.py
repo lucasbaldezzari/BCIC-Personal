@@ -24,7 +24,7 @@ channels = 8
 stimuli = 1 #one stimulus
 
 subjects = [1]
-filenames = ["LucasB-Alfa-Prueba1","LucasB-Alfa-Prueba2","LucasB-Alfa-Prueba3"]
+filenames = ["LucasB-Alfa-Prueba1","LucasB-Alfa-Prueba2","testGanglion"]
 allData = fa.loadData(path = path, filenames = filenames)
 names = list(allData.keys())
 

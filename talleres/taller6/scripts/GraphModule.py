@@ -27,16 +27,16 @@ class GraphModule(threading.Thread):
     
     def __init__(self, board_shim):
         
-        threading.Thread.__init__(self)
+        # threading.Thread.__init__(self)
         
         pg.setConfigOption('background', '#F8F6F8') #F8F6F8
         pg.setConfigOption('foreground', '#1C1C1C')
 
         self.board_id = board_shim.get_board_id()
         self.board_shim = board_shim
-        self.exg_channels = BoardShim.get_exg_channels(self.board_id)[:2]
+        self.exg_channels = BoardShim.get_exg_channels(self.board_id)
         self.sampling_rate = BoardShim.get_sampling_rate(self.board_id)
-        self.update_speed_ms = 10
+        self.update_speed_ms = 1
         self.window_size = 4
         self.num_points = self.window_size * self.sampling_rate
         
@@ -142,11 +142,11 @@ class GraphModule(threading.Thread):
         timer.start(self.update_speed_ms)
         QtGui.QApplication.instance().exec_()
         
-        # while True:
-        #     if self.keep_alive == True:
-        #         pass
-        #     else:
-        #         pg.QtGui.QApplication.quit()
+        while True:
+            if self.keep_alive == True:
+                pass
+            else:
+                pg.QtGui.QApplication.quit()
         
         
         

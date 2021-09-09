@@ -405,7 +405,8 @@ def main():
     rawEEG = rawEEG[:, :, :, 0:12]
     
     samples = rawEEG.shape[2]
-    resolution = fm/samples
+    # resolution = fm/samples
+    resolution = np.round(fm/samples,4)
     
     rawEEG = rawEEG[:,:, muestraDescarte: ,:]
     rawEEG = rawEEG[:,:, :muestrasTotales ,:]
@@ -504,7 +505,7 @@ def main():
     **********************************************************************
     """
     
-    accu_CNN_using_MSF = magnitudCNN.trainCNN(trainingData_MSF, labels_MSF, nFolds = 2)
+    accu_CNN_using_MSF = magnitudCNN.trainCNN(trainingData_MSF, labels_MSF, nFolds = 5)
     
     #saving the model
     magnitudCNN.saveCNNModel()
@@ -539,11 +540,11 @@ def main():
     # Create the CNN model
     complexCNN.createModel(inputshape)
     
-    accu_CNN_using_CSF = complexCNN.trainCNN(trainingData_CSF, labels_CSF, nFolds = 2)
+    accu_CNN_using_CSF = complexCNN.trainCNN(trainingData_CSF, labels_CSF, nFolds = 5)
     
     complexCNN.saveCNNModel()
         
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()
 
 

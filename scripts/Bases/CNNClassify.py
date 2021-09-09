@@ -229,7 +229,8 @@ def main():
     path = os.path.join(actualFolder,"models")
     
     samples = rawEEG.shape[2]
-    resolution = fm/samples #IMPORTANTE: La resolución DEBE SER LA MISMA que se uso cuando se entrenó la CNN
+    # resolution = fm/samples #IMPORTANTE: La resolución DEBE SER LA MISMA que se uso cuando se entrenó la CNN
+    resolution = np.round(fm/samples,4) #IMPORTANTE: La resolución DEBE SER LA MISMA que se uso cuando se entrenó la CNN
     
     rawEEG = rawEEG[:,:, muestraDescarte: ,:]
     rawEEG = rawEEG[:,:, :tiempoTotal ,:]
@@ -334,7 +335,7 @@ def main():
     print(predCom)
     
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()
 
 

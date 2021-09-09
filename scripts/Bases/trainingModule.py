@@ -15,7 +15,13 @@ Los procesos principales son:
     - Control de trials: Pasado ntrials se finaliza la sesión.
     - Registro de EEG: Finalizada la sesión se guardan los datos con saveData() de fileAdmin
     
-    VERSIÓN: SCT-01-RevA
+    VERSIÓN: SCT-01-RevB
+    
+    Funcionalidades:
+        - Comunicación con las boards Cyton, Ganglion y Synthetic de OpenBCI
+        - Comunicación con Arduino
+        - Control de trials
+        - Registro de datos adquiridos durante la sesión de entrenamiento.
 
 """
 
@@ -36,7 +42,7 @@ from brainflow.data_filter import DataFilter, FilterTypes, AggOperations, Window
 from ArduinoCommunication import ArduinoCommunication as AC
 
 from DataThread import DataThread as DT
-# from GraphModule import GraphModule as Graph       
+from GraphModule import GraphModule as Graph       
 import fileAdmin as fa
 
 def main():
@@ -47,8 +53,17 @@ def main():
    
     BoardShim.enable_dev_board_logger()
     logging.basicConfig(level=logging.DEBUG)
-
+    
+    placas = {"cyton": BoardIds.CYTON_BOARD, #IMPORTANTE: frecuencia muestreo 256Hz
+              "ganglion": BoardIds.GANGLION_BOARD, #IMPORTANTE: frecuencia muestro 200Hz
+              "synthetic": BoardIds.SYNTHETIC_BOARD}
+    
+    placa = placas["synthetic"]  
+    
+    puerto = "COM5" #Chequear el puerto al cual se conectará la placa
+    
     parser = argparse.ArgumentParser()
+    
     # use docs to check which parameters are required for specific board, e.g. for Cyton - set serial port
     parser.add_argument('--timeout', type=int, help='timeout for device discovery or connection', required=False,
                         default=0)
@@ -59,13 +74,13 @@ def main():
 
     #IMPORTENTE: Chequear en que puerto esta conectada la OpenBCI. En este ejemplo esta en el COM4    
     # parser.add_argument('--serial-port', type=str, help='serial port', required=False, default='COM4')
-    parser.add_argument('--serial-port', type=str, help='serial port', required=False, default='')
+    parser.add_argument('--serial-port', type=str, help='serial port', required=False, default = puerto)
     parser.add_argument('--mac-address', type=str, help='mac address', required=False, default='')
     parser.add_argument('--other-info', type=str, help='other info', required=False, default='')
     parser.add_argument('--streamer-params', type=str, help='streamer params', required=False, default='')
     parser.add_argument('--serial-number', type=str, help='serial number', required=False, default='')
     parser.add_argument('--board-id', type=int, help='board id, check docs to get a list of supported boards',
-                        required=False, default=BoardIds.SYNTHETIC_BOARD)
+                        required=False, default = placa)
     # parser.add_argument('--board-id', type=int, help='board id, check docs to get a list of supported boards',
     #                     required=False, default=BoardIds.CYTON_BOARD)
     parser.add_argument('--file', type=str, help='file', required=False, default='')
@@ -104,10 +119,10 @@ def main():
     saveData = True
     
     EEGdata = []
-    fm = 250
+    fm = 200.
     
     samplePoints = int(fm*stimuliDuration)
-    channels = 8
+    channels = 4
     stimuli = 1 #one stimulus
     
     """Inicio comunicación con Arduino instanciando un objeto AC (ArduinoCommunication)
@@ -121,7 +136,7 @@ def main():
     """
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
     #En este ejemplo esta conectada en el COM3
-    ard = AC('COM3', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM3', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
     time.sleep(2) 
     
@@ -130,48 +145,37 @@ def main():
     #El siguiente diccionario se usa para guardar información relevante cómo así también los datos de EEG
     #registrados durante la sesión de entrenamiento.
     dictionary = {
-                'subject': 'Sujeto1Test1',
+                'subject': 'testGanglion',
                 'date': '27/08/2021',
                 'generalInformation': 'Estímulo a 30cm. Color rojo. Probando en el taller 6.',
                 'stimFrec': "7",
-                'channels': [1,2,3,4,5,6,7,8], 
+                'channels': [1,2,3,4], 
                  'dataShape': [stimuli, channels, samplePoints, trials],
                   'eeg': None
                     }
 
-    ard.iniSesion() #Inicio sesión en el Arduino.
+    arduino.iniSesion() #Inicio sesión en el Arduino.
     # graph = Graph(board_shim)
+    time.sleep(1) 
 
     try:
-        # data_thread.start()
-        # graph.start() #init graphication
-        # while True:
-        #     if keyboard.read_key() == "esc":
-        #         print("Stopped by user")
-        #         break
-    
-        while ard.generalControl() == b"1":
-            if saveData and ard.systemControl[1] == b"0":
+        while arduino.generalControl() == b"1":
+            if saveData and arduino.systemControl[1] == b"0":
                 currentData = data_thread.getData(stimuliDuration)
                 EEGdata.append(currentData)
                 saveData = False
-            elif saveData == False and ard.systemControl[1] == b"1":
+            elif saveData == False and arduino.systemControl[1] == b"1":
                 saveData = True
         
     except BaseException as e:
         logging.warning('Exception', exc_info=True)
         
     finally:
-        # data_thread.keep_alive = False
-        # graph.keep_alive = False
-        # data_thread.join()
-        # graph.join()
         if board_shim.is_prepared():
             logging.info('Releasing session')
             board_shim.release_session()
             
-        #ard.endSesion() #finalizo sesión (se apagan los estímulos)
-        ard.close() #cierro comunicación serie para liberar puerto COM
+        arduino.close() #cierro comunicación serie para liberar puerto COM
         
         #Guardo los datos registrados por la placa
         EEGdata = np.asarray(EEGdata)
@@ -179,6 +183,8 @@ def main():
         rawEEG = rawEEG.swapaxes(1,2).swapaxes(2,3)
         dictionary["eeg"] = rawEEG
         fa.saveData(path = path,dictionary = dictionary, fileName = dictionary["subject"])
-
+        
 if __name__ == "__main__":
         main()
+        
+        
