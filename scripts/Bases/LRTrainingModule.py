@@ -32,8 +32,7 @@ from utils import filterEEG, segmentingEEG, computeMagnitudSpectrum, computeComp
 from utils import plotEEG
 import fileAdmin as fa
 
-#Transforming data for training
-def getDataForTraining(features, clases):
+def getDataForTraining(features, clases, canal = False):
     """Preparación del set de entrenamiento.
         
     Argumentos:
@@ -53,14 +52,21 @@ def getDataForTraining(features, clases):
     canales = features.shape[1]
     numClases = features.shape[2]
     trials = features.shape[3]
-    segmentos = features.shape[4]
     
-    trainingData = features.swapaxes(0,4).swapaxes(0,1).swapaxes(3,1).swapaxes(2,3)
-    trainingData = trainingData.reshape(canales*trials*segmentos*numClases, numFeatures)
+    if canal == False:
+        trainingData = np.mean(features, axis = 1)
+        
+    else:
+        trainingData = features[:, canal, :, :]
+        
+    trainingData = trainingData.swapaxes(0,1).swapaxes(1,2).reshape(numClases*trials, numFeatures)
     
-    labels = np.repeat(clases, canales*trials*segmentos)
+    classLabels = np.arange(len(clases))
+    
+    labels = (npm.repmat(classLabels, trials, 1).T).ravel()
 
     return trainingData, labels
+
 
 """Let's starting"""
             
@@ -91,6 +97,7 @@ PRE_PROCES_PARAMS = {
                 'hfrec': 38.,
                 'order': 4,
                 'sampling_rate': fm,
+                'bandStop': 50.,
                 'window': 4,
                 'shiftLen':4
                 }
@@ -121,45 +128,70 @@ dataSetSegmentado = segmentingEEG(trainSet, PRE_PROCES_PARAMS["window"],PRE_PROC
 
 magFFT = computeMagnitudSpectrum(dataSetSegmentado, FFT_PARAMS)
 
-# trainingData, labels = getDataForTraining(magFFT, clases = frecStimulus)
+magFFT = np.mean(magFFT, axis = 4) #media a través de los segmentos
+
 trainingData, labels = getDataForTraining(magFFT, clases = np.arange(0,12))
 
-METRICAS = {'modelo': {'trn': {'Pr': None, 'Rc': None, 'Acc': None, 'F1':None},
-                       'val': {'Pr': None, 'Rc': None, 'Acc': None, 'F1':None},
-                       'tst': {'Pr': None, 'Rc': None, 'Acc': None, 'F1':None}}}
+#Checking the features
+# Plotting promediando trials
+cantidadTrials = 11
+clase = 5
+fft_axis = np.arange(trainingData.shape[1]) * resolution
+plt.xlabel('Frecuencia [Hz]')
+plt.ylabel('Amplitud [uV]')
+plt.title(f"Características para clase {frecStimulus[clase-1]} - Trials promediados")
+plt.plot(fft_axis + FFT_PARAMS["start_frequency"],
+          np.mean(trainingData[ (clase-1)*cantidadTrials : (clase-1)*cantidadTrials + cantidadTrials, :], axis = 0))
+plt.axvline(x = frecStimulus[clase-1], ymin = 0., ymax = max(fft_axis),
+                      label = "Frecuencia estímulo",
+                      linestyle='--', color = "#e37165", alpha = 0.9)
+plt.legend()
+plt.show()
+
+# Plotting para una clase y un trial
+cantidadTrials = 11
+trial = 11
+clase = 5
+fft_axis = np.arange(trainingData.shape[1]) * resolution
+plt.xlabel('Frecuencia [Hz]')
+plt.ylabel('Amplitud [uV]')
+plt.title(f"Características para clase {frecStimulus[clase-1]} y trial {trial}")
+plt.plot(fft_axis + FFT_PARAMS["start_frequency"], trainingData[(clase-1)*cantidadTrials + (trial-1), :])
+plt.axvline(x = frecStimulus[clase-1], ymin = 0., ymax = max(fft_axis),
+                      label = "Frecuencia estímulo",
+                      linestyle='--', color = "#e37165", alpha = 0.9)
+plt.legend()
+plt.show()
+
+# Preparando datos de train y validation
 
 X_trn, X_val, y_trn, y_val = train_test_split(trainingData, labels, test_size=.2)
 
+modelo = LogisticRegression(multi_class="multinomial", solver = "newton-cg")
 
+# hiperParams = {"penalty": ["l1", "l2", "elasticnet"],
+#     "gammaValues": [1e-2, 1e-1, 1, 1e+1, 1e+2, "scale", "auto"],
+#     "CValues": [8e-1,9e-1, 1, 1e2, 1e3]
+#     }
 
-# clasificador = LinearRegression()
-# clasificador = LogisticRegression(solver = "newton-cg")
-pipline = make_pipeline(StandardScaler(), LogisticRegression(solver = "newton-cg"))
+modelo.fit(X_trn, y_trn)
 
+y_pred = modelo.predict(X_trn)
 
-# clasificador.fit(X_trn, y_trn) #Entreno clasificador
-pipline.fit(X_trn,y_trn)
-
-# Cálculo de métricas sobre datos de entrenamiento
-y_pred = pipline.predict(X_trn)
-
-# i = 0
-# for value in y_pred:
-#     difference = np.absolute(frecStimulus - value)
-#     y_pred[i] = frecStimulus[difference.argmin()]
-#     i += 1
+METRICAS = {'modelo': {'trn': {'Pr': None, 'Rc': None, 'Acc': None, 'F1':None},
+                        'val': {'Pr': None, 'Rc': None, 'Acc': None, 'F1':None},
+                        'tst': {'Pr': None, 'Rc': None, 'Acc': None, 'F1':None}}}
 
 precision, recall, f1,_ = precision_recall_fscore_support(y_trn, y_pred, average='macro')
 accuracy = accuracy_score(y_trn, y_pred)
-
 
 METRICAS['modelo']['trn']['Pr'] = precision
 METRICAS['modelo']['trn']['Rc'] = recall
 METRICAS['modelo']['trn']['Acc'] = accuracy
 METRICAS['modelo']['trn']['F1'] = f1
 
-# Cálculo de métricas sobre datos de validación
-y_pred = pipline.predict(X_val)
+#Datos de validación 
+y_pred = modelo.predict(X_val)
 precision, recall, f1,_ = precision_recall_fscore_support(y_val, y_pred, average='macro')
 accuracy = accuracy_score(y_val, y_pred)
 
@@ -168,125 +200,23 @@ METRICAS['modelo']['val']['Rc'] = recall
 METRICAS['modelo']['val']['Acc'] = accuracy
 METRICAS['modelo']['val']['F1'] = f1
 
-#eeg data segmentation
-testSetSegmentado = segmentingEEG(testSet, PRE_PROCES_PARAMS["window"],PRE_PROCES_PARAMS["shiftLen"],
+#Datos de test
+
+dataSetSegmentado = segmentingEEG(testSet, PRE_PROCES_PARAMS["window"],PRE_PROCES_PARAMS["shiftLen"],
                                   PRE_PROCES_PARAMS["sampling_rate"])
 
-magFFT = computeMagnitudSpectrum(testSetSegmentado, FFT_PARAMS)
+magFFT = computeMagnitudSpectrum(dataSetSegmentado, FFT_PARAMS)
+magFFT = np.mean(magFFT, axis = 4) #media a través de los segmentos
 
-trainingData, labels = getDataForTraining(magFFT, clases = frecStimulus)
-X_test, y_test = getDataForTraining(magFFT, clases = np.arange(0,12))
+X_tst, y_tst = getDataForTraining(magFFT, clases = np.arange(0,12))
 
-# Cálculo de métricas sobre datos de test
-y_pred = pipline.predict(X_test)
-precision, recall, f1,_ = precision_recall_fscore_support(y_test, y_pred, average='macro')
-accuracy = accuracy_score(y_test, y_pred)
+y_pred = modelo.predict(X_tst)
+precision, recall, f1,_ = precision_recall_fscore_support(y_tst, y_pred, average='macro')
+accuracy = accuracy_score(y_tst, y_pred)
 
 METRICAS['modelo']['tst']['Pr'] = precision
 METRICAS['modelo']['tst']['Rc'] = recall
 METRICAS['modelo']['tst']['Acc'] = accuracy
 METRICAS['modelo']['tst']['F1'] = f1
 
-#PCA
-
-components = 4
-clases = trainSet.shape[0]
-channels = trainSet.shape[1]
-samples = trainSet.shape[2]
-trials = trainSet.shape[3]
-
-trainSetPCA = np.zeros((clases, components, samples, trials))
-
-
-for clase in range(len(frecStimulus)):
-    pca = PCA(n_components = components)
-
-    data = trainSet[clase,:,:,:].reshape(channels, samples*trials).swapaxes(0,1)
-    pca.fit(data)
-    trainSetPCA[clase] = pca.transform(data).swapaxes(0,1).reshape(components,samples,trials)
-    
-components = 4
-clases = testSet.shape[0]
-channels = testSet.shape[1]
-samples = testSet.shape[2]
-trials = testSet.shape[3]
-
-testSetPCA = np.zeros((clases, components, samples, trials))
-
-
-for clase in range(len(frecStimulus)):
-    pca = PCA(n_components = components)
-
-    data = testSet[clase,:,:,:].reshape(channels, samples*trials).swapaxes(0,1)
-    pca.fit(data)
-    testSetPCA[clase] = pca.transform(data).swapaxes(0,1).reshape(components,samples,trials)
-    
-dataSetSegmentado = segmentingEEG(trainSetPCA, PRE_PROCES_PARAMS["window"],PRE_PROCES_PARAMS["shiftLen"],
-                                  PRE_PROCES_PARAMS["sampling_rate"])
-
-magFFT = computeMagnitudSpectrum(dataSetSegmentado, FFT_PARAMS)
-
-# trainingDataPCA, labelsPCA = getDataForTraining(magFFT, clases = frecStimulus)
-trainingDataPCA, labelsPCA = getDataForTraining(magFFT, clases = np.arange(0,12))
-
-X_trnPCA, X_valPCA, y_trnPCA, y_valPCA = train_test_split(trainingDataPCA, labelsPCA, test_size=.2)
-
-#eeg data segmentation
-testSetSegmentado = segmentingEEG(testSetPCA, PRE_PROCES_PARAMS["window"],PRE_PROCES_PARAMS["shiftLen"],
-                                  PRE_PROCES_PARAMS["sampling_rate"])
-
-magFFT = computeMagnitudSpectrum(testSetSegmentado, FFT_PARAMS)
-
-# trainingData, labels = getDataForTraining(magFFT, clases = frecStimulus)
-X_testPCA, y_testPCA = getDataForTraining(magFFT, clases = np.arange(0,12))
-
-# clasificadorPCA = LinearRegression()
-pipline = make_pipeline(StandardScaler(), LogisticRegression(solver = "newton-cg"))
-
-# clasificadorPCA.fit(X_trn, y_trn) #Entreno clasificador
-pipline.fit(X_trnPCA, y_trnPCA) 
-
-# Cálculo de métricas sobre datos de entrenamiento
-# y_pred = clasificadorPCA.predict(X_trn)
-y_pred = pipline.predict(X_trnPCA)
-
-# i = 0
-# for value in y_pred:
-#     difference = np.absolute(frecStimulus - value)
-#     y_pred[i] = frecStimulus[difference.argmin()]
-#     i += 1
-
-precision, recall, f1,_ = precision_recall_fscore_support(y_trnPCA, y_pred, average='macro')
-accuracy = accuracy_score(y_trnPCA, y_pred)
-
-# np.mean((y_trn - y_pred) ** 2)
-
-# clasificador.score(X_trn, y_trn)
-
-METRICAS['modelo+PCA'] = {'trn': {'Pr': None, 'Rc': None, 'Acc': None, 'F1':None},
-                           'val': {'Pr': None, 'Rc': None, 'Acc': None, 'F1':None},
-                           'tst': {'Pr': None, 'Rc': None, 'Acc': None, 'F1':None}}
-
-METRICAS['modelo+PCA']['trn']['Pr'] = precision
-METRICAS['modelo+PCA']['trn']['Rc'] = recall
-METRICAS['modelo+PCA']['trn']['Acc'] = accuracy
-METRICAS['modelo+PCA']['trn']['F1'] = f1
-
-
-y_pred = pipline.predict(X_valPCA)
-precision, recall, f1,_ = precision_recall_fscore_support(y_valPCA, y_pred, average='macro')
-accuracy = accuracy_score(y_valPCA, y_pred)
-
-METRICAS['modelo+PCA']['trn']['Pr'] = precision
-METRICAS['modelo+PCA']['trn']['Rc'] = recall
-METRICAS['modelo+PCA']['trn']['Acc'] = accuracy
-METRICAS['modelo+PCA']['trn']['F1'] = f1
-
-y_pred = pipline.predict(X_testPCA)
-precision, recall, f1,_ = precision_recall_fscore_support(y_testPCA, y_pred, average='macro')
-accuracy = accuracy_score(y_testPCA, y_pred)
-
-METRICAS['modelo+PCA']['tst']['Pr'] = precision
-METRICAS['modelo+PCA']['tst']['Rc'] = recall
-METRICAS['modelo+PCA']['tst']['Acc'] = accuracy
-METRICAS['modelo+PCA']['tst']['F1'] = f1
+print(METRICAS)
