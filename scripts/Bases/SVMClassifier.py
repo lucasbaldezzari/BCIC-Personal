@@ -99,7 +99,7 @@ class SVMClassifier():
         return self.MSF
     
     #Transofrmamos los datos del magnitud spectrum features en un formato para la SVM
-    def transformDataForSVM(self, features, canal = False):
+    def transformDataForClassifier(self, features, canal = False):
         """Preparación del set de entrenamiento.
             
         Argumentos:
@@ -138,7 +138,7 @@ class SVMClassifier():
         
         rawFeatures = self.computeMSF() #computamos la FFT para extraer las características
         
-        dataForSVM = self.transformDataForSVM(rawFeatures) #transformamos el espacio de características
+        dataForSVM = self.transformDataForClassifier(rawFeatures) #transformamos el espacio de características
         
         index = self.svm.predict(dataForSVM)[0] #clasificamos
         

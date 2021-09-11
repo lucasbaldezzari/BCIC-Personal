@@ -15,7 +15,7 @@ Los procesos principales son:
     - Control de trials: Pasado ntrials se finaliza la sesión.
     - Registro de EEG: Finalizada la sesión se guardan los datos con saveData() de fileAdmin
     
-    VERSIÓN: SCT-01-RevB
+************ VERSIÓN: SCT-01-RevB ************
     
     Funcionalidades:
         - Comunicación con las boards Cyton, Ganglion y Synthetic de OpenBCI
