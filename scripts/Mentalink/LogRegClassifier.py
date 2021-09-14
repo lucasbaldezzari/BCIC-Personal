@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Sep  9 11:12:08 2021
+Created on Fri Sep 10 17:46:17 2021
 
 @author: Lucas Baldezzari
 
-SVMClassifier: Clase que permiteusar un SVM para clasificar SSVEPs a partir de datos de EEG
+LogRegClassifier: Clase que permite usar un clasificador
+por Logistic Regression para clasificar SSVEPs a partir de datos de EEG
 
 ************ VERSIÓN SCP-01-RevA ************
 """
@@ -28,7 +29,7 @@ from utils import filterEEG, segmentingEEG, computeMagnitudSpectrum
 from utils import plotEEG
 import fileAdmin as fa
 
-class SVMClassifier():
+class LogRegClassifier():
     
     def __init__(self, modelFile, frecStimulus,
                  PRE_PROCES_PARAMS, FFT_PARAMS, path = "models"):
@@ -46,7 +47,7 @@ class SVMClassifier():
         os.chdir(path)
         
         with open(self.modelName, 'rb') as file:
-            self.svm = pickle.load(file)
+            self.logreg = pickle.load(file)
             
         os.chdir(actualFolder)
         
@@ -140,7 +141,7 @@ class SVMClassifier():
         
         dataForSVM = self.transformDataForClassifier(rawFeatures) #transformamos el espacio de características
         
-        index = self.svm.predict(dataForSVM)[0] #clasificamos
+        index = self.logreg.predict(dataForSVM)[0] #clasificamos
         
         return self.frecStimulusList[index] #retornamos la frecuencia clasificada
     
@@ -163,10 +164,9 @@ def main():
     """Loading the EEG data"""
     rawEEGs = fa.loadData(path = path, filenames = subjectsNames)
     
-    
     samples = rawEEGs[subjectsNames[0]]["eeg"].shape[2] #the are the same for all sobjecs and trials
     
-    #Filtering de EEG
+    #Variables para preprocesamiento EEG
     PRE_PROCES_PARAMS = {
                     'lfrec': 5.,
                     'hfrec': 38.,
@@ -200,9 +200,9 @@ def main():
     
     path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases',"models")
     
-    modelFile = "SVM1.pkl"
+    modelFile = "LogRegS8.pkl"
         
-    svm = SVMClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, path = path)
+    logreg = LogRegClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, path = path)
     
     #De nuestro set de datos seleccionamos el EEG de correspondiente a una clase y un trial.
     #Es importante tener en cuenta que los datos de OpenBCI vienen en la forma [canales x samples]
@@ -212,7 +212,7 @@ def main():
     
     rawEEG = testSet[clase - 1, :, : , trial - 1]
     
-    frecClasificada = svm.getClassification(rawEEG = rawEEG)
+    frecClasificada = logreg.getClassification(rawEEG = rawEEG)
     print(f"El estímulo clasificado fue {frecClasificada}")
     
     clase = 9 #corresponde al estímulo de 14.25Hz
@@ -220,9 +220,10 @@ def main():
     
     rawEEG = testSet[clase - 1, :, : , trial - 1]
     
-    frecClasificada = svm.getClassification(rawEEG = rawEEG)
+    frecClasificada = logreg.getClassification(rawEEG = rawEEG)
     print(f"El estímulo clasificado fue {frecClasificada}")
 
 
 if __name__ == "__main__":
     main()
+
