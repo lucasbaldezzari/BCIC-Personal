@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Jun 23 09:57:43 2021
+Created on Wed Sep 16 2021
 
 @author: Lucas Baldezzari
 
-
-Módulo de control utilizado para adquirir y almacenar datos de EEG.
+Módulo para adquirir, procesar y clasificar señales de EEG en busca de SSVEPs para obtener un comando
 
 Los procesos principales son:
     - Seteo de parámetros y conexión con placa OpenBCI (Synthetic, Cyton o Ganglion)
@@ -13,17 +12,19 @@ Los procesos principales son:
     - Comunicación con placa Arduino para control de estímulos.
     - Adquisición de señales de EEG a partir de la placa OpenBCI.
     - Control de trials: Pasado ntrials se finaliza la sesión.
-    - Registro de EEG: Finalizada la sesión se guardan los datos con saveData() de fileAdmin
+    - Sobre el EEG: Procesamiento, extracción de características, clasificación y obtención de un comando (traducción)
     
-    VERSIÓN: SCT-01-RevB
+    *********** VERSIÓN: SCT-01-RevA ***********
     
     Funcionalidades:
         - Comunicación con las boards Cyton, Ganglion y Synthetic de OpenBCI
         - Comunicación con Arduino
         - Control de trials
-        - Registro de datos adquiridos durante la sesión de entrenamiento.
+        - Procesamiento, extracción de características, clasificación y obtención de un comando (traducción)
+        - Actualización de variables de estado que se envían al Arduino M1
 
 """
+
 
 import os
 import argparse
@@ -58,7 +59,7 @@ def main():
               "ganglion": BoardIds.GANGLION_BOARD, #IMPORTANTE: frecuencia muestro 200Hz
               "synthetic": BoardIds.SYNTHETIC_BOARD}
     
-    placa = placas["synthetic"]  
+    placa = placas["ganglion"]  
     
     puerto = "COM5" #Chequear el puerto al cual se conectará la placa
     
@@ -111,12 +112,12 @@ def main():
 
     """Defino variables para control de Trials"""
     
-    trials = 5 #cantidad de trials. Sirve para la sesión de entrenamiento.
-    #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
-    trialDuration = 3 #secs
-    stimuliDuration = 2 #secs
+    trials = 2 #None implica que se ejecutaran trials de manera indeterminada
+    
+    trialDuration = 10 #secs #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
+    stimuliDuration = 5 #secs
 
-    saveData = True
+    classifyData = True
     
     EEGdata = []
     fm = 200.
@@ -135,37 +136,23 @@ def main():
     ntrials = None (default)
     """
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
-    #En este ejemplo esta conectada en el COM3
-    arduino = AC('COM3', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM6', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
     time.sleep(2) 
-    
-    path = "recordedEEG" #directorio donde se almacenan los registros de EEG.
-    
-    #El siguiente diccionario se usa para guardar información relevante cómo así también los datos de EEG
-    #registrados durante la sesión de entrenamiento.
-    dictionary = {
-                'subject': 'testGanglion',
-                'date': '27/08/2021',
-                'generalInformation': 'Estímulo a 30cm. Color rojo. Probando en el taller 6.',
-                'stimFrec': "7",
-                'channels': [1,2,3,4], 
-                 'dataShape': [stimuli, channels, samplePoints, trials],
-                  'eeg': None
-                    }
 
     arduino.iniSesion() #Inicio sesión en el Arduino.
-    # graph = Graph(board_shim)
+
     time.sleep(1) 
 
     try:
         while arduino.generalControl() == b"1":
-            if saveData and arduino.systemControl[1] == b"0":
+            if classifyData and arduino.systemControl[1] == b"0":
                 currentData = data_thread.getData(stimuliDuration)
+                print(currentData.shape)
                 EEGdata.append(currentData)
-                saveData = False
-            elif saveData == False and arduino.systemControl[1] == b"1":
-                saveData = True
+                classifyData = False
+            elif classifyData == False and arduino.systemControl[1] == b"1":
+                classifyData = True
         
     except BaseException as e:
         logging.warning('Exception', exc_info=True)
@@ -177,14 +164,5 @@ def main():
             
         arduino.close() #cierro comunicación serie para liberar puerto COM
         
-        #Guardo los datos registrados por la placa
-        EEGdata = np.asarray(EEGdata)
-        rawEEG = EEGdata.reshape(1,EEGdata.shape[0],EEGdata.shape[1],EEGdata.shape[2])
-        rawEEG = rawEEG.swapaxes(1,2).swapaxes(2,3)
-        dictionary["eeg"] = rawEEG
-        fa.saveData(path = path,dictionary = dictionary, fileName = dictionary["subject"])
-        
 if __name__ == "__main__":
         main()
-        
-        

@@ -423,3 +423,8 @@ def barPlotSubjects(medias, varianzas,
             
         os.chdir(pathACtual)
 
+# def transformDataToGetFeatures(eeg):
+#     rawEEG = eeg.reshape(1,eeg.shape[0],eeg.shape[1],eeg.shape[2])
+#     # rawEEG = rawEEG.swapaxes(1,2).swapaxes(2,3)
+#     # dictionary["eeg"] = rawEEG
+#     # fa.classifyData(path = path,dictionary = dictionary, fileName = dictionary["subject"])
