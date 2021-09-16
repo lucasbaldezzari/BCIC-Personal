@@ -45,6 +45,7 @@ from ArduinoCommunication import ArduinoCommunication as AC
 from DataThread import DataThread as DT
 from GraphModule import GraphModule as Graph       
 import fileAdmin as fa
+import SVMClassifier as SVMClassifier
 
 def main():
     
@@ -59,7 +60,7 @@ def main():
               "ganglion": BoardIds.GANGLION_BOARD, #IMPORTANTE: frecuencia muestro 200Hz
               "synthetic": BoardIds.SYNTHETIC_BOARD}
     
-    placa = placas["ganglion"]  
+    placa = placas["synthetic"]  
     
     puerto = "COM5" #Chequear el puerto al cual se conectará la placa
     
@@ -120,11 +121,45 @@ def main():
     classifyData = True
     
     EEGdata = []
-    fm = 200.
+    fm = BoardShim.get_sampling_rate(args.board_id) #200.
     
     samplePoints = int(fm*stimuliDuration)
     channels = 4
     stimuli = 1 #one stimulus
+
+    """
+    Cargamos clasificador
+    """
+
+    path = "E:\reposBCICompetition\BCIC-Personal\scripts\Bases\models"
+    
+    path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases',"models")
+    
+    modelFile = "SVM1.pkl"
+
+    #Filtering de EEG
+    PRE_PROCES_PARAMS = {
+                    'lfrec': 5.,
+                    'hfrec': 38.,
+                    'order': 4,
+                    'sampling_rate': fm,
+                    'bandStop': 50.,
+                    'window': 4,
+                    'shiftLen':4
+                    }
+    
+    #IMPORTANTE: La resolución DEBE ser la misma con la que se entrenó el clasificador.
+    
+    resolution = np.round(fm/samplePoints, 4)
+    
+    FFT_PARAMS = {
+                    'resolution': resolution,#0.2930,
+                    'start_frequency': 5.0,
+                    'end_frequency': 38.0,
+                    'sampling_rate': fm
+                    }
+        
+    svm = SVMClassifier(modelFile, fm, PRE_PROCES_PARAMS, FFT_PARAMS, path = path)
     
     """Inicio comunicación con Arduino instanciando un objeto AC (ArduinoCommunication)
     en el COM3, con un timing de 100ms

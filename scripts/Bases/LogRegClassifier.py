@@ -177,7 +177,7 @@ def main():
                     'shiftLen':4
                     }
     
-    resolution = fm/samples
+    resolution = np.round(fm/samples, 4)
     
     FFT_PARAMS = {
                     'resolution': resolution,#0.2930,

@@ -210,9 +210,8 @@ def main():
     """Loading the EEG data"""
     rawEEGs = fa.loadData(path = path, filenames = subjectsNames)
     
-    
-    samples = rawEEGs[subjectsNames[0]]["eeg"].shape[2] #the are the same for all sobjecs and trials
-    
+    samples = rawEEGs[subjectsNames[0]]["eeg"].shape[2] - muestraDescarte #the are the same for all sobjecs and trials
+
     #Filtering de EEG
     PRE_PROCES_PARAMS = {
                     'lfrec': 5.,
@@ -224,8 +223,8 @@ def main():
                     'shiftLen':4
                     }
     
-    resolution = fm/samples
-    
+    resolution = np.round(fm/tiempoTotal, 4)
+   
     FFT_PARAMS = {
                     'resolution': resolution,#0.2930,
                     'start_frequency': 5.0,
@@ -242,7 +241,7 @@ def main():
                                             orden = 4, bandStop = 50. , fm  = fm)
         
     trainSet = rawEEGs["s8"]["eeg"][:,:,:,:11] #me quedo con los primeros 11 trials para entrenamiento y validación
-    
+
     testSet = rawEEGs["s8"]["eeg"][:,:,:,11:]
     
     svm1 = SVMTrainingModule(trainSet, "8",PRE_PROCES_PARAMS,FFT_PARAMS,modelName = "SVM1")
