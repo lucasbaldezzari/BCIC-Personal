@@ -232,19 +232,23 @@ def main():
                     'sampling_rate': fm
                     }
     
-    for subject in subjectsNames:
-        eeg = rawEEGs[subject]["eeg"]
-        eeg = eeg[:,:, muestraDescarte: ,:]
-        eeg = eeg[:,:, :tiempoTotal ,:]
-        rawEEGs[subject]["eeg"] = filterEEG(eeg,lfrec = PRE_PROCES_PARAMS["lfrec"],
-                                            hfrec = PRE_PROCES_PARAMS["hfrec"],
-                                            orden = 4, bandStop = 50. , fm  = fm)
-        
+    # for subject in subjectsNames:
+    #     eeg = rawEEGs[subject]["eeg"]
+    #     eeg = eeg[:,:, muestraDescarte: ,:]
+    #     eeg = eeg[:,:, :tiempoTotal ,:]
+    #     rawEEGs[subject]["eeg"] = filterEEG(eeg,lfrec = PRE_PROCES_PARAMS["lfrec"],
+    #                                         hfrec = PRE_PROCES_PARAMS["hfrec"],
+    #                                         orden = 4, bandStop = 50. , fm  = fm)
+    canales = 4
+    rawEEGs["s8"]["eeg"] = rawEEGs["s8"]["eeg"][:,:, muestraDescarte: ,:]    
+    rawEEGs["s8"]["eeg"] = rawEEGs["s8"]["eeg"][:,:, :tiempoTotal ,:]
+    rawEEGs["s8"]["eeg"] = rawEEGs["s8"]["eeg"][:, 0:canales, :, :]
+    print(rawEEGs["s8"]["eeg"].shape)
     trainSet = rawEEGs["s8"]["eeg"][:,:,:,:11] #me quedo con los primeros 11 trials para entrenamiento y validación
 
     testSet = rawEEGs["s8"]["eeg"][:,:,:,11:]
     
-    svm1 = SVMTrainingModule(trainSet, "8",PRE_PROCES_PARAMS,FFT_PARAMS,modelName = "SVM1")
+    svm1 = SVMTrainingModule(trainSet, "8",PRE_PROCES_PARAMS,FFT_PARAMS, modelName = "SVM14Channels")
     
     spectrum = svm1.computeMSF()
     

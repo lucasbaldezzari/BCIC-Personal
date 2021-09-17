@@ -141,8 +141,6 @@ class SVMClassifier():
         dataForSVM = self.transformDataForClassifier(rawFeatures) #transformamos el espacio de características
         
         index = self.svm.predict(dataForSVM)[0] #clasificamos
-
-        print(type(index))
         
         return self.frecStimulusList[index] #retornamos la frecuencia clasificada
     
@@ -188,13 +186,18 @@ def main():
                     'sampling_rate': fm
                     }
     
-    for subject in subjectsNames:
-        eeg = rawEEGs[subject]["eeg"]
-        eeg = eeg[:,:, muestraDescarte: ,:]
-        eeg = eeg[:,:, :tiempoTotal ,:]
-        rawEEGs[subject]["eeg"] = filterEEG(eeg,lfrec = PRE_PROCES_PARAMS["lfrec"],
-                                            hfrec = PRE_PROCES_PARAMS["hfrec"],
-                                            orden = 4, bandStop = 50. , fm  = fm)
+    # for subject in subjectsNames:
+    #     eeg = rawEEGs[subject]["eeg"]
+    #     eeg = eeg[:,:, muestraDescarte: ,:]
+    #     eeg = eeg[:,:, :tiempoTotal ,:]
+    #     rawEEGs[subject]["eeg"] = filterEEG(eeg,lfrec = PRE_PROCES_PARAMS["lfrec"],
+    #                                         hfrec = PRE_PROCES_PARAMS["hfrec"],
+    #                                         orden = 4, bandStop = 50. , fm  = fm)
+
+    canales = 4
+    rawEEGs["s8"]["eeg"] = rawEEGs["s8"]["eeg"][:,:, muestraDescarte: ,:]    
+    rawEEGs["s8"]["eeg"] = rawEEGs["s8"]["eeg"][:,:, :tiempoTotal ,:]
+    rawEEGs["s8"]["eeg"] = rawEEGs["s8"]["eeg"][:, 0:canales, :, :]
         
     testSet = rawEEGs["s8"]["eeg"][:,:,:,11:] #seleccionamos los últimos 4 trials
     
@@ -202,7 +205,7 @@ def main():
     
     path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases',"models")
     
-    modelFile = "SVM1.pkl"
+    modelFile = "SVM14Channels.pkl"
         
     svm = SVMClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, path = path)
     

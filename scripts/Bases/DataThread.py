@@ -75,7 +75,7 @@ def main():
     
     path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases',"models")
     
-    modelFile = "SVM1.pkl"
+    modelFile = "SVM14Channels.pkl"
 
     window = 4
     # fm = BoardShim.get_sampling_rate(board_id)
@@ -107,7 +107,7 @@ def main():
     try:
         time.sleep(5)
         rawEEG = data_thread.getData(4)
-        #print(rawEEG.shape)
+        print(rawEEG.shape)
         frecClasificada = svm.getClassification(rawEEG = rawEEG[:8, :])
         print(f"El estímulo clasificado fue {frecClasificada}")
         # print(currentData[:4, :].shape)

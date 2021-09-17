@@ -45,7 +45,7 @@ from ArduinoCommunication import ArduinoCommunication as AC
 from DataThread import DataThread as DT
 from GraphModule import GraphModule as Graph       
 import fileAdmin as fa
-import SVMClassifier as SVMClassifier
+from SVMClassifier import SVMClassifier as SVMClassifier
 
 def main():
     
@@ -60,7 +60,7 @@ def main():
               "ganglion": BoardIds.GANGLION_BOARD, #IMPORTANTE: frecuencia muestro 200Hz
               "synthetic": BoardIds.SYNTHETIC_BOARD}
     
-    placa = placas["synthetic"]  
+    placa = placas["ganglion"]  
     
     puerto = "COM5" #Chequear el puerto al cual se conectará la placa
     
@@ -116,7 +116,7 @@ def main():
     trials = 2 #None implica que se ejecutaran trials de manera indeterminada
     
     trialDuration = 10 #secs #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
-    stimuliDuration = 5 #secs
+    stimuliDuration = 4 #secs
 
     classifyData = True
     
@@ -135,7 +135,7 @@ def main():
     
     path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases',"models")
     
-    modelFile = "SVM1.pkl"
+    modelFile = "SVM14Channels.pkl"
 
     #Filtering de EEG
     PRE_PROCES_PARAMS = {
@@ -149,8 +149,8 @@ def main():
                     }
     
     #IMPORTANTE: La resolución DEBE ser la misma con la que se entrenó el clasificador.
-    
     resolution = np.round(fm/samplePoints, 4)
+    print("resolucion:",resolution)
     
     FFT_PARAMS = {
                     'resolution': resolution,#0.2930,
@@ -158,11 +158,13 @@ def main():
                     'end_frequency': 38.0,
                     'sampling_rate': fm
                     }
+
+    frecStimulus = np.array([9.25, 11.25, 13.25, 9.75, 11.75, 13.75, 10.25, 12.25, 14.25, 10.75, 12.75, 14.75])    
         
-    svm = SVMClassifier(modelFile, fm, PRE_PROCES_PARAMS, FFT_PARAMS, path = path)
+    svm = SVMClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, path = path)
     
     """Inicio comunicación con Arduino instanciando un objeto AC (ArduinoCommunication)
-    en el COM3, con un timing de 100ms
+    en el COM8, con un timing de 100ms
     
     - El objeto ArduinoCommunication generará una comunicación entre la PC y el Arduino
     una cantidad de veces dada por el parámetro "ntrials". Pasado estos n trials se finaliza la sesión.
@@ -171,7 +173,7 @@ def main():
     ntrials = None (default)
     """
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
-    arduino = AC('COM6', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM8', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
     time.sleep(2) 
 
@@ -182,9 +184,11 @@ def main():
     try:
         while arduino.generalControl() == b"1":
             if classifyData and arduino.systemControl[1] == b"0":
-                currentData = data_thread.getData(stimuliDuration)
-                print(currentData.shape)
-                EEGdata.append(currentData)
+                rawEEG = data_thread.getData(stimuliDuration)
+                # print(rawEEG.shape)
+                # EEGdata.append(currentData)
+                frecClasificada = svm.getClassification(rawEEG = rawEEG)
+                print(frecClasificada)
                 classifyData = False
             elif classifyData == False and arduino.systemControl[1] == b"1":
                 classifyData = True
