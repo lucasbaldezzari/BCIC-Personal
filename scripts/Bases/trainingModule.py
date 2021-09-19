@@ -25,24 +25,19 @@ Los procesos principales son:
 
 """
 
-import os
 import argparse
 import time
 import logging
 import numpy as np
-import threading
 # import matplotlib.pyplot as plt
 
 # import pyqtgraph as pg
 # from pyqtgraph.Qt import QtGui, QtCore
 
-import brainflow
-from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds, BrainFlowError
-from brainflow.data_filter import DataFilter, FilterTypes, AggOperations, WindowFunctions, DetrendOperations
+from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds
 from ArduinoCommunication import ArduinoCommunication as AC
 
-from DataThread import DataThread as DT
-from GraphModule import GraphModule as Graph       
+from DataThread import DataThread as DT    
 import fileAdmin as fa
 
 def main():
@@ -111,10 +106,10 @@ def main():
 
     """Defino variables para control de Trials"""
     
-    trials = 5 #cantidad de trials. Sirve para la sesión de entrenamiento.
+    trials = 15 #cantidad de trials. Sirve para la sesión de entrenamiento.
     #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
-    trialDuration = 3 #secs
-    stimuliDuration = 2 #secs
+    trialDuration = 10 #secs
+    stimuliDuration = 5 #secs
 
     saveData = True
     

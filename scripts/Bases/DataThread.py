@@ -7,14 +7,11 @@ Created on Wed Jun 23 11:27:24 2021
 """
 
 import time
-import brainflow
 import numpy as np
 import threading
 
 from brainflow.board_shim import BoardShim, BrainFlowInputParams, LogLevels, BoardIds
-from brainflow.data_filter import DataFilter, FilterTypes, AggOperations
 import os
-import fileAdmin as fa
 from SVMClassifier import SVMClassifier as SVMClassifier
 
 

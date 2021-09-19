@@ -232,30 +232,23 @@ def main():
                     'sampling_rate': fm
                     }
     
-    # for subject in subjectsNames:
-    #     eeg = rawEEGs[subject]["eeg"]
-    #     eeg = eeg[:,:, muestraDescarte: ,:]
-    #     eeg = eeg[:,:, :tiempoTotal ,:]
-    #     rawEEGs[subject]["eeg"] = filterEEG(eeg,lfrec = PRE_PROCES_PARAMS["lfrec"],
-    #                                         hfrec = PRE_PROCES_PARAMS["hfrec"],
-    #                                         orden = 4, bandStop = 50. , fm  = fm)
     canales = 4
     rawEEGs["s8"]["eeg"] = rawEEGs["s8"]["eeg"][:,:, muestraDescarte: ,:]    
     rawEEGs["s8"]["eeg"] = rawEEGs["s8"]["eeg"][:,:, :tiempoTotal ,:]
     rawEEGs["s8"]["eeg"] = rawEEGs["s8"]["eeg"][:, 0:canales, :, :]
-    print(rawEEGs["s8"]["eeg"].shape)
     trainSet = rawEEGs["s8"]["eeg"][:,:,:,:11] #me quedo con los primeros 11 trials para entrenamiento y validación
 
     testSet = rawEEGs["s8"]["eeg"][:,:,:,11:]
     
     svm1 = SVMTrainingModule(trainSet, "8",PRE_PROCES_PARAMS,FFT_PARAMS, modelName = "SVM14Channels")
     
-    spectrum = svm1.computeMSF()
+    spectrum = svm1.computeMSF() #Computamos el espectro de Fourier de la señal
     
-    modelo = svm1.createSVM(kernel = "linear", gamma = "scale", C = 1)
+    modelo = svm1.createSVM(kernel = "linear", gamma = "scale", C = 1) #Creamos el modelo SVM
     
-    metricas = svm1.trainAndValidateSVM(clases = np.arange(0,12), test_size = 0.2)
+    metricas = svm1.trainAndValidateSVM(clases = np.arange(0,12), test_size = 0.2) #entrenamos el modelo
     
+    print("**** METRICAS ****")
     print(metricas)
     
     #Checking the features used to train the SVM

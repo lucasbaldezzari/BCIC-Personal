@@ -14,12 +14,6 @@ import numpy as np
 import numpy.matlib as npm
 import pandas as pd
 
-from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
-from sklearn.svm import SVC
-
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import precision_recall_fscore_support
-
 import pickle
 
 import matplotlib.pyplot as plt
@@ -112,7 +106,7 @@ class SVMClassifier():
             Con forma [trials*clases x number of features]
             - Labels: labels para entrenar el modelo a partir de las clases"""
         
-        print("Transformando datos para clasificarlos")
+        #print("Transformando datos para clasificarlos")
         
         numFeatures = features.shape[0]
         canales = features.shape[1]
