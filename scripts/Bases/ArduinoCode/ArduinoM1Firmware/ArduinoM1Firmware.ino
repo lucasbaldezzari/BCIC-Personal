@@ -167,32 +167,35 @@ void checkMessage(char val)
 
     case 2: //indica hacia donde se debe mover el vehículo
       char comando = incDataFromPC[bufferIndex];
-      sendCommand(comando); //Es mejor hacer sendCommand(incDataFromPC[bufferIndex])
+      sendMensajeBT(); //Es mejor hacer sendCommand(incDataFromPC[bufferIndex])
       break;          
   }
   bufferIndex++;
   if (bufferIndex >= inBuffDataFromPC) bufferIndex = 0;
 };
 
+
 /*
 Función: sendCommand()
 - Se usa para enviar un comando al vehículo robótico y recibir el estado del mismo.
 */
-void sendCommand(char comando)
+void sendCommand()
 {
-      /*
-      Implementar código para enviar un mensaje por bluetooth
-      ...
-      */
+    /*
+    Implementar código para enviar un mensaje por bluetooth
+    ...
+    */
     //Cargo datos en buffer de internalStatus para simular que el robot ve algunos obstáculos
-    internalStatus[FORWARD_INDEX] = OBSTACULO_DETECTADO;
-    internalStatus[LEFT_INDEX] = OBSTACULO_DETECTADO;
-    internalStatus[RIGHT_INDEX] = SIN_OBSTACULO;
-    internalStatus[BEHIND_INDEX] = SIN_OBSTACULO;  
+    byte mensaje = (incDataFromPC[0])|(incDataFromPC[1]<<1)|(incDataFromPC[2]<<2)
+    /*
+    Recordar que:
+    - incDataFromPC[0]: Estado de sesión (RUNNING = 1, STOP = 0)
+    - incDataFromPC[1]: Estado trial (ON = 1, OFF = 0)
+    - incDataFromPC[2]: Comando (0=adelante, 1=atras...)
 
-      // if (comando == 0) movimiento = STOP; 
-      // if (comando== 1) movimiento = ADELANTE; 
-      // if (comando == 2) movimiento = DERECHA; 
-      // if (comando == 3) movimiento = ATRAS; 
-      // if (comando == 4) movimiento = IZQUIERDA;
+    i) mensaje = (0b00000001)|(0b00000000<<1)|(0b00000100<<2)
+    ii) mensaje = (0b00000001)|(0b00000000)|(0b00100000)
+    iii) mensaje = 0b00100001
+    */
+    BT.write(mensaje) //enviamos mensaje por bluetooth
 }
