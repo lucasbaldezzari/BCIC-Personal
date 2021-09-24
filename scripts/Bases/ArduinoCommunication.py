@@ -7,7 +7,9 @@ Clase Arduino.
 Clase para comunicación entre Arduino y PC utilizando la libreria PYSerial
 
 
-        VERSIÓN: SCT-01-RevA
+        VERSIÓN: SCT-01-RevB (24/9/2021)
+
+        Se agrega lista de movimientos en variable self.movements para enviar comandos a través del puerto serie
 """
 
 import serial
@@ -53,9 +55,24 @@ class ArduinoCommunication:
         self.trial = 1
         self.trialsNumber = ntrials
         
+        self.movements = [b'0',b'1',b'2',b'3',b'4',b'5'] #lista con los compandos
+        """
+        movements:
+            b'0' = STOP (Neurorace) / ADELANTE (Mentalink)
+            b'1' = ADELANTE (Neurorace) /  45° ADELANTE E IZQUIERDA (Mentalink)
+            b'2' = LEFT (Neurorace) / IZQUIERDA (Mentalink)
+            b'3' = ATRAS (Neurorace) / ATRAS (Mentalink)
+            b'4' = DERECHA (Neuorace) / DERECHA (Mentalink)
+            b'5' = 45° ADELANTE Y DERECHA (Mentalink)
+
+            #El STOP de mentalink será self.moveOrder = b'63' (0b00111111)
+
+        """
+
         self.sessionStatus = b"1" #sesión en marcha
         self.stimuliStatus = b"0" #los estimulos empiezan apagados
-        self.moveOrder = b"0" #EL robot empieza en STOP
+        self.moveOrder = self.movements[0] #EL robot empieza en STOP
+        # self.moveOrder = b'63' #El STOP de mentalink será self.moveOrder = b'63' (0b00111111)
         """
         self.moveOrder
         - 0: STOP
@@ -220,10 +237,13 @@ def main():
     #En el caso de querer ejecutar Trials de manera indeterminada,
     #debe hacerse trials = None (default)
     """
-    ard = ArduinoCommunication('COM3', trialDuration = 8, stimONTime = 4,
+    ard = ArduinoCommunication('COM6', trialDuration = 2, stimONTime = 1,
                                timing = 100, ntrials = 2)
 
     ard.iniSesion()
+
+    #Simulamos que enviamos el comando de movimiento número cuatro
+    ard.systemControl[2] = ard.movements[3] #comando número 4
     
     while ard.generalControl() == b"1":
         pass
