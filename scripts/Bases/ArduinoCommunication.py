@@ -66,7 +66,6 @@ class ArduinoCommunication:
             b'5' = 45° ADELANTE Y DERECHA (Mentalink)
 
             #El STOP de mentalink será self.moveOrder = b'63' (0b00111111)
-
         """
 
         self.sessionStatus = b"1" #sesión en marcha
@@ -84,6 +83,8 @@ class ArduinoCommunication:
         self.systemControl = [self.sessionStatus,
                              self.stimuliStatus,
                              self.moveOrder]
+
+        self.stateFile = "stateFile.txt"
          
         self.useExternalTimer = useExternalTimer
         self.timerEnable = 0
@@ -149,6 +150,16 @@ class ArduinoCommunication:
         estadoRobot = self.sendMessage(self.systemControl)
         print("Estado inicial del ROBOT:", estadoRobot)
         
+        #Actualizamos archivo de estados
+        estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
+                    int(estadoRobot[0]),
+                    int(estadoRobot[1]),
+                    int(estadoRobot[2])]
+        file = open(self.stateFile, "w")
+        for estado in estados:
+            file.write(str(estado) + "\n")
+        file.close()
+        
         self.iniTimer()
         print("Sesión iniciada")
         print("Trial inicial")
@@ -168,6 +179,17 @@ class ArduinoCommunication:
                              self.moveOrder]
         
         estadoRobot = self.sendMessage(self.systemControl)
+
+        #Actualizamos archivo de estados
+        estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
+                    int(estadoRobot[0]),
+                    int(estadoRobot[1]),
+                    int(estadoRobot[2])]
+        file = open(self.stateFile, "w")
+        for estado in estados:
+            file.write(str(estado) + "\n")
+        file.close()
+
         print("Estado final del ROBOT:", estadoRobot)
         print("Sesión Finalizada")
         print(f"Trial final {self.trial - 1}")
@@ -187,11 +209,33 @@ class ArduinoCommunication:
         
             self.systemControl[1] = b"0" #apagamos estímulos
             estadoRobot = self.sendMessage(self.systemControl)
+
+            #Actualizamos archivo de estados
+            estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
+                        int(estadoRobot[0]),
+                        int(estadoRobot[1]),
+                        int(estadoRobot[2])]
+            print(estados)
+            file = open(self.stateFile, "w")
+            for estado in estados:
+                file.write(str(estado) + "\n")
+            file.close()
              
         if self.counter == self.trialDuration: 
             
             self.systemControl[1] = b"1"
             estadoRobot = self.sendMessage(self.systemControl)
+
+            #Actualizamos archivo de estados
+            estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
+                        int(estadoRobot[0]),
+                        int(estadoRobot[1]),
+                        int(estadoRobot[2])]
+            file = open(self.stateFile, "w")
+            for estado in estados:
+                file.write(str(estado) + "\n")
+            file.close()
+
             print(f"Fin trial {self.trial}")
             print("")
             self.trial += 1 #incrementamos un trial

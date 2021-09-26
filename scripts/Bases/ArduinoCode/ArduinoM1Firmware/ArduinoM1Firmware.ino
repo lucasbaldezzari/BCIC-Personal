@@ -21,8 +21,8 @@ char bufferIndex = 0;
 bool sendDataFlag = 0;
 bool newMessage = false;
 
-byte internalStatus[4]; //variable para enviar datos a la PC
-char internalStatusBuff = 4;
+byte robotStatus[3]; //variable para enviar datos a la PC
+char robotStatusBuff = 3;
 
 byte outputDataToRobot[4]; //variable para enviar datos al robot
 char buffOutDataRobotSize = 4;
@@ -101,10 +101,10 @@ void serialEvent()
 if (Serial.available() > 0) 
   {
     char val = (Serial.read()) - '0';
-    checkMessage(val); //chequeamos mensaje entrante        
-    for(int index = 0; index < internalStatusBuff; index++) //enviamos estado 
+    checkSerialMessage(val); //chequeamos mensaje entrante        
+    for(int index = 0; index < robotStatusBuff; index++) //enviamos estado 
       {
-        Serial.write(internalStatus[index]);
+        Serial.write(robotStatus[index]);
       }
       Serial.write("\n");
   }
@@ -119,6 +119,13 @@ ISR(TIMER0_COMPA_vect)//Rutina interrupción Timer0.
     digitalWrite(estimIzq,0);
     digitalWrite(estimDer,0);
     digitalWrite(LEDTesteo,1);
+  }
+
+  if(1) //para simular que tenemos un mensaje por bluetooth
+  //if(BT.available()) //Si tenemos un mensaje por bluetooth lo leemos
+  {
+      byte mensajeBT = 0b00000011; //simulamos un obstaculo adelante y a la izquierda
+    checkBTMessage(mensajeBT);
   }
 };
 
@@ -161,7 +168,7 @@ void stimuliControl()
   }
 }
 
-void checkMessage(char val)
+void checkSerialMessage(char val)
 {
   incDataFromPC[bufferIndex] = val;
   switch(bufferIndex)
@@ -187,10 +194,23 @@ void checkMessage(char val)
   bufferIndex++;
   if (bufferIndex >= inBuffDataFromPC) //hemos recibido todos los bytes desde la PC
   {
-    //sendMensajeBT();
+    sendMensajeBT();
     bufferIndex = 0;
   }
 };
+
+void checkBTMessage(char val)
+{
+  //Actualizmaos el estado interno del robot
+  if((val>>0)&0b00000001 == 1) robotStatus[FORWARD_INDEX] = OBSTACULO_DETECTADO;
+  else robotStatus[FORWARD_INDEX] = SIN_OBSTACULO;
+
+  if((val>>1)&0b00000001 == 1) robotStatus[LEFT_INDEX] = OBSTACULO_DETECTADO;
+  else robotStatus[LEFT_INDEX] = SIN_OBSTACULO;
+
+  if((val>>2)&0b00000001 == 1) robotStatus[RIGHT_INDEX] = OBSTACULO_DETECTADO;
+  else robotStatus[RIGHT_INDEX] = SIN_OBSTACULO;
+}
 
 
 /*
