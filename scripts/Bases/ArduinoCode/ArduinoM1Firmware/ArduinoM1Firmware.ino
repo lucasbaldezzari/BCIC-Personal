@@ -77,7 +77,7 @@ char movimiento = 0; //Robot en STOP
 /******************************************************************
   Bluetooth
 ******************************************************************/
-SoftwareSerial BT(2,3); //(RX,TX)
+SoftwareSerial BT(2,3); //(RX||TX)
 
 //FUNCION SETUP
 void setup()
@@ -89,7 +89,7 @@ void setup()
   pinMode(LEDTesteo,OUTPUT);
   iniTimer0(frecTimer); //inicio timer 0
   Serial.begin(19200); //iniciamos comunicación serie
-  BT.begin(38400);//iniciamos comunicación Bluetooth
+  BT.begin(9600);//iniciamos comunicación Bluetooth
   delay(1000);
   interrupts();//Habilito las interrupciones
 }

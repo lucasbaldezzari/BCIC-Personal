@@ -215,7 +215,6 @@ class ArduinoCommunication:
                         int(estadoRobot[0]),
                         int(estadoRobot[1]),
                         int(estadoRobot[2])]
-            print(estados)
             file = open(self.stateFile, "w")
             for estado in estados:
                 file.write(str(estado) + "\n")
@@ -281,13 +280,13 @@ def main():
     #En el caso de querer ejecutar Trials de manera indeterminada,
     #debe hacerse trials = None (default)
     """
-    ard = ArduinoCommunication('COM6', trialDuration = 2, stimONTime = 1,
+    ard = ArduinoCommunication('COM7', trialDuration = 4, stimONTime = 2,
                                timing = 100, ntrials = 2)
-
+    time.sleep(3)
     ard.iniSesion()
 
     #Simulamos que enviamos el comando de movimiento número cuatro
-    ard.systemControl[2] = ard.movements[3] #comando número 4
+    ard.systemControl[2] = ard.movements[1] #comando número 4 (b'3')
     
     while ard.generalControl() == b"1":
         pass
