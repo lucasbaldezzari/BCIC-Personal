@@ -209,7 +209,7 @@ class ArduinoCommunication:
         
             self.systemControl[1] = b"0" #apagamos estímulos
             estadoRobot = self.sendMessage(self.systemControl)
-
+            print("Estado ROBOT:", estadoRobot)
             #Actualizamos archivo de estados
             estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
                         int(estadoRobot[0]),
@@ -224,6 +224,7 @@ class ArduinoCommunication:
             
             self.systemControl[1] = b"1"
             estadoRobot = self.sendMessage(self.systemControl)
+            print("Estado ROBOT:", estadoRobot)
 
             #Actualizamos archivo de estados
             estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
@@ -280,9 +281,9 @@ def main():
     #En el caso de querer ejecutar Trials de manera indeterminada,
     #debe hacerse trials = None (default)
     """
-    ard = ArduinoCommunication('COM7', trialDuration = 4, stimONTime = 2,
+    ard = ArduinoCommunication('COM7', trialDuration = 4, stimONTime = 3,
                                timing = 100, ntrials = 2)
-    time.sleep(3)
+    time.sleep(2)
     ard.iniSesion()
 
     #Simulamos que enviamos el comando de movimiento número cuatro
