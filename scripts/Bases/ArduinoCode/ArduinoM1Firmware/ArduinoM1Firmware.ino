@@ -48,7 +48,7 @@ int frecTimer = 5000; //en Hz. Frecuencia de interrupción del timer.
 //estímulo izquierdo
 char estimIzq = 11;
 bool estimIzqON = 0;//Esado que define si el LED se apgará o prenderá.
-int frecEstimIzq = 11;
+int frecEstimIzq = 7;
 int acumEstimIzq = 0;
 const int estimIzqMaxValue = (1/float(frecEstimIzq))*frecTimer;
 
@@ -77,9 +77,12 @@ char movimiento = 0; //Robot en STOP
 /******************************************************************
   Bluetooth
 ******************************************************************/
-SoftwareSerial BT(2,3); //(RX,TX)
+SoftwareSerial BT(2,3); //(RX||TX)
+bool BTflag = false;
 
-//FUNCION SETUP
+/******************************************************************
+  //FUNCION SETUP
+******************************************************************/
 void setup()
 {
   noInterrupts();//Deshabilito todas las interrupciones
@@ -87,14 +90,15 @@ void setup()
   pinMode(estimDer,OUTPUT);
   pinMode(LEDVerde,OUTPUT);
   pinMode(LEDTesteo,OUTPUT);
-  iniTimer0(frecTimer); //inicio timer 0
   Serial.begin(19200); //iniciamos comunicación serie
-  BT.begin(38400);//iniciamos comunicación Bluetooth
+  BT.begin(9600);//iniciamos comunicación Bluetooth
+  iniTimer2(); //inicio timer 0
   delay(1000);
   interrupts();//Habilito las interrupciones
 }
 
-void loop(){}
+void loop()
+{}
 
 void serialEvent()
 {
@@ -110,7 +114,7 @@ if (Serial.available() > 0)
   }
 };
 
-ISR(TIMER0_COMPA_vect)//Rutina interrupción Timer0.
+ISR(TIMER2_COMPA_vect)//Rutina interrupción Timer0.
 {
   if(sessionState == SESSION_RUNNING) stimuliControl(); //Si la sesión comenzó, empezamos a generar los estímulos  
   else
@@ -191,7 +195,9 @@ void checkSerialMessage(char val)
        //Es mejor hacer sendCommand(incDataFromPC[bufferIndex])
       break;          
   }
+  
   bufferIndex++;
+  
   if (bufferIndex >= inBuffDataFromPC) //hemos recibido todos los bytes desde la PC
   {
     sendMensajeBT();

@@ -1,7 +1,7 @@
 /******************************************************************
             VERSIÓN FMR-001 Rev A
 ******************************************************************/
-
+#include "SoftwareSerial.h"
 #include "definiciones.h"
 #include "inicializaciones.h"
 #include "funciones.h"
@@ -11,19 +11,24 @@
 /******************************************************************/
 
 char inBuffDataFromPC = 3;
-unsigned char incDataFromPC[3]; //variable para almacenar datos provenientes de la PC
+byte incDataFromPC[3]; //variable para almacenar datos provenientes de la PC
+/*
+- incDataFromPC[0]: Estado de sesión (RUNNING = 1, STOP = 0)
+- incDataFromPC[1]: Estado trial (ON = 1, OFF = 0)
+- incDataFromPC[2]: Comando (0=adelante, 1=atras...)
+*/
 char bufferIndex = 0;
 bool sendDataFlag = 0;
 bool newMessage = false;
 
-unsigned char internalStatus[4]; //variable para enviar datos a la PC
-char internalStatusBuff = 4;
+byte robotStatus[3]; //variable para enviar datos a la PC
+char robotStatusBuff = 3;
 
-unsigned char outputDataToRobot[4]; //variable para enviar datos al robot
+byte outputDataToRobot[4]; //variable para enviar datos al robot
 char buffOutDataRobotSize = 4;
 char buffOutDataRobotIndex = 0;
 
-unsigned char incDataFromRobot[4]; //variable para recibir datos del robot
+byte incDataFromRobot[4]; //variable para recibir datos del robot
 char incDataFromRobotSize = 4;
 char incDataFromRobotIndex = 0;
 
@@ -69,6 +74,11 @@ int trialNumber = 1;
 
 char movimiento = 0; //Robot en STOP
 
+/******************************************************************
+  Bluetooth
+******************************************************************/
+SoftwareSerial BT(2,3); //(RX||TX)
+
 //FUNCION SETUP
 void setup()
 {
@@ -79,7 +89,8 @@ void setup()
   pinMode(LEDTesteo,OUTPUT);
   iniTimer0(frecTimer); //inicio timer 0
   Serial.begin(19200); //iniciamos comunicación serie
-
+  BT.begin(9600);//iniciamos comunicación Bluetooth
+  delay(1000);
   interrupts();//Habilito las interrupciones
 }
 
@@ -89,10 +100,12 @@ void serialEvent()
 {
 if (Serial.available() > 0) 
   {
-    char val = char(Serial.read()) - '0';
-    checkMessage(val); //chequeamos mensaje entrante        
-    for(int index = 0; index < internalStatusBuff; index++) //enviamos estado 
-      {Serial.write(internalStatus[index]);}
+    char val = (Serial.read()) - '0';
+    checkSerialMessage(val); //chequeamos mensaje entrante        
+    for(int index = 0; index < robotStatusBuff; index++) //enviamos estado 
+      {
+        Serial.write(robotStatus[index]);
+      }
       Serial.write("\n");
   }
 };
@@ -106,6 +119,13 @@ ISR(TIMER0_COMPA_vect)//Rutina interrupción Timer0.
     digitalWrite(estimIzq,0);
     digitalWrite(estimDer,0);
     digitalWrite(LEDTesteo,1);
+  }
+
+  if(1) //para simular que tenemos un mensaje por bluetooth
+  //if(BT.available()) //Si tenemos un mensaje por bluetooth lo leemos
+  {
+      byte mensajeBT = 0b00000011; //simulamos un obstaculo adelante y a la izquierda
+    checkBTMessage(mensajeBT);
   }
 };
 
@@ -148,7 +168,7 @@ void stimuliControl()
   }
 }
 
-void checkMessage(char val)
+void checkSerialMessage(char val)
 {
   incDataFromPC[bufferIndex] = val;
   switch(bufferIndex)
@@ -166,33 +186,45 @@ void checkMessage(char val)
       break;
 
     case 2: //indica hacia donde se debe mover el vehículo
-      char comando = incDataFromPC[bufferIndex];
-      sendCommand(comando); //Es mejor hacer sendCommand(incDataFromPC[bufferIndex])
+      byte comando = incDataFromPC[bufferIndex];
+      if(comando == 3) digitalWrite(LEDTesteo,1);
+       //Es mejor hacer sendCommand(incDataFromPC[bufferIndex])
       break;          
   }
   bufferIndex++;
-  if (bufferIndex >= inBuffDataFromPC) bufferIndex = 0;
+  if (bufferIndex >= inBuffDataFromPC) //hemos recibido todos los bytes desde la PC
+  {
+    sendMensajeBT();
+    bufferIndex = 0;
+  }
 };
 
-/*
-Función: sendCommand()
-- Se usa para enviar un comando al vehículo robótico y recibir el estado del mismo.
-*/
-void sendCommand(char comando)
+void checkBTMessage(char val)
 {
-      /*
-      Implementar código para enviar un mensaje por bluetooth
-      ...
-      */
-    //Cargo datos en buffer de internalStatus para simular que el robot ve algunos obstáculos
-    internalStatus[FORWARD_INDEX] = OBSTACULO_DETECTADO;
-    internalStatus[LEFT_INDEX] = OBSTACULO_DETECTADO;
-    internalStatus[RIGHT_INDEX] = SIN_OBSTACULO;
-    internalStatus[BEHIND_INDEX] = SIN_OBSTACULO;  
+  //Actualizmaos el estado interno del robot
+  if((val>>0)&0b00000001 == 1) robotStatus[FORWARD_INDEX] = OBSTACULO_DETECTADO;
+  else robotStatus[FORWARD_INDEX] = SIN_OBSTACULO;
 
-      // if (comando == 0) movimiento = STOP; 
-      // if (comando== 1) movimiento = ADELANTE; 
-      // if (comando == 2) movimiento = DERECHA; 
-      // if (comando == 3) movimiento = ATRAS; 
-      // if (comando == 4) movimiento = IZQUIERDA;
+  if((val>>1)&0b00000001 == 1) robotStatus[LEFT_INDEX] = OBSTACULO_DETECTADO;
+  else robotStatus[LEFT_INDEX] = SIN_OBSTACULO;
+
+  if((val>>2)&0b00000001 == 1) robotStatus[RIGHT_INDEX] = OBSTACULO_DETECTADO;
+  else robotStatus[RIGHT_INDEX] = SIN_OBSTACULO;
+}
+
+
+/*
+Función: sendMensajeBT()
+- Se usa para enviar un comando al vehículo robótico a través de Bluetooth
+*/
+void sendMensajeBT()
+{
+    /*
+    i) mensaje = (0b00000001)|(0b00000000<<1)|(0b00000100<<2)
+    ii) mensaje = (0b00000001)|(0b00000000)|(0b00100000)
+    iii) mensaje = 0b00100001
+    */
+    
+    byte mensaje = (incDataFromPC[0])|(incDataFromPC[1]<<1)|(incDataFromPC[2]<<2);//Armamos el byte
+    BT.write(mensaje); //enviamos byte por bluetooth
 }
