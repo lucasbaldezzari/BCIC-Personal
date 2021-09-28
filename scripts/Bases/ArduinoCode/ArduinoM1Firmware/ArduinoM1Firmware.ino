@@ -4,7 +4,6 @@
 #include "SoftwareSerial.h"
 #include "definiciones.h"
 #include "inicializaciones.h"
-#include "funciones.h"
 
 /******************************************************************
   Declaración de variables para comunicación
