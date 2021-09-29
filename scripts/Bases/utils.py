@@ -27,7 +27,7 @@ import scipy.fftpack
 from scipy.signal import butter, filtfilt, iirnotch
     
 def plotEEG(signal, sujeto = 1, trial = 1, blanco = 1,
-            fm = 256.0, window = [0,4], rmvOffset = False, save = False, title = "", folder = "figs"):
+            fm = 250.0, window = [0,4], rmvOffset = False, save = False, title = "", folder = "figs"):
     
     '''
     Grafica los canales de EEG pasados en la variable signal
@@ -363,7 +363,7 @@ def plotOneSpectrum(espectroSujeto, resol, blanco, sujeto, canal, frecStimulus,
                   startFrecGraph = 3.0, save = False, title = "", folder = "figs"):
     
     if not title:
-        title = f"Spectrum for channel {canal} - sibject {sujeto}"
+        title = f"Espectro para canal {canal} - sujeto {sujeto}"
     
     # fig.suptitle(title, fontsize = 20)
     
@@ -371,12 +371,12 @@ def plotOneSpectrum(espectroSujeto, resol, blanco, sujeto, canal, frecStimulus,
     plt.plot(fft_axis + startFrecGraph,
                        np.mean(np.squeeze(espectroSujeto[:, canal, :, :, :]),
                                axis=1), color = "#403e7d")
-    plt.xlabel('Frecuency [Hz]')
+    plt.xlabel('Frecuencia [Hz]')
     plt.ylabel('Amplitud [uV]')
     plt.title(title)
     # plt.xaxis.grid(True)
     plt.axvline(x = frecStimulus, ymin = 0., ymax = max(fft_axis),
-                         label = "Stimulus Frec.",
+                         label = f"Frecuencia estímulo {frecStimulus}Hz",
                          linestyle='--', color = "#e37165", alpha = 0.9)
     plt.legend()
         

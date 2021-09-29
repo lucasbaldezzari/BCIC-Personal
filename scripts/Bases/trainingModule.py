@@ -53,9 +53,9 @@ def main():
               "ganglion": BoardIds.GANGLION_BOARD, #IMPORTANTE: frecuencia muestro 200Hz
               "synthetic": BoardIds.SYNTHETIC_BOARD}
     
-    placa = placas["synthetic"]  
+    placa = placas["cyton"]  
     
-    puerto = "COM5" #Chequear el puerto al cual se conectará la placa
+    puerto = "COM11" #Chequear el puerto al cual se conectará la placa
     
     parser = argparse.ArgumentParser()
     
@@ -96,7 +96,7 @@ def main():
     
     board_shim = BoardShim(args.board_id, params) #genero un objeto para control de placas de Brainflow
     board_shim.prepare_session()
-    time.sleep(2) #esperamos 2 segundos
+    time.sleep(1) #esperamos 2 segundos
     
     board_shim.start_stream(450000, args.streamer_params) #iniciamos OpenBCI. Ahora estamos recibiendo datos.
     time.sleep(4) #esperamos 4 segundos
@@ -114,7 +114,7 @@ def main():
     saveData = True
     
     EEGdata = []
-    fm = 200.
+    fm = 250.
     
     samplePoints = int(fm*stimuliDuration)
     channels = 4
@@ -131,19 +131,19 @@ def main():
     """
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
     #En este ejemplo esta conectada en el COM3
-    arduino = AC('COM3', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM6', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
-    time.sleep(2) 
+    time.sleep(1) 
     
     path = "recordedEEG" #directorio donde se almacenan los registros de EEG.
     
     #El siguiente diccionario se usa para guardar información relevante cómo así también los datos de EEG
     #registrados durante la sesión de entrenamiento.
     dictionary = {
-                'subject': 'testGanglion',
-                'date': '27/08/2021',
-                'generalInformation': 'Estímulo a 30cm. Color rojo. Probando en el taller 6.',
-                'stimFrec': "7",
+                'subject': 'S1_R3_S1_E6',
+                'date': '29/09/2021',
+                'generalInformation': 'Estímulo a 54cm. Color verde. Se utilizan sólo los primeros 4 canales.',
+                'stimFrec': "6",
                 'channels': [1,2,3,4], 
                  'dataShape': [stimuli, channels, samplePoints, trials],
                   'eeg': None

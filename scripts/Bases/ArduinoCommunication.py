@@ -145,10 +145,11 @@ class ArduinoCommunication:
         print("Estado inicial del ROBOT:", estadoRobot)
         
         #Actualizamos archivo de estados
-        estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
-                    int(estadoRobot[0]),
-                    int(estadoRobot[1]),
-                    int(estadoRobot[2])]
+        # estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
+        #             int(estadoRobot[0]),
+        #             int(estadoRobot[1]),
+        #             int(estadoRobot[2])]
+        estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2]]
         file = open(self.stateFile, "w")
         for estado in estados:
             file.write(str(estado) + "\n")
@@ -157,7 +158,6 @@ class ArduinoCommunication:
         self.iniTimer()
         print("Sesión iniciada")
         print("Trial inicial")
-
         
     def endSesion(self):
         """Se finaliza sesión.
@@ -175,10 +175,11 @@ class ArduinoCommunication:
         estadoRobot = self.sendMessage(self.systemControl)
 
         #Actualizamos archivo de estados
-        estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
-                    int(estadoRobot[0]),
-                    int(estadoRobot[1]),
-                    int(estadoRobot[2])]
+        # estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
+        #             int(estadoRobot[0]),
+        #             int(estadoRobot[1]),
+        #             int(estadoRobot[2])]
+        estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2]]
         file = open(self.stateFile, "w")
         for estado in estados:
             file.write(str(estado) + "\n")
@@ -205,10 +206,11 @@ class ArduinoCommunication:
             estadoRobot = self.sendMessage(self.systemControl)
             print("Estado ROBOT:", estadoRobot)
             #Actualizamos archivo de estados
-            estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
-                        int(estadoRobot[0]),
-                        int(estadoRobot[1]),
-                        int(estadoRobot[2])]
+            # estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
+            #             int(estadoRobot[0]),
+            #             int(estadoRobot[1]),
+            #             int(estadoRobot[2])]
+            estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2]]
             file = open(self.stateFile, "w")
             for estado in estados:
                 file.write(str(estado) + "\n")
@@ -221,10 +223,11 @@ class ArduinoCommunication:
             print("Estado ROBOT:", estadoRobot)
 
             #Actualizamos archivo de estados
-            estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
-                        int(estadoRobot[0]),
-                        int(estadoRobot[1]),
-                        int(estadoRobot[2])]
+            # estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
+            #             int(estadoRobot[0]),
+            #             int(estadoRobot[1]),
+            #             int(estadoRobot[2])]
+            estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2]]
             file = open(self.stateFile, "w")
             for estado in estados:
                 file.write(str(estado) + "\n")
@@ -275,9 +278,9 @@ def main():
     #En el caso de querer ejecutar Trials de manera indeterminada,
     #debe hacerse trials = None (default)
     """
-    ard = ArduinoCommunication('COM7', trialDuration = 4, stimONTime = 3,
+    ard = ArduinoCommunication('COM6', trialDuration = 4, stimONTime = 2,
                                timing = 100, ntrials = 2)
-    time.sleep(2)
+    time.sleep(1)
     ard.iniSesion()
 
     #Simulamos que enviamos el comando de movimiento número cuatro

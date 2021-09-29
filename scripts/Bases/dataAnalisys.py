@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Wed Jul 28 16:05:39 2021
-
 @author: Lucas
-
         VERSIÓN: SCT-01-RevA
 """
 import os
@@ -24,12 +22,12 @@ channels = 8
 stimuli = 1 #one stimulus
 
 subjects = [1]
-filenames = ["LucasB-Alfa-Prueba1","LucasB-Alfa-Prueba2","testGanglion"]
+filenames = ["S1_R1_S1_E7","S1_R2_S1_E7","S1_R3_S1_E7"]
 allData = fa.loadData(path = path, filenames = filenames)
 names = list(allData.keys())
 
 #Chequeamos información del registro prueba 1
-print(allData["LucasB-Alfa-Prueba1"]["generalInformation"])
+print(allData["S1_R1_S1_E7"]["generalInformation"])
 
 prueba1 = allData[names[0]]
 prueba2 = allData[names[1]]
@@ -38,26 +36,26 @@ prueba3 = allData[names[2]]
 #Chequeamos información del registro prueba 1
 print(prueba1["generalInformation"])
 
-prueba1EEG = prueba3["eeg"][:,:,:,1:] #descarto trial 1
+prueba1EEG = prueba2["eeg"][:,:,:,:] 
 #[Number of targets, Number of channels, Number of sampling points, Number of trials]
 
 plotEEG(prueba1EEG, sujeto = 1, trial = 1, blanco = 1,
-            fm = fm, window = [0,4], rmvOffset = False, save = False, title = "", folder = "figs")
+            fm = fm, window = [0,5], rmvOffset = False, save = False, title = "", folder = "figs")
 
 resolution = fm/prueba1EEG.shape[2]
 
 PRE_PROCES_PARAMS = {
-                'lfrec': 7.,
+                'lfrec': 4.,
                 'hfrec': 28.,
                 'order': 4,
                 'sampling_rate': fm,
-                'window': 4,
-                'shiftLen':4
+                'window': 5,
+                'shiftLen':5
                 }
 
 FFT_PARAMS = {
                 'resolution': resolution,
-                'start_frequency': 0.0,
+                'start_frequency': 0,
                 'end_frequency': 28.0,
                 'sampling_rate': fm
                 }
@@ -68,7 +66,7 @@ prueba1EEGFiltered = filterEEG(prueba1EEG, PRE_PROCES_PARAMS["lfrec"],
                         PRE_PROCES_PARAMS["sampling_rate"])
 
 plotEEG(prueba1EEGFiltered, sujeto = 1, trial = 1, blanco = 1,
-            fm = fm, window = [0,4], rmvOffset = False, save = False,
+            fm = fm, window = [0,5], rmvOffset = False, save = False,
             title = "Señal de EEG filtrada del Sujeto 1", folder = "figs")
 
 
@@ -80,8 +78,8 @@ eegSegmented = segmentingEEG(prueba1EEGFiltered, PRE_PROCES_PARAMS["window"],
 MSF = computeMagnitudSpectrum(eegSegmented, FFT_PARAMS)
 #(113, 8, 1, 3, 1)
 
-canal = 6
-plotOneSpectrum(MSF, resolution, 1, subjects[0], canal-1, [12.5],
+canal = 2
+plotOneSpectrum(MSF, resolution, 1, subjects[0], canal-1, [7],
                 startFrecGraph = FFT_PARAMS['start_frequency'],
               save = False, title = f"Espectro para canal  {canal}",
               folder = "figs")
