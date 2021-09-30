@@ -21,6 +21,9 @@ class DataThread(threading.Thread):
         threading.Thread.__init__(self)
         
         self.eeg_channels = BoardShim.get_eeg_channels(board_id)
+        print("***********")
+        print(self.eeg_channels)
+        print("***********")
         self.acel_channels = BoardShim.get_accel_channels(board_id)
         self.sampling_rate = BoardShim.get_sampling_rate(board_id)
         self.keep_alive = True

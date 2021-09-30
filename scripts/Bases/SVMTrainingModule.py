@@ -200,7 +200,7 @@ def main():
     
     subjects = np.arange(0,10)
     # subjectsNames = [f"s{subject}" for subject in np.arange(1,11)]
-    subjectsNames = [f"s8"]
+    subjectsNames = [f"s5"]
     
     fm = 256.0
     tiempoTotal = int(4*fm) #cantidad de muestras para 4segundos
@@ -209,7 +209,13 @@ def main():
     
     """Loading the EEG data"""
     rawEEGs = fa.loadData(path = path, filenames = subjectsNames)
+
+    rawEEGs["s5"].keys()
     
+    eeg = rawEEGs["s5"]["eeg"]
+    
+    eeg.shape
+
     samples = rawEEGs[subjectsNames[0]]["eeg"].shape[2] - muestraDescarte #the are the same for all sobjecs and trials
 
     #Filtering de EEG
@@ -233,14 +239,14 @@ def main():
                     }
     
     canales = 4
-    rawEEGs["s8"]["eeg"] = rawEEGs["s8"]["eeg"][:,:, muestraDescarte: ,:]    
-    rawEEGs["s8"]["eeg"] = rawEEGs["s8"]["eeg"][:,:, :tiempoTotal ,:]
-    rawEEGs["s8"]["eeg"] = rawEEGs["s8"]["eeg"][:, 0:canales, :, :]
-    trainSet = rawEEGs["s8"]["eeg"][:,:,:,:11] #me quedo con los primeros 11 trials para entrenamiento y validación
+    rawEEGs["s5"]["eeg"] = rawEEGs["s5"]["eeg"][:,:, muestraDescarte: ,:]    
+    rawEEGs["s5"]["eeg"] = rawEEGs["s5"]["eeg"][:,:, :tiempoTotal ,:]
+    rawEEGs["s5"]["eeg"] = rawEEGs["s5"]["eeg"][:, 0:canales, :, :]
+    trainSet = rawEEGs["s5"]["eeg"][:,:,:,:11] #me quedo con los primeros 11 trials para entrenamiento y validación
 
-    testSet = rawEEGs["s8"]["eeg"][:,:,:,11:]
+    testSet = rawEEGs["s5"]["eeg"][:,:,:,11:]
     
-    svm1 = SVMTrainingModule(trainSet, "8",PRE_PROCES_PARAMS,FFT_PARAMS, modelName = "SVM14Channels")
+    svm1 = SVMTrainingModule(trainSet, "2",PRE_PROCES_PARAMS,FFT_PARAMS, modelName = "SVM14Channels")
     
     spectrum = svm1.computeMSF() #Computamos el espectro de Fourier de la señal
     

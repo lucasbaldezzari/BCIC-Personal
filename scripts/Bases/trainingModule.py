@@ -106,7 +106,7 @@ def main():
 
     """Defino variables para control de Trials"""
     
-    trials = 15 #cantidad de trials. Sirve para la sesión de entrenamiento.
+    trials = 10 #cantidad de trials. Sirve para la sesión de entrenamiento.
     #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
     trialDuration = 10 #secs
     stimuliDuration = 5 #secs
@@ -114,7 +114,7 @@ def main():
     saveData = True
     
     EEGdata = []
-    fm = 250.
+    fm = 200.
     
     samplePoints = int(fm*stimuliDuration)
     channels = 4
@@ -131,7 +131,7 @@ def main():
     """
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
     #En este ejemplo esta conectada en el COM3
-    arduino = AC('COM6', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM8', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
     time.sleep(1) 
     
@@ -140,10 +140,10 @@ def main():
     #El siguiente diccionario se usa para guardar información relevante cómo así también los datos de EEG
     #registrados durante la sesión de entrenamiento.
     dictionary = {
-                'subject': 'S1_R3_S1_E6',
-                'date': '29/09/2021',
-                'generalInformation': 'Estímulo a 54cm. Color verde. Se utilizan sólo los primeros 4 canales.',
-                'stimFrec': "6",
+                'subject': 'lucasB-R2-S1-E5',
+                'date': '30/09/2021',
+                'generalInformation': 'Estímulo a 50cm. Color rojo. Se utiliza Cyton.',
+                'stimFrec': "5",
                 'channels': [1,2,3,4], 
                  'dataShape': [stimuli, channels, samplePoints, trials],
                   'eeg': None

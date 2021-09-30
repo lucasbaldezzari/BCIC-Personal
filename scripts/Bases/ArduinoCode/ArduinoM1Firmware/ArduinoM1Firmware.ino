@@ -45,9 +45,9 @@ char LEDTesteo = 13; //led de testeo
 int frecTimer = 5000; //en Hz. Frecuencia de interrupción del timer.
 
 //estímulo izquierdo
-char estimIzq = 4;
+char estimIzq = 11;
 bool estimIzqON = 0;//Esado que define si el LED se apgará o prenderá.
-int frecEstimIzq = 6;
+int frecEstimIzq = 5;
 int acumEstimIzq = 0;
 const int estimIzqMaxValue = (1 / float(frecEstimIzq)) * frecTimer;
 
