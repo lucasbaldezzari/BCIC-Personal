@@ -18,71 +18,69 @@ trials = 10
 fm = 200.
 window = 5 #sec
 samplePoints = int(fm*window)
-channels = 8
+channels = 4
 stimuli = 1 #one stimulus
 
 subjects = [1]
-filenames = ["lucasB-R1-S1-E6","lucasB-R2-S1-E6","lucasB-R3-S1-E6"]
+filenames = ["lucasB-R1-S1-E11","lucasB-R2-S1-E11","lucasB-R2-S1-E11"]
 allData = fa.loadData(path = path, filenames = filenames)
 names = list(allData.keys())
 
 #Chequeamos información del registro prueba 1
-print(allData["lucasB-R1-S1-E6"]["generalInformation"])
+print(allData[filenames[0]]["generalInformation"])
 
-prueba1 = allData[names[0]]
-prueba2 = allData[names[1]]
-prueba3 = allData[names[2]]
+run1 = allData[names[0]]
+run2 = allData[names[1]]
+run3 = allData[names[2]]
 
 #Chequeamos información del registro prueba 1
 #print(prueba1["generalInformation"])
-samples = prueba1["eeg"].shape[1]
-iniDelSamples = int(fm*0.5)
-finDelSamples = int(fm*0.8)
+samples = run3["eeg"].shape[1]
 
-prueba1EEG = prueba1["eeg"]#[:,:,iniDelSamples:samples-finDelSamples,:] 
+run1EEG = run3["eeg"]
 #[Number of targets, Number of channels, Number of sampling points, Number of trials]
 
-plotEEG(prueba1EEG, sujeto = 1, trial = 1, blanco = 1,
+plotEEG(run1EEG, sujeto = 1, trial = 1, blanco = 1,
             fm = fm, window = [0,5], rmvOffset = False, save = False, title = "", folder = "figs")
 
-resolution = np.round(fm/prueba1EEG.shape[2], 4)
+resolution = np.round(fm/run1EEG.shape[2], 4)
 
 PRE_PROCES_PARAMS = {
-                'lfrec': 6.,
-                'hfrec': 20.,
-                'order': 8,
+                'lfrec': 5.,
+                'hfrec': 18.,
+                'order': 4,
                 'sampling_rate': fm,
-                'window': 5,
-                'shiftLen':5
+                'window': window,
+                'shiftLen':window
                 }
 
 FFT_PARAMS = {
                 'resolution': resolution,
                 'start_frequency': 0.,
-                'end_frequency': 28.0,
+                'end_frequency': 18.0,
                 'sampling_rate': fm
                 }
 
-prueba1EEGFiltered = filterEEG(prueba1EEG, PRE_PROCES_PARAMS["lfrec"],
+run1EEGFiltered = filterEEG(run1EEG, PRE_PROCES_PARAMS["lfrec"],
                         PRE_PROCES_PARAMS["hfrec"],
                         PRE_PROCES_PARAMS["order"],
                         PRE_PROCES_PARAMS["sampling_rate"])
 
-plotEEG(prueba1EEGFiltered, sujeto = 1, trial = 1, blanco = 1,
+plotEEG(run1EEGFiltered, sujeto = 1, trial = 1, blanco = 1,
             fm = fm, window = [0,5], rmvOffset = False, save = False,
             title = "Señal de EEG filtrada del Sujeto 1", folder = "figs")
 
 
 #eeg data segmentation
-eegSegmented = segmentingEEG(prueba1EEGFiltered, PRE_PROCES_PARAMS["window"],
+eegSegmented = segmentingEEG(run1EEGFiltered, PRE_PROCES_PARAMS["window"],
                              PRE_PROCES_PARAMS["shiftLen"],
                              PRE_PROCES_PARAMS["sampling_rate"])
 
 MSF = computeMagnitudSpectrum(eegSegmented, FFT_PARAMS)
 #(113, 8, 1, 3, 1)
 
-canal = 0
-plotOneSpectrum(MSF, resolution, 1, subjects[0], canal-1, [10],
+canal = 4
+plotOneSpectrum(MSF, resolution, 1, subjects[0], canal-1, [11],
                 startFrecGraph = FFT_PARAMS['start_frequency'],
               save = False, title = f"Espectro para canal  {canal}",
               folder = "figs")
