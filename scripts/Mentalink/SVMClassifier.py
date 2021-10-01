@@ -14,12 +14,6 @@ import numpy as np
 import numpy.matlib as npm
 import pandas as pd
 
-from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
-from sklearn.svm import SVC
-
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import precision_recall_fscore_support
-
 import pickle
 
 import matplotlib.pyplot as plt
@@ -112,7 +106,7 @@ class SVMClassifier():
             Con forma [trials*clases x number of features]
             - Labels: labels para entrenar el modelo a partir de las clases"""
         
-        print("Transformando datos para clasificarlos")
+        #print("Transformando datos para clasificarlos")
         
         numFeatures = features.shape[0]
         canales = features.shape[1]
@@ -146,26 +140,37 @@ class SVMClassifier():
     
     
 def main():
-    """Let's starting"""
-                    
+    """Empecemos"""
+
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-    path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\talleres\\taller4\\scripts',"dataset")
-    
-    subjects = np.arange(0,10)
-    # subjectsNames = [f"s{subject}" for subject in np.arange(1,11)]
-    subjectsNames = ["s8"]
-    
-    fm = 256.0
-    tiempoTotal = int(4*fm) #cantidad de muestras para 4segundos
-    muestraDescarte = 39
-    frecStimulus = np.array([9.25, 11.25, 13.25, 9.75, 11.75, 13.75, 10.25, 12.25, 14.25, 10.75, 12.75, 14.75])
-    
-    """Loading the EEG data"""
-    rawEEGs = fa.loadData(path = path, filenames = subjectsNames)
-    
-    
-    samples = rawEEGs[subjectsNames[0]]["eeg"].shape[2] #the are the same for all sobjecs and trials
-    
+    path = os.path.join(actualFolder,"recordedEEG")
+
+    frecStimulus = np.array([6, 7])
+
+    trials = 15
+    fm = 250.
+    window = 5 #sec
+    samplePoints = int(fm*window)
+    channels = 4
+    stimuli = 1 #one stimulus
+
+    subjects = [1] #un solo sujeto
+    filenames = ["S1_R1_S1_E6","S1_R1_S1_E7"]
+    allData = fa.loadData(path = path, filenames = filenames)
+    names = list(allData.keys())
+
+    allData['S1_R1_S1_E6']["eeg"] = allData['S1_R1_S1_E6']["eeg"][:,1:5,:,:].reshape(1,4,1250,15).reshape(1,4,1250,15)
+    allData['S1_R1_S1_E7']["eeg"] = allData['S1_R1_S1_E7']["eeg"][:,1:5,:,:].reshape(1,4,1250,15).reshape(1,4,1250,15)
+
+    def joinData(allData, stimuli, channels, samples, trials):
+        joinedData = np.zeros((stimuli, channels, samples, trials))
+        for i, sujeto in enumerate(allData):
+            joinedData[i] = allData[sujeto]["eeg"][0,:,:,:trials]
+
+        return joinedData
+
+    joinedData = joinData(allData, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
+
     #Filtering de EEG
     PRE_PROCES_PARAMS = {
                     'lfrec': 5.,
@@ -173,12 +178,12 @@ def main():
                     'order': 4,
                     'sampling_rate': fm,
                     'bandStop': 50.,
-                    'window': 4,
-                    'shiftLen':4
+                    'window': window,
+                    'shiftLen':window
                     }
-    
-    resolution = fm/samples
-    
+
+    resolution = np.round(fm/samplePoints, 4)
+
     FFT_PARAMS = {
                     'resolution': resolution,#0.2930,
                     'start_frequency': 5.0,
@@ -186,36 +191,38 @@ def main():
                     'sampling_rate': fm
                     }
     
-    for subject in subjectsNames:
-        eeg = rawEEGs[subject]["eeg"]
-        eeg = eeg[:,:, muestraDescarte: ,:]
-        eeg = eeg[:,:, :tiempoTotal ,:]
-        rawEEGs[subject]["eeg"] = filterEEG(eeg,lfrec = PRE_PROCES_PARAMS["lfrec"],
-                                            hfrec = PRE_PROCES_PARAMS["hfrec"],
-                                            orden = 4, bandStop = 50. , fm  = fm)
-        
-    testSet = rawEEGs["s8"]["eeg"][:,:,:,11:] #seleccionamos los últimos 4 trials
+    # for subject in subjectsNames:
+    #     eeg = rawEEGs[subject]["eeg"]
+    #     eeg = eeg[:,:, muestraDescarte: ,:]
+    #     eeg = eeg[:,:, :tiempoTotal ,:]
+    #     rawEEGs[subject]["eeg"] = filterEEG(eeg,lfrec = PRE_PROCES_PARAMS["lfrec"],
+    #                                         hfrec = PRE_PROCES_PARAMS["hfrec"],
+    #                                         orden = 4, bandStop = 50. , fm  = fm)
+
+    trainSet = joinedData[:,:,:,:8] #me quedo con los primeros 8 trials para entrenamiento y validación
+
+    testSet = joinedData[:,:,:,8:] #me quedo con los últimos 2 trials para test
     
     path = "E:\reposBCICompetition\BCIC-Personal\scripts\Bases\models"
     
     path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases',"models")
     
-    modelFile = "SVM1.pkl"
+    modelFile = "testEmi.pkl"
         
     svm = SVMClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, path = path)
     
     #De nuestro set de datos seleccionamos el EEG de correspondiente a una clase y un trial.
     #Es importante tener en cuenta que los datos de OpenBCI vienen en la forma [canales x samples]
     
-    clase = 5 #corresponde al estímulo de 11.75Hz
-    trial = 2
+    clase = 1 #corresponde al estímulo de 6Hz
+    trial = 1
     
     rawEEG = testSet[clase - 1, :, : , trial - 1]
     
     frecClasificada = svm.getClassification(rawEEG = rawEEG)
     print(f"El estímulo clasificado fue {frecClasificada}")
     
-    clase = 9 #corresponde al estímulo de 14.25Hz
+    clase = 2 #corresponde al estímulo de 7Hz
     trial = 2
     
     rawEEG = testSet[clase - 1, :, : , trial - 1]
@@ -226,4 +233,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
