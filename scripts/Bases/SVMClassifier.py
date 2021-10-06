@@ -188,13 +188,6 @@ def main():
                     'sampling_rate': fm
                     }
     
-    # for subject in subjectsNames:
-    #     eeg = rawEEGs[subject]["eeg"]
-    #     eeg = eeg[:,:, muestraDescarte: ,:]
-    #     eeg = eeg[:,:, :tiempoTotal ,:]
-    #     rawEEGs[subject]["eeg"] = filterEEG(eeg,lfrec = PRE_PROCES_PARAMS["lfrec"],
-    #                                         hfrec = PRE_PROCES_PARAMS["hfrec"],
-    #                                         orden = 4, bandStop = 50. , fm  = fm)
 
     trainSet = joinedData[:,:,:,:8] #me quedo con los primeros 8 trials para entrenamiento y validación
 
@@ -219,7 +212,7 @@ def main():
     frecClasificada = svm.getClassification(rawEEG = rawEEG)
     print(f"El estímulo clasificado fue {frecClasificada}")
     
-    clase = 3 #corresponde al estímulo de 8Hz
+    clase = 3 #corresponde al estímulo de 11Hz
     trial = 2
     
     rawEEG = testSet[clase - 1, :, : , trial - 1]

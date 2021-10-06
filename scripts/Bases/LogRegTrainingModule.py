@@ -203,41 +203,6 @@ class LogRegTrainingModule():
         json.dump(self.PRE_PROCES_PARAMS , file)
         file.close   
 
-# def getDataForTraining(features, clases, canal = False):
-#     """Preparación del set de entrenamiento.
-        
-#     Argumentos:
-#         - features: Parte Real del Espectro or Parte Real e Imaginaria del Espectro
-#         con forma [número de características x canales x clases x trials x número de segmentos]
-#         - clases: Lista con las clases para formar las labels
-        
-#     Retorna:
-#         - trainingData: Set de datos de entrenamiento para alimentar el modelo SVM
-#         Con forma [trials*clases x number of features]
-#         - Labels: labels para entrenar el modelo a partir de las clases
-#     """
-    
-#     print("Generating training data")
-    
-#     numFeatures = features.shape[0]
-#     canales = features.shape[1]
-#     numClases = features.shape[2]
-#     trials = features.shape[3]
-    
-#     if canal == False:
-#         trainingData = np.mean(features, axis = 1)
-        
-#     else:
-#         trainingData = features[:, canal, :, :]
-        
-#     trainingData = trainingData.swapaxes(0,1).swapaxes(1,2).reshape(numClases*trials, numFeatures)
-    
-#     classLabels = np.arange(len(clases))
-    
-#     labels = (npm.repmat(classLabels, trials, 1).T).ravel()
-
-#     return trainingData, labels
-
 def main():
            
     """Empecemos"""
