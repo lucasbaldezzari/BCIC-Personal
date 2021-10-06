@@ -7,6 +7,7 @@ Clase para comunicación entre Arduino y PC utilizando la libreria PYSerial
         Se agrega lista de movimientos en variable self.movements para enviar comandos a través del puerto serie
 """
 
+import os
 import serial
 import time
 
@@ -78,7 +79,9 @@ class ArduinoCommunication:
                              self.stimuliStatus,
                              self.moveOrder]
 
-        self.stateFile = "stateFile.txt"
+        actualFolder = os.getcwd()
+        self.stateFilePath = os.path.join(actualFolder,"visual stimulation")
+        self.stateFile = "comunication.txt"
          
         self.useExternalTimer = useExternalTimer
         self.timerEnable = 0
@@ -149,10 +152,14 @@ class ArduinoCommunication:
         #             int(estadoRobot[0]),
         #             int(estadoRobot[1]),
         #             int(estadoRobot[2])]
+
         estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2]]
-        file = open(self.stateFile, "w")
+
+        completeName = os.path.join(self.stateFilePath,self.stateFile)
+        file = open(completeName, "w")
         for estado in estados:
-            file.write(str(estado) + "\n")
+            #file.write(str(estado) + "\n")
+            file.write(str(estado))
         file.close()
         
         self.iniTimer()
@@ -180,9 +187,12 @@ class ArduinoCommunication:
         #             int(estadoRobot[1]),
         #             int(estadoRobot[2])]
         estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2]]
-        file = open(self.stateFile, "w")
+
+        completeName = os.path.join(self.stateFilePath,self.stateFile)
+        file = open(completeName, "w")
         for estado in estados:
-            file.write(str(estado) + "\n")
+            #file.write(str(estado) + "\n")
+            file.write(str(estado))
         file.close()
 
         print("Estado final del ROBOT:", estadoRobot)
@@ -211,9 +221,12 @@ class ArduinoCommunication:
             #             int(estadoRobot[1]),
             #             int(estadoRobot[2])]
             estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2]]
-            file = open(self.stateFile, "w")
+
+            completeName = os.path.join(self.stateFilePath,self.stateFile)
+            file = open(completeName, "w")
             for estado in estados:
-                file.write(str(estado) + "\n")
+                #file.write(str(estado) + "\n")
+                file.write(str(estado))
             file.close()
              
         if self.counter == self.trialDuration: 
@@ -227,10 +240,14 @@ class ArduinoCommunication:
             #             int(estadoRobot[0]),
             #             int(estadoRobot[1]),
             #             int(estadoRobot[2])]
+
             estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2]]
-            file = open(self.stateFile, "w")
+
+            completeName = os.path.join(self.stateFilePath,self.stateFile)
+            file = open(completeName, "w")
             for estado in estados:
-                file.write(str(estado) + "\n")
+                #file.write(str(estado) + "\n")
+                file.write(str(estado))
             file.close()
 
             print(f"Fin trial {self.trial}")
@@ -269,6 +286,7 @@ class ArduinoCommunication:
 def main():
     
     initialTime = time.time()#/1000
+    time.sleep(2)
 
     """
     #creamos un objeto ArduinoCommunication para establecer una conexión
@@ -278,8 +296,8 @@ def main():
     #En el caso de querer ejecutar Trials de manera indeterminada,
     #debe hacerse trials = None (default)
     """
-    ard = ArduinoCommunication('COM8', trialDuration = 10, stimONTime = 5,
-                               timing = 100, ntrials = 30)
+    ard = ArduinoCommunication('COM6', trialDuration = 5, stimONTime = 3,
+                               timing = 100, ntrials = 3)
     time.sleep(1)
     ard.iniSesion()
 

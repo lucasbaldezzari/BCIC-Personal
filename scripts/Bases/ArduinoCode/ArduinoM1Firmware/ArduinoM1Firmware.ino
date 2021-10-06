@@ -47,7 +47,7 @@ int frecTimer = 5000; //en Hz. Frecuencia de interrupción del timer.
 //estímulo izquierdo
 char estimIzq = 11;
 bool estimIzqON = 0;//Esado que define si el LED se apgará o prenderá.
-int frecEstimIzq = 5;
+int frecEstimIzq = 11;
 int acumEstimIzq = 0;
 const int estimIzqMaxValue = (1 / float(frecEstimIzq)) * frecTimer;
 
@@ -90,7 +90,7 @@ void setup()
   pinMode(LEDVerde, OUTPUT);
   pinMode(LEDTesteo, OUTPUT);
   Serial.begin(19200); //iniciamos comunicación serie
-  //BT.begin(9600);//iniciamos comunicación Bluetooth
+  BT.begin(9600);//iniciamos comunicación Bluetooth
   iniTimer2(); //inicio timer 0
   delay(1000);
   interrupts();//Habilito las interrupciones
@@ -124,13 +124,13 @@ ISR(TIMER2_COMPA_vect)//Rutina interrupción Timer0.
     digitalWrite(LEDTesteo, 1);
   }
 
-  //if(1) //para simular que tenemos un mensaje por bluetooth
-//  if (BT.available()) //Si tenemos un mensaje por bluetooth lo leemos
-//  {
-//    mensajeBT = 0b00000011; //simulamos un obstaculo adelante y a la izquierda
-//    mensajeBT = BT.read();
-//    checkBTMessage(mensajeBT);
-//  }
+  if(1) //para simular que tenemos un mensaje por bluetooth
+ //if (BT.available()) //Si tenemos un mensaje por bluetooth lo leemos
+ {
+   mensajeBT = 0b00000011; //simulamos un obstaculo adelante y a la izquierda
+   //mensajeBT = BT.read();
+   checkBTMessage(mensajeBT);
+ }
   
 };
 

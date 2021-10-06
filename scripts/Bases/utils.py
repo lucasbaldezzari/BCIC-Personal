@@ -75,7 +75,7 @@ def plotEEG(signal, sujeto = 1, trial = 1, blanco = 1,
     if not title:
         title = f"Señal de EEG de sujeto {sujeto}"
     
-    fig.suptitle(title, fontsize=36)
+    fig.suptitle(title, fontsize=18)
     
     axes = axes.reshape(-1)
         

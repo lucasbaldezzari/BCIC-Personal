@@ -12,7 +12,7 @@ Clase que permite entrenar una SVM para clasificar SSVEPs a partir de datos de E
 import os
 import numpy as np
 import numpy.matlib as npm
-import pandas as pd
+import json
 
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
 from sklearn.svm import SVC
@@ -47,7 +47,8 @@ class SVMTrainingModule():
         if not modelName:
             self.modelName = f"SVMModel_Subj{subject}"
 
-        self.modelName = modelName
+        else:
+            self.modelName = modelName
 
         self.eeg_channels = self.rawEEG.shape[0]
         self.total_trial_len = self.rawEEG.shape[2]
@@ -188,6 +189,15 @@ class SVMTrainingModule():
         with open(filename, 'wb') as file:
             pickle.dump(self.model, file)
 
+        #Guardamos los parámetros usados para entrenar el SVM
+        file = open(f"{self.modelName}_preproces.json", "w")
+        json.dump(self.PRE_PROCES_PARAMS , file)
+        file.close
+
+        file = open(f"{self.modelName}_fft.json", "w")
+        json.dump(self.PRE_PROCES_PARAMS , file)
+        file.close    
+
 def main():
 
     """Empecemos"""
@@ -243,7 +253,7 @@ def main():
 
     trainSet = joinedData[:,:,:,:8] #me quedo con los primeros 8 trials para entrenamiento y validación
 
-    testSet = joinedData[:,:,:,8:] #me quedo con los últimos 2 trials para test
+    #testSet = joinedData[:,:,:,8:] #me quedo con los últimos 2 trials para test
 
     svm1 = SVMTrainingModule(trainSet, "lucasB",PRE_PROCES_PARAMS,FFT_PARAMS, modelName = "SVM_LucasB_Test1_30092021")
 

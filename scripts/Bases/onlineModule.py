@@ -60,7 +60,7 @@ def main():
               "ganglion": BoardIds.GANGLION_BOARD, #IMPORTANTE: frecuencia muestro 200Hz
               "synthetic": BoardIds.SYNTHETIC_BOARD}
     
-    placa = placas["ganglion"]  
+    placa = placas["synthetic"]  
     
     puerto = "COM5" #Chequear el puerto al cual se conectará la placa
     
@@ -150,7 +150,6 @@ def main():
     
     #IMPORTANTE: La resolución DEBE ser la misma con la que se entrenó el clasificador.
     resolution = np.round(fm/samplePoints, 4)
-    print("resolucion:",resolution)
     
     FFT_PARAMS = {
                     'resolution': resolution,#0.2930,
@@ -173,7 +172,7 @@ def main():
     ntrials = None (default)
     """
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
-    arduino = AC('COM8', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM6', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
     time.sleep(2) 
 
@@ -185,8 +184,6 @@ def main():
         while arduino.generalControl() == b"1":
             if classifyData and arduino.systemControl[1] == b"0":
                 rawEEG = data_thread.getData(stimuliDuration)
-                # print(rawEEG.shape)
-                # EEGdata.append(currentData)
                 frecClasificada = svm.getClassification(rawEEG = rawEEG)
                 print(frecClasificada)
                 classifyData = False
