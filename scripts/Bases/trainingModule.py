@@ -53,9 +53,9 @@ def main():
               "ganglion": BoardIds.GANGLION_BOARD, #IMPORTANTE: frecuencia muestro 200Hz
               "synthetic": BoardIds.SYNTHETIC_BOARD}
     
-    placa = placas["cyton"]  
+    placa = placas["ganglion"]  
     
-    puerto = "COM11" #Chequear el puerto al cual se conectará la placa
+    puerto = "COM5" #Chequear el puerto al cual se conectará la placa
     
     parser = argparse.ArgumentParser()
     
@@ -106,7 +106,7 @@ def main():
 
     """Defino variables para control de Trials"""
     
-    trials = 10 #cantidad de trials. Sirve para la sesión de entrenamiento.
+    trials = 15 #cantidad de trials. Sirve para la sesión de entrenamiento.
     #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
     trialDuration = 10 #secs
     stimuliDuration = 5 #secs
@@ -114,7 +114,11 @@ def main():
     saveData = True
     
     EEGdata = []
-    fm = 200.
+
+    if placa == "ganglion":
+        fm = 200.
+    else:
+        fm = 250.
     
     samplePoints = int(fm*stimuliDuration)
     channels = 4
@@ -140,10 +144,10 @@ def main():
     #El siguiente diccionario se usa para guardar información relevante cómo así también los datos de EEG
     #registrados durante la sesión de entrenamiento.
     dictionary = {
-                'subject': 'lucasB-R2-S1-E5',
-                'date': '30/09/2021',
-                'generalInformation': 'Estímulo a 50cm. Color rojo. Se utiliza Cyton.',
-                'stimFrec': "5",
+                'subject': 'lucasB-R2-S1-E7',
+                'date': '8/10/2021',
+                'generalInformation': 'Estimulos HTML. Flecha Amarilla. Izquierda.',
+                'stimFrec': "7",
                 'channels': [1,2,3,4], 
                  'dataShape': [stimuli, channels, samplePoints, trials],
                   'eeg': None

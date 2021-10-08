@@ -22,7 +22,7 @@ channels = 4
 stimuli = 1 #one stimulus
 
 subjects = [1]
-filenames = ["lucasB-R1-S1-E8","lucasB-R2-S1-E8","lucasB-R3-S1-E8"]
+filenames = ["lucasB-R2-S1-E7","lucasB-R2-S1-E13","lucasB-R2-S1-E11"]
 allData = fa.loadData(path = path, filenames = filenames)
 names = list(allData.keys())
 
@@ -46,8 +46,8 @@ resolution = np.round(fm/run1EEG.shape[2], 4)
 
 PRE_PROCES_PARAMS = {
                 'lfrec': 5.,
-                'hfrec': 18.,
-                'order': 4,
+                'hfrec': 28.,
+                'order': 8,
                 'sampling_rate': fm,
                 'window': window,
                 'shiftLen':window
@@ -56,7 +56,7 @@ PRE_PROCES_PARAMS = {
 FFT_PARAMS = {
                 'resolution': resolution,
                 'start_frequency': 0.,
-                'end_frequency': 18.0,
+                'end_frequency': 28.0,
                 'sampling_rate': fm
                 }
 
@@ -79,7 +79,7 @@ MSF = computeMagnitudSpectrum(eegSegmented, FFT_PARAMS)
 #(113, 8, 1, 3, 1)
 
 canal = 1
-estim = [8]
+estim = [13]
 plotOneSpectrum(MSF, resolution, 1, subjects[0], canal-1, estim,
                 startFrecGraph = FFT_PARAMS['start_frequency'],
               save = False, title = f"Espectro para canal  {canal}",
@@ -87,11 +87,14 @@ plotOneSpectrum(MSF, resolution, 1, subjects[0], canal-1, estim,
 
 #Graficamos espectro promediando canales
 import matplotlib.pyplot as plt
+trial = 10
 plt.xlabel('Frecuencia [Hz]')
 plt.ylabel('Amplitud [uV]')
-plt.title(f"Espectro promediando los 4 canales para estímulo {estim[0]}")
+trial = 3
+plt.title(f"Espectro promediando los 4 para trial {trial} y estim {estim[0]}")
 fft_axis = np.arange(MSF.shape[0]) * resolution
-plt.plot(fft_axis,np.mean(MSF[:,1:5,0,0,0], axis=1))
+MSFmean = np.mean(MSF,axis = 1).reshape(MSF.shape[0],MSF.shape[3])
+plt.plot(fft_axis, MSFmean[:,trial-1])
 
 plt.axvline(x = estim[0], ymin = 0., ymax = max(fft_axis),
                         label = f"Frecuencia estímulo {estim[0]}Hz",
@@ -99,89 +102,17 @@ plt.axvline(x = estim[0], ymin = 0., ymax = max(fft_axis),
 plt.legend()
 plt.show()
 
-# """Buscando SSVEPs"""
-# subjects = [1] #cantidad de sujetos
+#Graficamos espectro promediando canales
+import matplotlib.pyplot as plt
+plt.xlabel('Frecuencia [Hz]')
+plt.ylabel('Amplitud [uV]')
+plt.title(f"Espectro promediando los 4 y todos los trials - {estim[0]}")
+fft_axis = np.arange(MSF.shape[0]) * resolution
+MSFmean = np.mean(MSF,axis = 1).reshape(MSF.shape[0],MSF.shape[3])
+plt.plot(fft_axis, np.mean(MSFmean, axis = 1))
 
-# filenames = ["LucasB-PruebaSSVEPs(5.5Hz)-Num1",
-#              "LucasB-PruebaSSVEPs(8Hz)-Num1",
-#              "LucasB-PruebaSSVEPs(9Hz)-Num1"]
-# allData = fa.loadData(path = path, filenames = filenames)
-# names = list(allData.keys())
-
-# estimuli = ["5.5","8","7"]
-# frecStimulus = np.array([5.5, 8, 9])
-
-# #Chequeamos información del registro de la prueba del estímulo 8hz
-# print(allData["LucasB-PruebaSSVEPs(8Hz)-Num1"]["generalInformation"])
-
-# for name in names:
-#     print(f"Cantidad de trials para {name}:",
-#           allData[name]["eeg"].shape[3])
-
-# frec7hz = allData[names[0]]
-# frec8hz = allData[names[1]]
-# frec9hz = allData[names[2]]
-
-# def joinData(allData, stimuli = 4, channels = 8, samples = 1000, trials = 15):
-#     joinedData = np.zeros((stimuli, channels, samples, trials))
-#     for i, sujeto in enumerate(allData):    
-#         joinedData[i] = allData[sujeto]["eeg"][0,:,:,:trials]
-        
-#     return joinedData
-
-# joinedData = joinData(allData, stimuli = 3, channels = 8, samples = 1000, trials = 15)
-# #la forma de joinedData es (3, 8, 1000, 15)[estímulos, canales, muestras, trials]
-
-# #Graficamos el EEG de cada canal para cada estímulo
-# trial = 10
-# for stimulus in range(len(estimuli)):
-#     plotEEG(joinedData, sujeto = 1, trial = 10, blanco = stimulus,
-#             fm = fm, window = [0,4], rmvOffset = False, save = False,
-#             title = f"EEG sin filtrar para target {estimuli[stimulus]}Hz",
-#             folder = "figs")
-
-# resolution = fm/joinedData.shape[2]
-
-# PRE_PROCES_PARAMS = {
-#                 'lfrec': 5.,
-#                 'hfrec': 17.,
-#                 'order': 4,
-#                 'sampling_rate': fm,
-#                 'window': 4,
-#                 'shiftLen':4
-#                 }
-
-# FFT_PARAMS = {
-#                 'resolution': resolution,
-#                 'start_frequency': 0.0,
-#                 'end_frequency': 17.0,
-#                 'sampling_rate': fm
-#                 }
-
-# eegFiltered = filterEEG(joinedData, PRE_PROCES_PARAMS["lfrec"],
-#                         PRE_PROCES_PARAMS["hfrec"],
-#                         PRE_PROCES_PARAMS["order"],
-#                         PRE_PROCES_PARAMS["sampling_rate"])
-
-# #Graficamos el EEG de cada canal para cada estímulo
-# trial = 10
-# for stimulus in range(len(frecStimulus)):
-#     plotEEG(eegFiltered, sujeto = 1, trial = 10, blanco = stimulus,
-#             fm = fm, window = [0,4], rmvOffset = False, save = False,
-#             title = f"EEG sin filtrar para target {estimuli[stimulus]}Hz",
-#             folder = "figs")
-
-# #eeg data segmentation
-# eegSegmented = segmentingEEG(eegFiltered, PRE_PROCES_PARAMS["window"],
-#                              PRE_PROCES_PARAMS["shiftLen"],
-#                              PRE_PROCES_PARAMS["sampling_rate"])
-
-# magnitudFeatures = computeMagnitudSpectrum(eegSegmented, FFT_PARAMS)
-# #MSF.shape = [features, canales, estímulos, trials, segmentos]
-# #(113, 8, 1, 3, 1)
-# cantidadTargets = 3
-# plotSpectrum(magnitudFeatures, resolution, cantidadTargets,
-#              subjects[0], 7, frecStimulus,
-#               startFrecGraph = FFT_PARAMS['start_frequency'],
-#               save = False, title = "", folder = "figs",
-#               rows = 1, columns = 3)
+plt.axvline(x = estim[0], ymin = 0., ymax = max(fft_axis),
+                        label = f"Frecuencia estímulo {estim[0]}Hz",
+                        linestyle='--', color = "#e37165", alpha = 0.9)
+plt.legend()
+plt.show()

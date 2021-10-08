@@ -30,14 +30,14 @@ class DataThread(threading.Thread):
         self.board = board
         self.trialDuration = 4 #secs
         
-    def getData (self, duration, channels = 8):
+    def getData (self, duration, channels = 4):
 
         data = self.board.get_current_board_data(int(duration*self.sampling_rate))
         eeg = []        
         eeg = [data[canal] for canal in self.eeg_channels]
         eeg = np.asarray(eeg)
         
-        return eeg
+        return eeg[:channels,:]
         
         # return self.board.get_current_board_data(int(duration*self.sampling_rate))[:channels]
         
