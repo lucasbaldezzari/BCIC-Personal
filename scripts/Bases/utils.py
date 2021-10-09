@@ -317,7 +317,6 @@ def computeComplexSpectrum(segmentedData, fftparms):
     imag_part = imag_part.swapaxes(1,2)
 
     features = np.concatenate((real_part[startIndex:endIndex], imag_part[startIndex:endIndex]), axis=0)
-
     
     return features
 
@@ -334,7 +333,7 @@ def plotSpectrum(espectroSujeto, resol, blancos, sujeto, canal, frecStimulus,
     if not title:
         title = f"Espectro de frecuecnias para canal {canal} - sujeto {sujeto}"
     
-    fig.suptitle(title, fontsize = 20)
+    fig.suptitle(title, fontsize = 16)
     
     for blanco in range(blancos):
         fft_axis = np.arange(espectroSujeto.shape[0]) * resol
