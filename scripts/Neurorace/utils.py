@@ -27,7 +27,7 @@ import scipy.fftpack
 from scipy.signal import butter, filtfilt, iirnotch
     
 def plotEEG(signal, sujeto = 1, trial = 1, blanco = 1,
-            fm = 256.0, window = [0,4], rmvOffset = False, save = False, title = "", folder = "figs"):
+            fm = 250.0, window = [0,4], rmvOffset = False, save = False, title = "", folder = "figs"):
     
     '''
     Grafica los canales de EEG pasados en la variable signal
@@ -70,12 +70,12 @@ def plotEEG(signal, sujeto = 1, trial = 1, blanco = 1,
     signalAvg = 0
     
     #genero la grilla para graficar
-    fig, axes = plt.subplots(4, 2, figsize=(24, 20), gridspec_kw = dict(hspace=0.45, wspace=0.2))
+    fig, axes = plt.subplots(4, 2, figsize=(14, 8), gridspec_kw = dict(hspace=0.45, wspace=0.2))
     
     if not title:
         title = f"Señal de EEG de sujeto {sujeto}"
     
-    fig.suptitle(title, fontsize=36)
+    fig.suptitle(title, fontsize=18)
     
     axes = axes.reshape(-1)
         
@@ -85,8 +85,8 @@ def plotEEG(signal, sujeto = 1, trial = 1, blanco = 1,
             signalAvg = np.average(signal[blanco - 1, canal - 1, :len(t), trial - 1])
         signalScale = (signal[blanco - 1, canal - 1, :len(t), trial - 1] - signalAvg)*scaling 
         axes[canal].plot(t, signalScale, color = "#e37165")
-        axes[canal].set_xlabel('Tiempo [seg]', fontsize=16) 
-        axes[canal].set_ylabel('Amplitud [uV]', fontsize=16)
+        axes[canal].set_xlabel('Tiempo [seg]', fontsize=14) 
+        axes[canal].set_ylabel('Amplitud [uV]', fontsize=14)
         axes[canal].set_title(f'Sujeto {sujeto} - Blanco {blanco} - Canal {canal + 1}', fontsize=22)
         axes[canal].yaxis.grid(True)
 
@@ -317,7 +317,6 @@ def computeComplexSpectrum(segmentedData, fftparms):
     imag_part = imag_part.swapaxes(1,2)
 
     features = np.concatenate((real_part[startIndex:endIndex], imag_part[startIndex:endIndex]), axis=0)
-
     
     return features
 
@@ -334,7 +333,7 @@ def plotSpectrum(espectroSujeto, resol, blancos, sujeto, canal, frecStimulus,
     if not title:
         title = f"Espectro de frecuecnias para canal {canal} - sujeto {sujeto}"
     
-    fig.suptitle(title, fontsize = 20)
+    fig.suptitle(title, fontsize = 16)
     
     for blanco in range(blancos):
         fft_axis = np.arange(espectroSujeto.shape[0]) * resol
@@ -363,7 +362,7 @@ def plotOneSpectrum(espectroSujeto, resol, blanco, sujeto, canal, frecStimulus,
                   startFrecGraph = 3.0, save = False, title = "", folder = "figs"):
     
     if not title:
-        title = f"Spectrum for channel {canal} - sibject {sujeto}"
+        title = f"Espectro para canal {canal} - sujeto {sujeto}"
     
     # fig.suptitle(title, fontsize = 20)
     
@@ -371,12 +370,12 @@ def plotOneSpectrum(espectroSujeto, resol, blanco, sujeto, canal, frecStimulus,
     plt.plot(fft_axis + startFrecGraph,
                        np.mean(np.squeeze(espectroSujeto[:, canal, :, :, :]),
                                axis=1), color = "#403e7d")
-    plt.xlabel('Frecuency [Hz]')
+    plt.xlabel('Frecuencia [Hz]')
     plt.ylabel('Amplitud [uV]')
     plt.title(title)
     # plt.xaxis.grid(True)
     plt.axvline(x = frecStimulus, ymin = 0., ymax = max(fft_axis),
-                         label = "Stimulus Frec.",
+                         label = f"Frecuencia estímulo {frecStimulus}Hz",
                          linestyle='--', color = "#e37165", alpha = 0.9)
     plt.legend()
         
