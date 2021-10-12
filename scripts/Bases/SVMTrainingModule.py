@@ -203,11 +203,11 @@ def main():
     """Empecemos"""
 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-    path = os.path.join(actualFolder,"recordedEEG")
+    path = os.path.join(actualFolder,"recordedEEG\LucasB")
 
-    frecStimulus = np.array([6, 8, 11])
+    frecStimulus = np.array([7, 9, 11, 13])
 
-    trials = 10
+    trials = 15
     fm = 200.
     window = 5 #sec
     samplePoints = int(fm*window)
@@ -232,8 +232,8 @@ def main():
     #Filtering de EEG
     PRE_PROCES_PARAMS = {
                     'lfrec': 5.,
-                    'hfrec': 38.,
-                    'order': 4,
+                    'hfrec': 28.,
+                    'order': 8,
                     'sampling_rate': fm,
                     'bandStop': 50.,
                     'window': window,
@@ -245,17 +245,17 @@ def main():
     FFT_PARAMS = {
                     'resolution': resolution,#0.2930,
                     'start_frequency': 5.0,
-                    'end_frequency': 38.0,
+                    'end_frequency': 28.0,
                     'sampling_rate': fm
                     }
 
     #canales = 4
 
-    trainSet = joinedData[:,:,:,:8] #me quedo con los primeros 8 trials para entrenamiento y validación
-
+    trainSet = joinedData[:,:,:,:12] #me quedo con los primeros 12 trials para entrenamiento y validación
+    trainSet = trainSet[:,:2,:,:]
     #testSet = joinedData[:,:,:,8:] #me quedo con los últimos 2 trials para test
 
-    svm1 = SVMTrainingModule(trainSet, "lucasB",PRE_PROCES_PARAMS,FFT_PARAMS, modelName = "SVM_LucasB_Test1_30092021")
+    svm1 = SVMTrainingModule(trainSet, "lucasB",PRE_PROCES_PARAMS,FFT_PARAMS, modelName = "SVM_LucasB_Test2_10112021")
 
     spectrum = svm1.computeMSF() #Computamos el espectro de Fourier de la señal
 

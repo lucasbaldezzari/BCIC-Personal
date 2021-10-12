@@ -143,11 +143,11 @@ def main():
     """Empecemos"""
 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-    path = os.path.join(actualFolder,"recordedEEG")
+    path = os.path.join(actualFolder,"recordedEEG\LucasB")
 
-    frecStimulus = np.array([6, 8, 11])
+    frecStimulus = np.array([7, 9, 11, 13])
 
-    trials = 10
+    trials = 15
     fm = 200.
     window = 5 #sec
     samplePoints = int(fm*window)
@@ -155,7 +155,7 @@ def main():
     stimuli = 1 #one stimulus
 
     subjects = [1] #un solo sujeto
-    filenames = ["lucasB-R2-S1-E6","lucasB-R2-S1-E8", "lucasB-R3-S1-E11"]
+    filenames = ["lb-R1-S1-E7","lb-R1-S1-E9", "lb-R1-S1-E11","lb-R1-S1-E13"]
     allData = fa.loadData(path = path, filenames = filenames)
     names = list(allData.keys())
 
@@ -182,16 +182,16 @@ def main():
     resolution = np.round(fm/samplePoints, 4)
 
     FFT_PARAMS = {
-                    'resolution': resolution,#0.2930,
+                    'resolution': resolution,
                     'start_frequency': 5.0,
                     'end_frequency': 38.0,
                     'sampling_rate': fm
                     }
     
 
-    trainSet = joinedData[:,:,:,:8] #me quedo con los primeros 8 trials para entrenamiento y validación
+    trainSet = joinedData[:,:,:,:12] #me quedo con los primeros 8 trials para entrenamiento y validación
 
-    testSet = joinedData[:,:,:,8:] #me quedo con los últimos 2 trials para test
+    testSet = joinedData[:,:,:,12:] #me quedo con los últimos 2 trials para test
     
     path = "E:\reposBCICompetition\BCIC-Personal\scripts\Bases\models"
     
