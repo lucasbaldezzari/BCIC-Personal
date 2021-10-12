@@ -23,6 +23,7 @@ from sklearn.metrics import precision_recall_fscore_support
 import pickle
 
 import matplotlib.pyplot as plt
+from sklearn.utils import shuffle
 
 from utils import filterEEG, segmentingEEG, computeMagnitudSpectrum
 from utils import plotEEG
@@ -147,7 +148,7 @@ class SVMTrainingModule():
 
         self.trainingData, self.labels = self.getDataForTraining(self.MSF, clases = self.clases)
 
-        X_trn, X_val, y_trn, y_val = train_test_split(self.trainingData, self.labels, test_size = test_size)
+        X_trn, X_val, y_trn, y_val = train_test_split(self.trainingData, self.labels, test_size = test_size, shuffle = True)
 
         self.model.fit(X_trn,y_trn)
 
@@ -203,7 +204,7 @@ def main():
     """Empecemos"""
 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-    path = os.path.join(actualFolder,"recordedEEG\LucasB")
+    path = os.path.join(actualFolder,"recordedEEG\\LucasB")
 
     frecStimulus = np.array([7, 9, 11, 13])
 
@@ -212,27 +213,16 @@ def main():
     window = 5 #sec
     samplePoints = int(fm*window)
     channels = 4
-    stimuli = 1 #one stimulus
 
-    subjects = [1] #un solo sujeto
-    filenames = ["lucasB-R2-S1-E6","lucasB-R2-S1-E8", "lucasB-R3-S1-E11"]
-    allData = fa.loadData(path = path, filenames = filenames)
-    names = list(allData.keys())
-
-    def joinData(allData, stimuli, channels, samples, trials):
-        joinedData = np.zeros((stimuli, channels, samples, trials))
-        for i, sujeto in enumerate(allData):
-            joinedData[i] = allData[sujeto]["eeg"][0,:,:,:trials]
-
-        return joinedData
-
-    joinedData = joinData(allData, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
-    #la forma de joinedData es [estímulos, canales, muestras, trials]
+    filesRun1 = ["lb-R1-S1-E7","lb-R1-S1-E9", "lb-R1-S1-E11","lb-R1-S1-E13"]
+    run1 = fa.loadData(path = path, filenames = filesRun1)
+    filesRun2 = ["lb-R2-S1-E7","lb-R2-S1-E9", "lb-R2-S1-E11","lb-R2-S1-E13"]
+    run2 = fa.loadData(path = path, filenames = filesRun2)
 
     #Filtering de EEG
     PRE_PROCES_PARAMS = {
                     'lfrec': 5.,
-                    'hfrec': 28.,
+                    'hfrec': 38.,
                     'order': 8,
                     'sampling_rate': fm,
                     'bandStop': 50.,
@@ -245,63 +235,115 @@ def main():
     FFT_PARAMS = {
                     'resolution': resolution,#0.2930,
                     'start_frequency': 5.0,
-                    'end_frequency': 28.0,
+                    'end_frequency': 38.0,
                     'sampling_rate': fm
                     }
 
-    #canales = 4
+    def joinData(allData, stimuli, channels, samples, trials):
+        joinedData = np.zeros((stimuli, channels, samples, trials))
+        for i, sujeto in enumerate(allData):
+            joinedData[i] = allData[sujeto]["eeg"][0,:,:,:trials]
 
-    trainSet = joinedData[:,:,:,:12] #me quedo con los primeros 12 trials para entrenamiento y validación
-    trainSet = trainSet[:,:2,:,:]
-    #testSet = joinedData[:,:,:,8:] #me quedo con los últimos 2 trials para test
+        return joinedData #la forma de joinedData es [estímulos, canales, muestras, trials]
+
+    run1JoinedData = joinData(run1, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
+    run2JoinedData = joinData(run2, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
+
+    trainSet = np.concatenate((run1JoinedData[:,:,:,:12], run2JoinedData[:,:,:,:12]), axis = 3)
+    trainSet = trainSet[:,:2,:,:] #nos quedamos con los primeros dos canales
+
+    #trainSet = joinedData[:,:,:,:12] #me quedo con los primeros 12 trials para entrenamiento y validación
+    #trainSet = trainSet[:,:2,:,:] #nos quedamos con los primeros dos canales
 
     svm1 = SVMTrainingModule(trainSet, "lucasB",PRE_PROCES_PARAMS,FFT_PARAMS, modelName = "SVM_LucasB_Test2_10112021")
 
     spectrum = svm1.computeMSF() #Computamos el espectro de Fourier de la señal
 
-    modelo = svm1.createSVM(kernel = "linear", gamma = "scale", C = 1) #Creamos el modelo SVM
+    modelo = svm1.createSVM(kernel = "linear", gamma = 1e-2, C = 8e-1) #Creamos el modelo SVM
 
     metricas = svm1.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2) #entrenamos el modelo
 
     print("**** METRICAS ****")
     print(metricas)
 
-    #Chequeamos las features utilizadas para entrenar el SVM
-    #Graficamos promediando sobre los trials de entrenamiento
-    cantidadTrials = 8
-    clase = 3
-    fft_axis = np.arange(svm1.trainingData.shape[1]) * resolution
-    plt.xlabel('Frecuencia [Hz]')
-    plt.ylabel('Amplitud [uV]')
-    plt.title(f"Características para clase {frecStimulus[clase-1]} - Promedio sobre trials")
-    plt.plot(fft_axis + FFT_PARAMS["start_frequency"],
-              np.mean(svm1.trainingData[ (clase-1)*cantidadTrials : (clase-1)*cantidadTrials + cantidadTrials, :], axis = 0))
-    plt.axvline(x = frecStimulus[clase-1], ymin = 0., ymax = max(fft_axis),
-                          label = "Frecuencia estímulo",
-                          linestyle='--', color = "#e37165", alpha = 0.9)
-    plt.legend()
-    plt.show()
-
-    # Plotting para una clase y un trial
-    cantidadTrials = 8
-    trial = 0
-    clase = 0
-    fft_axis = np.arange(svm1.trainingData.shape[1]) * resolution
-    plt.xlabel('Frecuencia [Hz]')
-    plt.ylabel('Amplitud [uV]')
-    plt.title(f"Características para clase {frecStimulus[clase-1]} y trial {trial}")
-    plt.plot(fft_axis + FFT_PARAMS["start_frequency"], svm1.trainingData[(clase-1)*cantidadTrials + (trial-1), :])
-    plt.axvline(x = frecStimulus[clase-1], ymin = 0., ymax = max(fft_axis),
-                          label = "Frecuencia estímulo",
-                          linestyle='--', color = "#e37165", alpha = 0.9)
-
-    plt.legend()
-    plt.show()
-
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases',"models")
     svm1.saveModel(path)
     os.chdir(actualFolder)
+
+
+    ######################################################################
+    ################## Buscando el mejor clasificador ####################
+    ######################################################################
+
+    hiperParams = {"kernels": ["linear", "rbf"],
+        "gammaValues": [1e-2, 1e-1, 1, 1e+1, 1e+2, "scale", "auto"],
+        "CValues": [8e-1,9e-1, 1, 1e2, 1e3]
+        }
+
+    clasificadoresSVM = {"linear": list(),
+                    "rbf": list()
+        }
+
+    rbfResults = np.zeros((len(hiperParams["gammaValues"]), len(hiperParams["CValues"])))
+    linearResults = list()
+
+    # modelName = "SVM_Best_LucasB_10112021"
+    # svmTest = SVMTrainingModule(trainSet, modelName,PRE_PROCES_PARAMS,FFT_PARAMS, modelName = modelName)
+
+    for i, kernel in enumerate(hiperParams["kernels"]):
+        
+        if kernel != "linear":
+            for j, gamma in enumerate(hiperParams["gammaValues"]):
+                
+                for k, C in enumerate(hiperParams["CValues"]):
+                    #Instanciamos el modelo para los hipermarametros
+                    #modelo = svmTest.createSVM(kernel = kernel, gamma = gamma, C = C) #Creamos el modelo SVM
+
+                    #spectrum = svmTest.computeMSF() #Computamos el espectro de Fourier de la señal
+                    
+                    metricas = svm1.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2) #entrenamos el modelo y obtenemos las métricas
+                    accu = metricas["modelo_SVM_LucasB_Test2_10112021"]["val"]["Acc"]
+                    rbfResults[j,k] = accu
+                    
+                    clasificadoresSVM[kernel].append((C, gamma, svm1.model, accu))
+        else:
+            for k, C in enumerate(hiperParams["CValues"]):
+                
+                #Instanciamos el modelo para los hipermarametros
+                # modelo = svmTest.createSVM(kernel = kernel, gamma = 1, C = C) #Creamos el modelo SVM
+
+                # spectrum = svmTest.computeMSF() #Computamos el espectro de Fourier de la señal
+                
+                metricas = svm1.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2) #entrenamos el modelo y obtenemos las métricas
+                
+                accu = metricas["modelo_SVM_LucasB_Test2_10112021"]["val"]["Acc"]
+
+                linearResults.append(accu)
+                #predecimos con los datos en Xoptim
+                
+                clasificadoresSVM[kernel].append((C, svm1.model, accu))
+
+
+    plt.figure(figsize=(15,10))
+    plt.imshow(rbfResults)
+    plt.xlabel("Valor de C")
+    plt.xticks(np.arange(len(hiperParams["CValues"])), hiperParams["CValues"])
+    plt.ylabel("Valor de Gamma")
+    plt.yticks(np.arange(len(hiperParams["gammaValues"])), hiperParams["gammaValues"])
+    plt.colorbar()
+
+    for i in range(rbfResults.shape[0]):
+        for j in range(rbfResults.shape[1]):
+            plt.text(j, i, "{:.2f}".format(rbfResults[i, j]), va='center', ha='center')
+    plt.show()
+
+    plt.plot([str(C) for C in hiperParams["CValues"]], np.asarray(linearResults)*100)
+    plt.title("Accuracy para predicciones usando kernel 'linear'")
+    plt.xlabel("Valor de C") 
+    plt.ylabel("Accuracy (%)")
+    plt.show()
+
 
 if __name__ == "__main__":
     main()
