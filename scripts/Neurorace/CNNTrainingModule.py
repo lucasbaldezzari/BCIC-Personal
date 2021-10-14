@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 """
 Created on Thu Jun 24 16:53:29 2021
 
@@ -7,7 +8,6 @@ Created on Thu Jun 24 16:53:29 2021
         VERSIÓN: SCT-01-RevB
 """
 
-import sys
 import os
 
 import warnings
@@ -17,8 +17,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.io as sio
 from sklearn.model_selection import KFold
-
-import tensorflow as tf
 
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense, Activation, Flatten, Dropout, Conv2D, BatchNormalization
@@ -30,12 +28,9 @@ from tensorflow.keras import optimizers
 from tensorflow.keras.callbacks import ModelCheckpoint
 from tensorflow.keras.losses import categorical_crossentropy
 
-from brainflow.data_filter import DataFilter
-
 #own packages
 
 from utils import filterEEG, segmentingEEG, computeMagnitudSpectrum, computeComplexSpectrum, plotSpectrum
-from utils import plotEEG
 
 # warnings.filterwarnings('ignore')
 
@@ -331,14 +326,14 @@ class CNNTrainingModule():
                     
                     try:
                         actualFolder = os.getcwd()
-                        os.makedirs("models")    
+                        os.makedirs("models/cnn")    
                         print("Directory 'models' created ")
                     except FileExistsError:
                         print("")
                         
                     if actualSscore[1] > score:
                         score = actualSscore[1]
-                        self.model.save_weights(f'models/bestWeightss_{self.modelName}.h5')
+                        self.model.save_weights(f'models//cnn/bestWeightss_{self.modelName}.h5')
                 
                 accu[fold, :] = actualSscore[1]*100
                 
@@ -362,12 +357,12 @@ class CNNTrainingModule():
         else:
             try:
                 actualFolder = os.getcwd()
-                os.makedirs("models")    
-                print("Directory 'models' created ")
+                os.makedirs("models/cnn")    
+                print("Directory 'models/cnn' created ")
             except FileExistsError:
                 print("")
                 
-            self.model.save(f"models/{self.modelName}.h5")
+            self.model.save(f"models/cnn/{self.modelName}.h5")
             modelInJson = self.model.to_json()
             with open(f"models/{self.modelName}.json", "w") as jsonFile:
                 jsonFile.write(modelInJson)
@@ -376,22 +371,17 @@ def main():
         
     import fileAdmin as fa
                 
-    # actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-    actualFolder = "E:/reposBCICompetition/BCIC-Personal/talleres/taller4/scripts"
-    path = os.path.join(actualFolder,"dataset")
-    # dataSet = sciio.loadmat(f"{path}/s{subject}.mat")
-    
-    # path = "E:/reposBCICompetition/BCIC-Personal/taller4/scripts/dataset" #directorio donde estan los datos
-    
-    subjects = [8]
-    subjectsNames = ["s8"]
-    
-    
-    fm = 256.0
-    muestrasTotales = int(4*fm) #cantidad de muestras para 4segundos
-    muestraDescarte = 39
-    frecStimulus = np.array([9.25, 11.25, 13.25, 9.75, 11.75, 13.75, 10.25, 12.25, 14.25, 10.75, 12.75, 14.75])
-    
+    actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
+    path = os.path.join(actualFolder,"recordedEEG\\LucasB")
+
+    frecStimulus = np.array([7, 9, 11, 13])
+
+    trials = 15
+    fm = 200.
+    window = 5 #sec
+    samplePoints = int(fm*window)
+    channels = 4
+
     """
     **********************************************************************
     First step: Loading and plotting the EEG
@@ -399,27 +389,32 @@ def main():
     """
     
     """Loading the EEG data"""
-    rawEEG = fa.loadData(path = path, filenames = subjectsNames)[f"s{subjects[0]}"]["eeg"]
-    
-    #Selecting the first 12 trials
-    rawEEG = rawEEG[:, :, :, 0:12]
-    
-    samples = rawEEG.shape[2]
-    # resolution = fm/samples
-    resolution = np.round(fm/samples,4)
-    
-    rawEEG = rawEEG[:,:, muestraDescarte: ,:]
-    rawEEG = rawEEG[:,:, :muestrasTotales ,:]
-    
+
+    filesRun1 = ["lb-R1-S1-E7","lb-R1-S1-E9", "lb-R1-S1-E11","lb-R1-S1-E13"]
+    run1 = fa.loadData(path = path, filenames = filesRun1)
+    filesRun2 = ["lb-R2-S1-E7","lb-R2-S1-E9", "lb-R2-S1-E11","lb-R2-S1-E13"]
+    run2 = fa.loadData(path = path, filenames = filesRun2)
+
+    #Filtering de EEG
     PRE_PROCES_PARAMS = {
                     'lfrec': 5.,
                     'hfrec': 38.,
-                    'order': 4,
+                    'order': 8,
                     'sampling_rate': fm,
-                    'window': 4,
-                    'shiftLen':4
+                    'bandStop': 50.,
+                    'window': window,
+                    'shiftLen':window
                     }
-    
+
+    resolution = np.round(fm/samplePoints, 4)
+
+    FFT_PARAMS = {
+                    'resolution': resolution,#0.2930,
+                    'start_frequency': 5.0,
+                    'end_frequency': 38.0,
+                    'sampling_rate': fm
+                    }
+
     CNN_PARAMS = {
                     'batch_size': 64,
                     'epochs': 50,
@@ -429,45 +424,33 @@ def main():
                     'l2_lambda': 0.0001,
                     'momentum': 0.9,
                     'kernel_f': 10,
-                    'n_ch': 8,
-                    'num_classes': 12}
-    
-    FFT_PARAMS = {
-                    'resolution': resolution,#0.2930,
-                    'start_frequency': 5.0,
-                    'end_frequency': 38.0,
-                    'sampling_rate': fm
-                    }
-    
-    """Plotting the EEG data"""
-    ## Descomentar las siguientes línas en el caso de querer graficar
-    
-    # title = f"EEG without filter - subjetc {subjects[0]}"
-    # plotEEG(signal = rawEEG, sujeto = subjects[0],
-    #         trial = 3, blanco = 1, window = [0,4], fm = 256.0, save = False, title = title)
-    
-    # #filtro la señal entre los 5hz y los 80hz
-    # eegfiltrado = filterEEG(rawEEG, lfrec = PRE_PROCES_PARAMS["lfrec"],
-    #                         hfrec = PRE_PROCES_PARAMS["hfrec"], orden = 4, bandStop = 50., fm  = 256.0)
-    
-    # title = f"EEG filtered - subjetc {subjects[0]}"
-    
-    # plotEEG(eegfiltrado, sujeto = subjects[0],
-    #         trial = 3, blanco = 1, window = [0,4], fm = 256.0, save = False,
-    #         title = title)
+                    'n_ch': 2,
+                    'num_classes': 4}
+
+    def joinData(allData, stimuli, channels, samples, trials):
+        joinedData = np.zeros((stimuli, channels, samples, trials))
+        for i, sujeto in enumerate(allData):
+            joinedData[i] = allData[sujeto]["eeg"][0,:,:,:trials]
+
+        return joinedData #la forma de joinedData es [estímulos, canales, muestras, trials]
+
+    run1JoinedData = joinData(run1, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
+    run2JoinedData = joinData(run2, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
+
+    trainSet = np.concatenate((run1JoinedData[:,:2,:,:12], run2JoinedData[:,:2,:,:12]), axis = 3)
     
     """
     **********************************************************************
     Second step: Create the CNN
     **********************************************************************
     """
-    
+    sujeto = "lucasB"
     #Make a CNNTrainingModule object in order to use the data's Magnitude Features
-    magnitudCNN = CNNTrainingModule(rawEEG = rawEEG, subject = subjects[0],
+    magnitudCNN = CNNTrainingModule(rawEEG = trainSet, subject = 1,
                                     PRE_PROCES_PARAMS = PRE_PROCES_PARAMS,
                                     FFT_PARAMS = FFT_PARAMS,
                                     CNN_PARAMS = CNN_PARAMS,
-                                    modelName = f"CNN_UsingMagnitudFeatures_Subject{subjects[0]}")
+                                    modelName = f"CNN_UsingMagnitudFeatures_Subject{sujeto}")
     
     """
     **********************************************************************
@@ -479,10 +462,10 @@ def main():
     
     ### Descomentar las líneas de abajo para graficar el espectro
     
-    # plotSpectrum(magnitudFeatures, resolution, 12, subjects[0], 7, frecStimulus,
-    #               startFrecGraph = FFT_PARAMS['start_frequency'],
-    #               save = False, title = "", folder = "figs",
-    #               rows = 4, columns = 3)
+    plotSpectrum(magnitudFeatures, resolution, blancos = 4, sujeto = sujeto, canal = 1, frecStimulus = frecStimulus,
+                  startFrecGraph = FFT_PARAMS['start_frequency'],
+                  save = False, title = "", folder = "figs",
+                  rows = 2, columns = 2)
     
     
     # Get the training and testing data for CNN using Magnitud Spectrum Features
@@ -505,7 +488,8 @@ def main():
     **********************************************************************
     """
     
-    accu_CNN_using_MSF = magnitudCNN.trainCNN(trainingData_MSF, labels_MSF, nFolds = 5)
+    accu_CNN_using_MSF = magnitudCNN.trainCNN(trainingData_MSF, labels_MSF, nFolds = 6)
+    print(f"Maxima accu {accu_CNN_using_MSF.max()}")
     
     #saving the model
     magnitudCNN.saveCNNModel()
@@ -523,11 +507,11 @@ def main():
     **************************************
     """
     """Make a CNNTrainingModule object in order to use the data's Magnitude and data's Complex Features"""
-    complexCNN = CNNTrainingModule(rawEEG = rawEEG, subject = subjects[0],
+    complexCNN = CNNTrainingModule(rawEEG = trainSet, subject = 1,
                                     PRE_PROCES_PARAMS = PRE_PROCES_PARAMS,
                                     FFT_PARAMS = FFT_PARAMS,
                                     CNN_PARAMS = CNN_PARAMS,
-                                    modelName = f"CNN_UsingComplexFeatures_Subject{subjects[0]}")
+                                    modelName = f"CNN_UsingComplexFeatures_Subject{sujeto}")
     
     complexFeatures = complexCNN.computeCSF()
     
@@ -540,7 +524,8 @@ def main():
     # Create the CNN model
     complexCNN.createModel(inputshape)
     
-    accu_CNN_using_CSF = complexCNN.trainCNN(trainingData_CSF, labels_CSF, nFolds = 5)
+    accu_CNN_using_CSF = complexCNN.trainCNN(trainingData_CSF, labels_CSF, nFolds = 6)
+    print(f"Maxima accu {accu_CNN_using_CSF.max()}")
     
     complexCNN.saveCNNModel()
         

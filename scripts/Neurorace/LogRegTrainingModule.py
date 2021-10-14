@@ -12,25 +12,21 @@ Clase que permite entrenar una Regresión Logística para clasificar SSVEPs a pa
 import os
 import numpy as np
 import numpy.matlib as npm
+import json
 
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
+from sklearn.metrics import accuracy_score
 
 import pickle
 
-from sklearn.linear_model import LinearRegression
 from sklearn.metrics import accuracy_score
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
-
 import matplotlib.pyplot as plt
 
 from utils import filterEEG, segmentingEEG, computeMagnitudSpectrum, computeComplexSpectrum, plotSpectrum
-from utils import plotEEG
 import fileAdmin as fa
 
 class LogRegTrainingModule():
@@ -140,7 +136,7 @@ class LogRegTrainingModule():
         
         return self.model
     
-    def trainAndValidateSVM(self, clases, test_size = 0.2):
+    def trainAndValidateLogReg(self, clases, test_size = 0.2):
         """Método para entrenar un modelo SVM.
         
         Argumentos:
@@ -192,140 +188,110 @@ class LogRegTrainingModule():
         filename = f"{self.modelName}.pkl"
         with open(filename, 'wb') as file:  
             pickle.dump(self.model, file)
+            
+        #Guardamos los parámetros usados para entrenar el SVM
+        file = open(f"{self.modelName}_preproces.json", "w")
+        json.dump(self.PRE_PROCES_PARAMS , file)
+        file.close
 
-def getDataForTraining(features, clases, canal = False):
-    """Preparación del set de entrenamiento.
-        
-    Argumentos:
-        - features: Parte Real del Espectro or Parte Real e Imaginaria del Espectro
-        con forma [número de características x canales x clases x trials x número de segmentos]
-        - clases: Lista con las clases para formar las labels
-        
-    Retorna:
-        - trainingData: Set de datos de entrenamiento para alimentar el modelo SVM
-        Con forma [trials*clases x number of features]
-        - Labels: labels para entrenar el modelo a partir de las clases
-    """
-    
-    print("Generating training data")
-    
-    numFeatures = features.shape[0]
-    canales = features.shape[1]
-    numClases = features.shape[2]
-    trials = features.shape[3]
-    
-    if canal == False:
-        trainingData = np.mean(features, axis = 1)
-        
-    else:
-        trainingData = features[:, canal, :, :]
-        
-    trainingData = trainingData.swapaxes(0,1).swapaxes(1,2).reshape(numClases*trials, numFeatures)
-    
-    classLabels = np.arange(len(clases))
-    
-    labels = (npm.repmat(classLabels, trials, 1).T).ravel()
-
-    return trainingData, labels
+        file = open(f"{self.modelName}_fft.json", "w")
+        json.dump(self.PRE_PROCES_PARAMS , file)
+        file.close   
 
 def main():
            
-    """Let's starting"""
+    """Empecemos"""
                 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-    path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\talleres\\taller4\\scripts',"dataset")
-    # dataSet = sciio.loadmat(f"{path}/s{subject}.mat")
-    
-    # path = "E:/reposBCICompetition/BCIC-Personal/taller4/scripts/dataset" #directorio donde estan los datos
-    
-    subjects = np.arange(0,10)
-    # subjectsNames = [f"s{subject}" for subject in np.arange(1,11)]
-    subjectsNames = [f"s8"]
-    
-    fm = 256.0
-    tiempoTotal = int(4*fm) #cantidad de muestras para 4segundos
-    muestraDescarte = 39
-    frecStimulus = np.array([9.25, 11.25, 13.25, 9.75, 11.75, 13.75, 10.25, 12.25, 14.25, 10.75, 12.75, 14.75])
-    
-    """Loading the EEG data"""
-    rawEEGs = fa.loadData(path = path, filenames = subjectsNames)
-    
-    
-    samples = rawEEGs[subjectsNames[0]]["eeg"].shape[2] #the are the same for all sobjecs and trials
-    
+    path = os.path.join(actualFolder,"recordedEEG\\LucasB")
+
+    frecStimulus = np.array([7, 9, 11, 13])
+
+    trials = 15
+    fm = 200.
+    window = 5 #sec
+    samplePoints = int(fm*window)
+    channels = 4
+
+    filesRun1 = ["lb-R1-S1-E7","lb-R1-S1-E9", "lb-R1-S1-E11","lb-R1-S1-E13"]
+    run1 = fa.loadData(path = path, filenames = filesRun1)
+    filesRun2 = ["lb-R2-S1-E7","lb-R2-S1-E9", "lb-R2-S1-E11","lb-R2-S1-E13"]
+    run2 = fa.loadData(path = path, filenames = filesRun2)
+
     #Filtering de EEG
     PRE_PROCES_PARAMS = {
                     'lfrec': 5.,
                     'hfrec': 38.,
-                    'order': 4,
+                    'order': 8,
                     'sampling_rate': fm,
                     'bandStop': 50.,
-                    'window': 4,
-                    'shiftLen':4
+                    'window': window,
+                    'shiftLen':window
                     }
-    
-    resolution = fm/samples
-    
+
+    resolution = np.round(fm/samplePoints, 4)
+
     FFT_PARAMS = {
                     'resolution': resolution,#0.2930,
                     'start_frequency': 5.0,
                     'end_frequency': 38.0,
                     'sampling_rate': fm
                     }
-    
-    for subject in subjectsNames:
-        eeg = rawEEGs[subject]["eeg"]
-        eeg = eeg[:,:, muestraDescarte: ,:]
-        eeg = eeg[:,:, :tiempoTotal ,:]
-        rawEEGs[subject]["eeg"] = filterEEG(eeg,lfrec = PRE_PROCES_PARAMS["lfrec"],
-                                            hfrec = PRE_PROCES_PARAMS["hfrec"],
-                                            orden = 4, bandStop = 50. , fm  = fm)
-        
-    trainSet = rawEEGs["s8"]["eeg"][:,:,:,:11] #me quedo con los primeros 11 trials para entrenamiento y validación
-    
-    testSet = rawEEGs["s8"]["eeg"][:,:,:,11:]
-    
-    logreg = LogRegTrainingModule(trainSet, "8",PRE_PROCES_PARAMS,FFT_PARAMS,modelName = "LogRegS8")
+
+    def joinData(allData, stimuli, channels, samples, trials):
+        joinedData = np.zeros((stimuli, channels, samples, trials))
+        for i, sujeto in enumerate(allData):
+            joinedData[i] = allData[sujeto]["eeg"][0,:,:,:trials]
+
+        return joinedData #la forma de joinedData es [estímulos, canales, muestras, trials]
+
+    run1JoinedData = joinData(run1, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
+    run2JoinedData = joinData(run2, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
+
+    trainSet = np.concatenate((run1JoinedData[:,:,:,:12], run2JoinedData[:,:,:,:12]), axis = 3)
+    trainSet = trainSet[:,:2,:,:] #nos quedamos con los primeros dos canales
+
+    logreg = LogRegTrainingModule(trainSet, "LucasB",PRE_PROCES_PARAMS,FFT_PARAMS,modelName = "Logreg_LucasB_Test2_10112021")
     
     spectrum = logreg.computeMSF()
     
     modelo = logreg.createLogReg(multi_class="multinomial", solver = "newton-cg")
     
-    metricas = logreg.trainAndValidateSVM(clases = np.arange(0,12), test_size = 0.2)
+    metricas = logreg.trainAndValidateLogReg(clases = np.arange(0,len(frecStimulus)), test_size = 0.2) #entrenamos el modelo
     
     print(metricas)
     
-    #Checking the features used to train the SVM
-    # Plotting promediando trials
-    cantidadTrials = 11
-    clase = 5
-    fft_axis = np.arange(logreg.trainingData.shape[1]) * resolution
-    plt.xlabel('Frecuencia [Hz]')
-    plt.ylabel('Amplitud [uV]')
-    plt.title(f"Características para clase {frecStimulus[clase-1]} - Promedio sobre trials")
-    plt.plot(fft_axis + FFT_PARAMS["start_frequency"],
-              np.mean(logreg.trainingData[ (clase-1)*cantidadTrials : (clase-1)*cantidadTrials + cantidadTrials, :], axis = 0))
-    plt.axvline(x = frecStimulus[clase-1], ymin = 0., ymax = max(fft_axis),
-                          label = "Frecuencia estímulo",
-                          linestyle='--', color = "#e37165", alpha = 0.9)
-    plt.legend()
-    plt.show()
+    # #Checking the features used to train the SVM
+    # # Plotting promediando trials
+    # cantidadTrials = 2
+    # clase = 1
+    # fft_axis = np.arange(logreg.trainingData.shape[1]) * resolution
+    # plt.xlabel('Frecuencia [Hz]')
+    # plt.ylabel('Amplitud [uV]')
+    # plt.title(f"Características para clase {frecStimulus[clase-1]} - Promedio sobre trials")
+    # plt.plot(fft_axis + FFT_PARAMS["start_frequency"],
+    #           np.mean(logreg.trainingData[ (clase-1)*cantidadTrials : (clase-1)*cantidadTrials + cantidadTrials, :], axis = 0))
+    # plt.axvline(x = frecStimulus[clase-1], ymin = 0., ymax = max(fft_axis),
+    #                       label = "Frecuencia estímulo",
+    #                       linestyle='--', color = "#e37165", alpha = 0.9)
+    # plt.legend()
+    # plt.show()
     
-    # Plotting para una clase y un trial
-    cantidadTrials = 11
-    trial = 11
-    clase = 5
-    fft_axis = np.arange(logreg.trainingData.shape[1]) * resolution
-    plt.xlabel('Frecuencia [Hz]')
-    plt.ylabel('Amplitud [uV]')
-    plt.title(f"Características para clase {frecStimulus[clase-1]} y trial {trial}")
-    plt.plot(fft_axis + FFT_PARAMS["start_frequency"], logreg.trainingData[(clase-1)*cantidadTrials + (trial-1), :])
-    plt.axvline(x = frecStimulus[clase-1], ymin = 0., ymax = max(fft_axis),
-                          label = "Frecuencia estímulo",
-                          linestyle='--', color = "#e37165", alpha = 0.9)
+    # # Plotting para una clase y un trial
+    # cantidadTrials = 2
+    # trial = 2
+    # clase = 1
+    # fft_axis = np.arange(logreg.trainingData.shape[1]) * resolution
+    # plt.xlabel('Frecuencia [Hz]')
+    # plt.ylabel('Amplitud [uV]')
+    # plt.title(f"Características para clase {frecStimulus[clase-1]} y trial {trial}")
+    # plt.plot(fft_axis + FFT_PARAMS["start_frequency"], logreg.trainingData[(clase-1)*cantidadTrials + (trial-1), :])
+    # plt.axvline(x = frecStimulus[clase-1], ymin = 0., ymax = max(fft_axis),
+    #                       label = "Frecuencia estímulo",
+    #                       linestyle='--', color = "#e37165", alpha = 0.9)
     
-    plt.legend()
-    plt.show()
+    # plt.legend()
+    # plt.show()
     
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases',"models")

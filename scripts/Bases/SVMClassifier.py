@@ -200,7 +200,7 @@ def main():
     
     path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases',"models")
     
-    modelFile = "SVM_LucasB_Test2_10112021.pkl" #nombre del modelo
+    modelFile = "SVM_LucasB_Test3_10112021.pkl" #nombre del modelo
         
     svm = SVMClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, path = path)
     

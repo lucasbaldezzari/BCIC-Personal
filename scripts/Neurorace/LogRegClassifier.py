@@ -113,7 +113,7 @@ class LogRegClassifier():
             Con forma [trials*clases x number of features]
             - Labels: labels para entrenar el modelo a partir de las clases"""
         
-        print("Transformando datos para clasificarlos")
+        #print("Transformando datos para clasificarlos")
         
         numFeatures = features.shape[0]
         canales = features.shape[1]
@@ -150,78 +150,103 @@ def main():
     """Let's starting"""
                     
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-    path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\talleres\\taller4\\scripts',"dataset")
-    
-    subjects = np.arange(0,10)
-    # subjectsNames = [f"s{subject}" for subject in np.arange(1,11)]
-    subjectsNames = ["s8"]
-    
-    fm = 256.0
-    tiempoTotal = int(4*fm) #cantidad de muestras para 4segundos
-    muestraDescarte = 39
-    frecStimulus = np.array([9.25, 11.25, 13.25, 9.75, 11.75, 13.75, 10.25, 12.25, 14.25, 10.75, 12.75, 14.75])
-    
-    """Loading the EEG data"""
-    rawEEGs = fa.loadData(path = path, filenames = subjectsNames)
-    
-    samples = rawEEGs[subjectsNames[0]]["eeg"].shape[2] #the are the same for all sobjecs and trials
-    
-    #Variables para preprocesamiento EEG
+    path = os.path.join(actualFolder,"recordedEEG\\LucasB")
+
+    frecStimulus = np.array([7, 9, 11, 13])
+
+    trials = 15
+    fm = 200.
+    window = 5 #sec
+    samplePoints = int(fm*window)
+    channels = 4
+
+    filesRun1 = ["lb-R1-S1-E7","lb-R1-S1-E9", "lb-R1-S1-E11","lb-R1-S1-E13"]
+    run1 = fa.loadData(path = path, filenames = filesRun1)
+    filesRun2 = ["lb-R2-S1-E7","lb-R2-S1-E9", "lb-R2-S1-E11","lb-R2-S1-E13"]
+    run2 = fa.loadData(path = path, filenames = filesRun2)
+
+    #Filtering de EEG
     PRE_PROCES_PARAMS = {
                     'lfrec': 5.,
                     'hfrec': 38.,
-                    'order': 4,
+                    'order': 8,
                     'sampling_rate': fm,
                     'bandStop': 50.,
-                    'window': 4,
-                    'shiftLen':4
+                    'window': window,
+                    'shiftLen':window
                     }
-    
-    resolution = fm/samples
-    
+
+    resolution = np.round(fm/samplePoints, 4)
+
     FFT_PARAMS = {
                     'resolution': resolution,#0.2930,
                     'start_frequency': 5.0,
                     'end_frequency': 38.0,
                     'sampling_rate': fm
                     }
-    
-    for subject in subjectsNames:
-        eeg = rawEEGs[subject]["eeg"]
-        eeg = eeg[:,:, muestraDescarte: ,:]
-        eeg = eeg[:,:, :tiempoTotal ,:]
-        rawEEGs[subject]["eeg"] = filterEEG(eeg,lfrec = PRE_PROCES_PARAMS["lfrec"],
-                                            hfrec = PRE_PROCES_PARAMS["hfrec"],
-                                            orden = 4, bandStop = 50. , fm  = fm)
-        
-    testSet = rawEEGs["s8"]["eeg"][:,:,:,11:] #seleccionamos los últimos 4 trials
+
+    def joinData(allData, stimuli, channels, samples, trials):
+        joinedData = np.zeros((stimuli, channels, samples, trials))
+        for i, sujeto in enumerate(allData):
+            joinedData[i] = allData[sujeto]["eeg"][0,:,:,:trials]
+
+        return joinedData #la forma de joinedData es [estímulos, canales, muestras, trials]
+
+    run1JoinedData = joinData(run1, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
+    run2JoinedData = joinData(run2, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
+
+    testSet = np.concatenate((run1JoinedData[:,:,:,12:], run2JoinedData[:,:,:,12:]), axis = 3)
+    testSet = testSet[:,:2,:,:] #nos quedamos con los primeros dos canales
+
+    #testSet = joinedData[:,:,:,12:] #me quedo con los últimos 2 trials para test
+    #testSet = testSet[:,:2,:,:] #nos quedamos con los primeros dos canales
     
     path = "E:\reposBCICompetition\BCIC-Personal\scripts\Bases\models"
     
     path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases',"models")
     
-    modelFile = "LogRegS8.pkl"
+    modelFile = "Logreg_LucasB_Test2_10112021.pkl"
         
     logreg = LogRegClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, path = path)
     
     #De nuestro set de datos seleccionamos el EEG de correspondiente a una clase y un trial.
     #Es importante tener en cuenta que los datos de OpenBCI vienen en la forma [canales x samples]
     
-    clase = 5 #corresponde al estímulo de 11.75Hz
-    trial = 2
+    clase = 1 #corresponde al estímulo de 7Hz
+    trial = 6
     
     rawEEG = testSet[clase - 1, :, : , trial - 1]
     
     frecClasificada = logreg.getClassification(rawEEG = rawEEG)
     print(f"El estímulo clasificado fue {frecClasificada}")
     
-    clase = 9 #corresponde al estímulo de 14.25Hz
-    trial = 2
+    clase = 3 #corresponde al estímulo de 11Hz
+    trial = 3
     
     rawEEG = testSet[clase - 1, :, : , trial - 1]
     
     frecClasificada = logreg.getClassification(rawEEG = rawEEG)
     print(f"El estímulo clasificado fue {frecClasificada}")
+
+    trials = 6
+    predicciones = np.zeros((len(frecStimulus),trials))
+    
+    for i, clase in enumerate(np.arange(4)):
+        for j, trial in enumerate(np.arange(6)):
+            data = testSet[clase, :, : , trial]
+            classification = logreg.getClassification(rawEEG = data)
+            if classification == frecStimulus[clase]:
+                predicciones[i,j] = 1
+
+        #predicciones[i,j+1] = predicciones[i,:].sum()/trials
+
+    predictions = pd.DataFrame(predicciones, index = frecStimulus,
+                    columns = [f"trial {trial+1}" for trial in np.arange(trials)])
+
+    predictions['promedio'] = predictions.mean(numeric_only=True, axis=1)
+    
+    print(f"Predicciones usando el modelo LogReg {modelFile}")
+    print(predictions)
 
 
 if __name__ == "__main__":
