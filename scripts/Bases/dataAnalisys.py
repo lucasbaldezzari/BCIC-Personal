@@ -14,24 +14,24 @@ from utils import plotSpectrum, plotOneSpectrum, plotEEG
 import matplotlib.pyplot as plt
 
 actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-path = os.path.join(actualFolder,"recordedEEG\olds")
+path = os.path.join(actualFolder,"recordedEEG")
 
-trials = 10
-fm = 250.
+trials = 15
+fm = 200.
 window = 5 #sec
 samplePoints = int(fm*window)
 channels = 4
 stimuli = 1 #one stimulus
 
 subjects = [1]
-filenames = ["S1_R1_S1_E7","S1_R2_S1_E7","S1_R3_S1_E7"]
+filenames = ["lb-R2-S2-E","lb-R2-S2-E9","lb-R2-S2-E11","lb-R2-S2-E13"]
 allData = fa.loadData(path = path, filenames = filenames)
 
-name = "S1_R2_S1_E7" #nombre de los datos a analizar}
-stimuli = [6,7,8,9] #lista de estímulos
-estim = [7] #Le pasamos un estímulo para que grafique una linea vertical
+name = "lb-R2-S2-E11" #nombre de los datos a analizar}
+stimuli = [7,9,11,13] #lista de estímulos
+estim = [11] #Le pasamos un estímulo para que grafique una linea vertical
 
-eeg = allData[name]['eeg'][:,:4,:,:]
+eeg = allData[name]['eeg'][:,:4,:,:] #utilizamos solo los dos primeros canales
 
 #Chequeamos información del registro eeg 1
 print(allData[name]["generalInformation"])
@@ -106,7 +106,7 @@ plt.show()
 ########################################################################
 
 canales = [1,2,3,4]
-trial = 3
+trial = 4
 
 title = f"Espectro - Trial número {trial} - sujeto {name}"
 fig, plots = plt.subplots(2, 2, figsize=(16, 14), gridspec_kw=dict(hspace=0.45, wspace=0.3))
@@ -132,7 +132,7 @@ plt.show()
 #graficamos espectro para todos los trials y un canal
 ########################################################################
 
-canal = 2 #elegimos un canal
+canal = 1 #elegimos un canal
 
 title = f"Espectro para cada trial - Canal {canal} - Estímulo {estim[0]}Hz - Sujeto {name}"
 

@@ -135,7 +135,7 @@ def main():
     """
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
     #En este ejemplo esta conectada en el COM3
-    arduino = AC('COM8', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM12', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
     time.sleep(1) 
     
@@ -144,10 +144,10 @@ def main():
     #El siguiente diccionario se usa para guardar información relevante cómo así también los datos de EEG
     #registrados durante la sesión de entrenamiento.
     dictionary = {
-                'subject': 'lucasB-R2-S1-E7',
-                'date': '8/10/2021',
-                'generalInformation': 'Estimulos HTML. Flecha Amarilla. Izquierda.',
-                'stimFrec': "7",
+                'subject': 'lb-R2-S2-E11',
+                'date': '14/10/2021',
+                'generalInformation': 'Ganglion. Estimulos HTML. Adelante.',
+                'stimFrec': "11",
                 'channels': [1,2,3,4], 
                  'dataShape': [stimuli, channels, samplePoints, trials],
                   'eeg': None
