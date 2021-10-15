@@ -27,6 +27,7 @@ import matplotlib.pyplot as plt
 
 from utils import filterEEG, segmentingEEG, computeMagnitudSpectrum
 from utils import plotEEG
+from utils import norm_mean_std
 import fileAdmin as fa
 
 class LogRegClassifier():
@@ -197,6 +198,7 @@ def main():
 
     testSet = np.concatenate((run1JoinedData[:,:,:,12:], run2JoinedData[:,:,:,12:]), axis = 3)
     testSet = testSet[:,:2,:,:] #nos quedamos con los primeros dos canales
+    #testSet = norm_mean_std(testSet)
 
     #testSet = joinedData[:,:,:,12:] #me quedo con los últimos 2 trials para test
     #testSet = testSet[:,:2,:,:] #nos quedamos con los primeros dos canales

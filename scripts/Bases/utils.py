@@ -422,8 +422,13 @@ def barPlotSubjects(medias, varianzas,
             
         os.chdir(pathACtual)
 
-# def transformDataToGetFeatures(eeg):
-#     rawEEG = eeg.reshape(1,eeg.shape[0],eeg.shape[1],eeg.shape[2])
-#     # rawEEG = rawEEG.swapaxes(1,2).swapaxes(2,3)
-#     # dictionary["eeg"] = rawEEG
-#     # fa.classifyData(path = path,dictionary = dictionary, fileName = dictionary["subject"])
+def norm_mean_std(eeg):
+    mean = eeg.mean(axis=2, keepdims=True)
+    std_dev = eeg.mean(axis=2, keepdims=True)
+    return (eeg - mean)/std_dev
+
+# def norm_min_max(eeg):
+#     return (eeg - np.min(eeg)) / (np.max(eeg)-np.min(eeg))
+
+# def norm_linear(eeg):
+#     return eeg / np.max(eeg)

@@ -27,6 +27,7 @@ from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 import matplotlib.pyplot as plt
 
 from utils import filterEEG, segmentingEEG, computeMagnitudSpectrum, computeComplexSpectrum, plotSpectrum
+from utils import norm_mean_std
 import fileAdmin as fa
 
 class LogRegTrainingModule():
@@ -129,10 +130,10 @@ class LogRegTrainingModule():
     
         return trainingData, labels
     
-    def createLogReg(self, multi_class="multinomial", solver = "newton-cg"):
+    def createLogReg(self, multi_class="multinomial", solver = "newton-cg", C = 1):
         """Se crea modelo"""
         
-        self.model = LogisticRegression(multi_class = multi_class , solver = solver)
+        self.model = LogisticRegression(multi_class = multi_class , solver = solver, C = C)
         
         return self.model
     
@@ -250,48 +251,18 @@ def main():
 
     trainSet = np.concatenate((run1JoinedData[:,:,:,:12], run2JoinedData[:,:,:,:12]), axis = 3)
     trainSet = trainSet[:,:2,:,:] #nos quedamos con los primeros dos canales
+    #trainSet = norm_mean_std(trainSet) #normalizamos los datos
 
     logreg = LogRegTrainingModule(trainSet, "LucasB",PRE_PROCES_PARAMS,FFT_PARAMS,modelName = "Logreg_LucasB_Test2_10112021")
     
     spectrum = logreg.computeMSF()
     
-    modelo = logreg.createLogReg(multi_class="multinomial", solver = "newton-cg")
+    modelo = logreg.createLogReg(multi_class="ovr", solver = "saga", C = 100)
     
     metricas = logreg.trainAndValidateLogReg(clases = np.arange(0,len(frecStimulus)), test_size = 0.2) #entrenamos el modelo
     
+    print("**** METRICAS ****")
     print(metricas)
-    
-    # #Checking the features used to train the SVM
-    # # Plotting promediando trials
-    # cantidadTrials = 2
-    # clase = 1
-    # fft_axis = np.arange(logreg.trainingData.shape[1]) * resolution
-    # plt.xlabel('Frecuencia [Hz]')
-    # plt.ylabel('Amplitud [uV]')
-    # plt.title(f"Características para clase {frecStimulus[clase-1]} - Promedio sobre trials")
-    # plt.plot(fft_axis + FFT_PARAMS["start_frequency"],
-    #           np.mean(logreg.trainingData[ (clase-1)*cantidadTrials : (clase-1)*cantidadTrials + cantidadTrials, :], axis = 0))
-    # plt.axvline(x = frecStimulus[clase-1], ymin = 0., ymax = max(fft_axis),
-    #                       label = "Frecuencia estímulo",
-    #                       linestyle='--', color = "#e37165", alpha = 0.9)
-    # plt.legend()
-    # plt.show()
-    
-    # # Plotting para una clase y un trial
-    # cantidadTrials = 2
-    # trial = 2
-    # clase = 1
-    # fft_axis = np.arange(logreg.trainingData.shape[1]) * resolution
-    # plt.xlabel('Frecuencia [Hz]')
-    # plt.ylabel('Amplitud [uV]')
-    # plt.title(f"Características para clase {frecStimulus[clase-1]} y trial {trial}")
-    # plt.plot(fft_axis + FFT_PARAMS["start_frequency"], logreg.trainingData[(clase-1)*cantidadTrials + (trial-1), :])
-    # plt.axvline(x = frecStimulus[clase-1], ymin = 0., ymax = max(fft_axis),
-    #                       label = "Frecuencia estímulo",
-    #                       linestyle='--', color = "#e37165", alpha = 0.9)
-    
-    # plt.legend()
-    # plt.show()
     
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases',"models")

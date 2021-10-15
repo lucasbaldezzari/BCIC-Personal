@@ -10,6 +10,7 @@ import numpy as np
 import fileAdmin as fa
 from utils import filterEEG, segmentingEEG, computeMagnitudSpectrum, computeComplexSpectrum
 from utils import plotSpectrum, plotOneSpectrum, plotEEG
+from utils import norm_mean_std
 
 import matplotlib.pyplot as plt
 
@@ -24,7 +25,7 @@ channels = 4
 stimuli = 1 #one stimulus
 
 subjects = [1]
-filenames = ["lb-R2-S2-E","lb-R2-S2-E9","lb-R2-S2-E11","lb-R2-S2-E13"]
+filenames = ["lb-R2-S2-E7","lb-R2-S2-E9","lb-R2-S2-E11","lb-R2-S2-E13"]
 allData = fa.loadData(path = path, filenames = filenames)
 
 name = "lb-R2-S2-E11" #nombre de los datos a analizar}
@@ -32,6 +33,7 @@ stimuli = [7,9,11,13] #lista de estímulos
 estim = [11] #Le pasamos un estímulo para que grafique una linea vertical
 
 eeg = allData[name]['eeg'][:,:4,:,:] #utilizamos solo los dos primeros canales
+eeg = norm_mean_std(eeg) #normalizamos los datos
 
 #Chequeamos información del registro eeg 1
 print(allData[name]["generalInformation"])
@@ -153,6 +155,5 @@ for trial in range(MSF1.shape[3]):
         plots[trial].xaxis.grid(True)
         plots[trial].axvline(x = estim[0], ymin = 0., ymax = max(fft_axis),
                                 linestyle='--', color = "#e37165", alpha = 0.9)
-        # plots[trial].legend()
 
 plt.show()

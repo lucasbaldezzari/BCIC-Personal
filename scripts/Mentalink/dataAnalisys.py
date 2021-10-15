@@ -14,24 +14,24 @@ from utils import plotSpectrum, plotOneSpectrum, plotEEG
 import matplotlib.pyplot as plt
 
 actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-path = os.path.join(actualFolder,"recordedEEG/DG_08_10")
+path = os.path.join(actualFolder,"recordedEEG\olds")
 
 trials = 10
-fm = 200.
+fm = 250.
 window = 5 #sec
 samplePoints = int(fm*window)
 channels = 4
 stimuli = 1 #one stimulus
 
 subjects = [1]
-filenames = ["S1_R5_S1_E6","S1_R3_S1_E7","S1_R1_S1_E8","S1_R1_S1_E9"]
+filenames = ["S1_R1_S1_E7","S1_R2_S1_E7","S1_R3_S1_E7"]
 allData = fa.loadData(path = path, filenames = filenames)
 
-name = "S1_R1_S1_E9" #nombre de los datos a analizar}
+name = "S1_R2_S1_E7" #nombre de los datos a analizar}
 stimuli = [6,7,8,9] #lista de estímulos
-estim = [9] #Le pasamos un estímulo para que grafique una linea vertical
+estim = [7] #Le pasamos un estímulo para que grafique una linea vertical
 
-eeg = allData[name]['eeg']
+eeg = allData[name]['eeg'][:,:4,:,:]
 
 #Chequeamos información del registro eeg 1
 print(allData[name]["generalInformation"])
@@ -106,7 +106,7 @@ plt.show()
 ########################################################################
 
 canales = [1,2,3,4]
-trial = 10
+trial = 3
 
 title = f"Espectro - Trial número {trial} - sujeto {name}"
 fig, plots = plt.subplots(2, 2, figsize=(16, 14), gridspec_kw=dict(hspace=0.45, wspace=0.3))

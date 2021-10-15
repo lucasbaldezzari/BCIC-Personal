@@ -19,7 +19,8 @@ import pickle
 import matplotlib.pyplot as plt
 
 from utils import filterEEG, segmentingEEG, computeMagnitudSpectrum
-from utils import plotEEG
+from utils import norm_mean_std
+
 import fileAdmin as fa
 
 class SVMClassifier():
@@ -191,16 +192,16 @@ def main():
 
     testSet = np.concatenate((run1JoinedData[:,:,:,12:], run2JoinedData[:,:,:,12:]), axis = 3)
     testSet = testSet[:,:2,:,:] #nos quedamos con los primeros dos canales
+    testSet = norm_mean_std(testSet) #normalizamos los datos
 
     #trainSet = joinedData[:,:,:,:12] #me quedo con los primeros 12 trials para entrenamiento y validación
     #trainSet = trainSet[:,:2,:,:] #nos quedamos con los primeros dos canales
-
     
     path = "E:\reposBCICompetition\BCIC-Personal\scripts\Bases\models"
     
     path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases',"models")
     
-    modelFile = "SVM_LucasB_Test3_10112021.pkl" #nombre del modelo
+    modelFile = "SVM_LucasB_100accu_14102021.pkl" #nombre del modelo
         
     svm = SVMClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, path = path)
     

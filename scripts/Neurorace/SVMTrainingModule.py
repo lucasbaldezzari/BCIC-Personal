@@ -109,8 +109,6 @@ class SVMTrainingModule():
             - Labels: labels para entrenar el modelo a partir de las clases
         """
 
-        print("Generating training data")
-
         numFeatures = features.shape[0]
         canales = features.shape[1]
         numClases = features.shape[2]
@@ -130,10 +128,10 @@ class SVMTrainingModule():
 
         return trainingData, labels
 
-    def createSVM(self, kernel, gamma, C):
+    def createSVM(self, kernel = "rbf", gamma = "scale", C = 1, probability=False):
         """Se crea modelo"""
 
-        self.model = SVC(C = C, kernel = kernel, gamma = gamma)
+        self.model = SVC(C = C, kernel = kernel, gamma = gamma, probability=probability)
 
         return self.model
 
@@ -181,12 +179,14 @@ class SVMTrainingModule():
 
         return self.METRICAS
 
-    def saveModel(self, path):
+    def saveModel(self, path, filename = ""):
         """Método para guardar el modelo"""
 
         os.chdir(path)
 
-        filename = f"{self.modelName}.pkl"
+        if not filename:
+            filename = f"{self.modelName}.pkl"
+
         with open(filename, 'wb') as file:
             pickle.dump(self.model, file)
 
@@ -259,7 +259,7 @@ def main():
 
     spectrum = svm1.computeMSF() #Computamos el espectro de Fourier de la señal
 
-    modelo = svm1.createSVM(kernel = "linear", gamma = 1e-2, C = 8e-1) #Creamos el modelo SVM
+    modelo = svm1.createSVM(kernel = "rbf", gamma = 0.05, C = 24, probability = True) #Creamos el modelo SVM
 
     metricas = svm1.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2) #entrenamos el modelo
 
@@ -298,23 +298,28 @@ def main():
                 
                 for k, C in enumerate(hiperParams["CValues"]):
                     #Instanciamos el modelo para los hipermarametros
-                    #modelo = svmTest.createSVM(kernel = kernel, gamma = gamma, C = C) #Creamos el modelo SVM
 
-                    #spectrum = svmTest.computeMSF() #Computamos el espectro de Fourier de la señal
-                    
+                    svm1 = SVMTrainingModule(trainSet, "lucasB",PRE_PROCES_PARAMS,FFT_PARAMS, modelName = "SVM_LucasB_Test2_10112021")
+
+                    spectrum = svm1.computeMSF() #Computamos el espectro de Fourier de la señal
+
+                    modelo = svm1.createSVM(kernel = kernel, gamma = gamma, C = C, probability = True) #Creamos el modelo SVM
+              
                     metricas = svm1.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2) #entrenamos el modelo y obtenemos las métricas
                     accu = metricas["modelo_SVM_LucasB_Test2_10112021"]["val"]["Acc"]
                     rbfResults[j,k] = accu
                     
-                    clasificadoresSVM[kernel].append((C, gamma, svm1.model, accu))
+                    clasificadoresSVM[kernel].append((C, gamma, svm1, accu))
         else:
             for k, C in enumerate(hiperParams["CValues"]):
                 
                 #Instanciamos el modelo para los hipermarametros
-                # modelo = svmTest.createSVM(kernel = kernel, gamma = 1, C = C) #Creamos el modelo SVM
+                svm1 = SVMTrainingModule(trainSet, "lucasB",PRE_PROCES_PARAMS,FFT_PARAMS, modelName = "SVM_LucasB_Test2_10112021")
 
-                # spectrum = svmTest.computeMSF() #Computamos el espectro de Fourier de la señal
-                
+                spectrum = svm1.computeMSF() #Computamos el espectro de Fourier de la señal
+
+                modelo = svm1.createSVM(kernel = kernel,C = C, probability = True) #Creamos el modelo SVM
+            
                 metricas = svm1.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2) #entrenamos el modelo y obtenemos las métricas
                 
                 accu = metricas["modelo_SVM_LucasB_Test2_10112021"]["val"]["Acc"]
@@ -322,7 +327,7 @@ def main():
                 linearResults.append(accu)
                 #predecimos con los datos en Xoptim
                 
-                clasificadoresSVM[kernel].append((C, svm1.model, accu))
+                clasificadoresSVM[kernel].append((C, svm1, accu))
 
 
     plt.figure(figsize=(15,10))
@@ -344,7 +349,22 @@ def main():
     plt.ylabel("Accuracy (%)")
     plt.show()
 
+    #Selecciono dos clasificadores SVM
+    modeloSVM1 = clasificadoresSVM["rbf"][3][1] #modelo 3 con [Model = SVC(C=100.0, kernel='linear'), accu = 0.811]
 
-if __name__ == "__main__":
-    main()
+    gamma = 0.01
+    C = 1000
+
+    for values in clasificadoresSVM["rbf"]:
+        if values[1] == gamma and values[0] == C:
+            modeloSVM2 = values[2] #modelo 2 es un SVM con kernel = rbf
+
+    actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
+    path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases',"models")
+    modeloSVM2.saveModel(path, filename = "SVM_LucasB_Test3_10112021.pkl")
+    os.chdir(actualFolder)
+
+
+# if __name__ == "__main__":
+#     main()
 

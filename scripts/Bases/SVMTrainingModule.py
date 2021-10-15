@@ -23,10 +23,9 @@ from sklearn.metrics import precision_recall_fscore_support
 import pickle
 
 import matplotlib.pyplot as plt
-from sklearn.utils import shuffle
 
 from utils import filterEEG, segmentingEEG, computeMagnitudSpectrum
-from utils import plotEEG
+from utils import norm_mean_std
 import fileAdmin as fa
 
 class SVMTrainingModule():
@@ -251,6 +250,7 @@ def main():
 
     trainSet = np.concatenate((run1JoinedData[:,:,:,:12], run2JoinedData[:,:,:,:12]), axis = 3)
     trainSet = trainSet[:,:2,:,:] #nos quedamos con los primeros dos canales
+    trainSet = norm_mean_std(trainSet) #normalizamos los datos
 
     #trainSet = joinedData[:,:,:,:12] #me quedo con los primeros 12 trials para entrenamiento y validación
     #trainSet = trainSet[:,:2,:,:] #nos quedamos con los primeros dos canales
@@ -352,7 +352,7 @@ def main():
     #Selecciono dos clasificadores SVM
     modeloSVM1 = clasificadoresSVM["rbf"][3][1] #modelo 3 con [Model = SVC(C=100.0, kernel='linear'), accu = 0.811]
 
-    gamma = 0.01
+    gamma = "scale"
     C = 1000
 
     for values in clasificadoresSVM["rbf"]:
@@ -361,7 +361,7 @@ def main():
 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases',"models")
-    modeloSVM2.saveModel(path, filename = "SVM_LucasB_Test3_10112021.pkl")
+    modeloSVM2.saveModel(path, filename = "SVM_LucasB_100accu_14102021.pkl")
     os.chdir(actualFolder)
 
 
