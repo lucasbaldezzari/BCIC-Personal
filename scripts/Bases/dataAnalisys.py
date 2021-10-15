@@ -15,7 +15,7 @@ from utils import norm_mean_std
 import matplotlib.pyplot as plt
 
 actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-path = os.path.join(actualFolder,"recordedEEG")
+path = os.path.join(actualFolder,"recordedEEG\WM\ses1")
 
 trials = 15
 fm = 200.
@@ -25,12 +25,12 @@ channels = 4
 stimuli = 1 #one stimulus
 
 subjects = [1]
-filenames = ["lb-R2-S2-E7","lb-R2-S2-E9","lb-R2-S2-E11","lb-R2-S2-E13"]
+filenames = ["S3-R1-S1-E6","S3-R1-S1-E7","S3-R1-S1-E8","S3-R1-S1-E9","S3-R1-S1-E15","S3-R1-S1-E17"]
 allData = fa.loadData(path = path, filenames = filenames)
 
-name = "lb-R2-S2-E11" #nombre de los datos a analizar}
+name = "S3-R1-S1-E17" #nombre de los datos a analizar}
 stimuli = [7,9,11,13] #lista de estímulos
-estim = [11] #Le pasamos un estímulo para que grafique una linea vertical
+estim = [17] #L7e pasamos un estímulo para que grafique una linea vertical
 
 eeg = allData[name]['eeg'][:,:4,:,:] #utilizamos solo los dos primeros canales
 eeg = norm_mean_std(eeg) #normalizamos los datos
@@ -108,7 +108,7 @@ plt.show()
 ########################################################################
 
 canales = [1,2,3,4]
-trial = 4
+trial = 12
 
 title = f"Espectro - Trial número {trial} - sujeto {name}"
 fig, plots = plt.subplots(2, 2, figsize=(16, 14), gridspec_kw=dict(hspace=0.45, wspace=0.3))
@@ -130,11 +130,29 @@ for canal in range(len(canales)):
 
 plt.show()
 
+
+########################################################################
+#Graficamos espectro canales promediados y un trial
+########################################################################
+
+trial = 3
+
+title = f"Espectro canales promediados - Trial número {trial} - sujeto {name}"
+plt.title(title)
+plt.plot(fft_axis + FFT_PARAMS["start_frequency"],
+                                MSF1.mean(axis = 1)[:,0,trial-1,0], color = "#403e7d")
+plt.ylabel('Amplitud [uV]')
+plt.axvline(x = estim[0], ymin = 0., ymax = max(fft_axis),
+                        label = f"Frec. Estímulo {estim[0]}Hz",
+                        linestyle='--', color = "#e37165", alpha = 0.9)
+plt.legend()
+plt.show()
+
 ########################################################################
 #graficamos espectro para todos los trials y un canal
 ########################################################################
 
-canal = 1 #elegimos un canal
+canal = 2 #elegimos un canal
 
 title = f"Espectro para cada trial - Canal {canal} - Estímulo {estim[0]}Hz - Sujeto {name}"
 

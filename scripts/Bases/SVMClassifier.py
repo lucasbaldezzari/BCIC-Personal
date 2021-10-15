@@ -145,9 +145,9 @@ def main():
     """Empecemos"""
 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-    path = os.path.join(actualFolder,"recordedEEG\\LucasB")
+    path = os.path.join(actualFolder,"recordedEEG\WM\ses1")
 
-    frecStimulus = np.array([7, 9, 11, 13])
+    frecStimulus = np.array([6, 7, 8, 9])
 
     trials = 15
     fm = 200.
@@ -155,15 +155,15 @@ def main():
     samplePoints = int(fm*window)
     channels = 4
 
-    filesRun1 = ["lb-R1-S1-E7","lb-R1-S1-E9", "lb-R1-S1-E11","lb-R1-S1-E13"]
+    filesRun1 = ["S3-R1-S1-E6","S3-R1-S1-E7", "S3-R1-S1-E8","S3-R1-S1-E9"]
     run1 = fa.loadData(path = path, filenames = filesRun1)
-    filesRun2 = ["lb-R2-S1-E7","lb-R2-S1-E9", "lb-R2-S1-E11","lb-R2-S1-E13"]
+    filesRun2 = ["S3-R2-S1-E6","S3-R2-S1-E7", "S3-R2-S1-E8","S3-R2-S1-E9"]
     run2 = fa.loadData(path = path, filenames = filesRun2)
 
     #Filtering de EEG
     PRE_PROCES_PARAMS = {
-                    'lfrec': 5.,
-                    'hfrec': 38.,
+                    'lfrec': 4.,
+                    'hfrec': 28.,
                     'order': 8,
                     'sampling_rate': fm,
                     'bandStop': 50.,
@@ -175,8 +175,8 @@ def main():
 
     FFT_PARAMS = {
                     'resolution': resolution,#0.2930,
-                    'start_frequency': 5.0,
-                    'end_frequency': 38.0,
+                    'start_frequency': 4.0,
+                    'end_frequency': 28.0,
                     'sampling_rate': fm
                     }
 
@@ -192,7 +192,7 @@ def main():
 
     testSet = np.concatenate((run1JoinedData[:,:,:,12:], run2JoinedData[:,:,:,12:]), axis = 3)
     testSet = testSet[:,:2,:,:] #nos quedamos con los primeros dos canales
-    testSet = norm_mean_std(testSet) #normalizamos los datos
+    #testSet = norm_mean_std(testSet) #normalizamos los datos
 
     #trainSet = joinedData[:,:,:,:12] #me quedo con los primeros 12 trials para entrenamiento y validación
     #trainSet = trainSet[:,:2,:,:] #nos quedamos con los primeros dos canales
@@ -201,15 +201,16 @@ def main():
     
     path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases',"models")
     
-    modelFile = "SVM_LucasB_100accu_14102021.pkl" #nombre del modelo
+    #modelFile = "SVM_LucasB_100accu_14102021.pkl" #nombre del modelo
+    modelFile = "SVM_WM_rbf_0.85_15102021.pkl" #nombre del modelo
         
     svm = SVMClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, path = path)
     
     #De nuestro set de datos seleccionamos el EEG de correspondiente a una clase y un trial.
     #Es importante tener en cuenta que los datos de OpenBCI vienen en la forma [canales x samples]
     
-    clase = 1 #corresponde al estímulo de 7Hz
-    trial = 1
+    clase = 1 #corresponde al estímulo de 6Hz
+    trial = 2
     
     rawEEG = testSet[clase - 1, :, : , trial - 1]
     

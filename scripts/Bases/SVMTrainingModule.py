@@ -196,16 +196,16 @@ class SVMTrainingModule():
 
         file = open(f"{self.modelName}_fft.json", "w")
         json.dump(self.PRE_PROCES_PARAMS , file)
-        file.close    
+        file.close
 
 def main():
 
     """Empecemos"""
 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-    path = os.path.join(actualFolder,"recordedEEG\\LucasB")
+    path = os.path.join(actualFolder,"recordedEEG\WM\ses1")
 
-    frecStimulus = np.array([7, 9, 11, 13])
+    frecStimulus = np.array([6, 7, 8, 9])
 
     trials = 15
     fm = 200.
@@ -213,15 +213,15 @@ def main():
     samplePoints = int(fm*window)
     channels = 4
 
-    filesRun1 = ["lb-R1-S1-E7","lb-R1-S1-E9", "lb-R1-S1-E11","lb-R1-S1-E13"]
+    filesRun1 = ["S3-R1-S1-E6","S3-R1-S1-E7", "S3-R1-S1-E8","S3-R1-S1-E9"]
     run1 = fa.loadData(path = path, filenames = filesRun1)
-    filesRun2 = ["lb-R2-S1-E7","lb-R2-S1-E9", "lb-R2-S1-E11","lb-R2-S1-E13"]
+    filesRun2 = ["S3-R2-S1-E6","S3-R2-S1-E7", "S3-R2-S1-E8","S3-R2-S1-E9"]
     run2 = fa.loadData(path = path, filenames = filesRun2)
 
     #Filtering de EEG
     PRE_PROCES_PARAMS = {
-                    'lfrec': 5.,
-                    'hfrec': 38.,
+                    'lfrec': 4.,
+                    'hfrec': 28.,
                     'order': 8,
                     'sampling_rate': fm,
                     'bandStop': 50.,
@@ -233,8 +233,8 @@ def main():
 
     FFT_PARAMS = {
                     'resolution': resolution,#0.2930,
-                    'start_frequency': 5.0,
-                    'end_frequency': 38.0,
+                    'start_frequency': 4.0,
+                    'end_frequency': 28.0,
                     'sampling_rate': fm
                     }
 
@@ -250,12 +250,12 @@ def main():
 
     trainSet = np.concatenate((run1JoinedData[:,:,:,:12], run2JoinedData[:,:,:,:12]), axis = 3)
     trainSet = trainSet[:,:2,:,:] #nos quedamos con los primeros dos canales
-    trainSet = norm_mean_std(trainSet) #normalizamos los datos
+    #trainSet = norm_mean_std(trainSet) #normalizamos los datos
 
     #trainSet = joinedData[:,:,:,:12] #me quedo con los primeros 12 trials para entrenamiento y validación
     #trainSet = trainSet[:,:2,:,:] #nos quedamos con los primeros dos canales
 
-    svm1 = SVMTrainingModule(trainSet, "lucasB",PRE_PROCES_PARAMS,FFT_PARAMS, modelName = "SVM_LucasB_Test2_10112021")
+    svm1 = SVMTrainingModule(trainSet, "WM",PRE_PROCES_PARAMS,FFT_PARAMS, modelName = "SVM_WM_test1_15102021")
 
     spectrum = svm1.computeMSF() #Computamos el espectro de Fourier de la señal
 
@@ -292,41 +292,41 @@ def main():
     # svmTest = SVMTrainingModule(trainSet, modelName,PRE_PROCES_PARAMS,FFT_PARAMS, modelName = modelName)
 
     for i, kernel in enumerate(hiperParams["kernels"]):
-        
+
         if kernel != "linear":
             for j, gamma in enumerate(hiperParams["gammaValues"]):
-                
+
                 for k, C in enumerate(hiperParams["CValues"]):
                     #Instanciamos el modelo para los hipermarametros
 
-                    svm1 = SVMTrainingModule(trainSet, "lucasB",PRE_PROCES_PARAMS,FFT_PARAMS, modelName = "SVM_LucasB_Test2_10112021")
+                    svm1 = SVMTrainingModule(trainSet, "WM",PRE_PROCES_PARAMS,FFT_PARAMS, modelName = "SVM_WM_test1_15102021")
 
                     spectrum = svm1.computeMSF() #Computamos el espectro de Fourier de la señal
 
                     modelo = svm1.createSVM(kernel = kernel, gamma = gamma, C = C, probability = True) #Creamos el modelo SVM
-              
+
                     metricas = svm1.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2) #entrenamos el modelo y obtenemos las métricas
-                    accu = metricas["modelo_SVM_LucasB_Test2_10112021"]["val"]["Acc"]
+                    accu = metricas["modelo_SVM_WM_test1_15102021"]["val"]["Acc"]
                     rbfResults[j,k] = accu
-                    
+
                     clasificadoresSVM[kernel].append((C, gamma, svm1, accu))
         else:
             for k, C in enumerate(hiperParams["CValues"]):
-                
+
                 #Instanciamos el modelo para los hipermarametros
-                svm1 = SVMTrainingModule(trainSet, "lucasB",PRE_PROCES_PARAMS,FFT_PARAMS, modelName = "SVM_LucasB_Test2_10112021")
+                svm1 = SVMTrainingModule(trainSet, "lucasB",PRE_PROCES_PARAMS,FFT_PARAMS, modelName = "SVM_WM_test1_15102021")
 
                 spectrum = svm1.computeMSF() #Computamos el espectro de Fourier de la señal
 
                 modelo = svm1.createSVM(kernel = kernel,C = C, probability = True) #Creamos el modelo SVM
-            
+
                 metricas = svm1.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2) #entrenamos el modelo y obtenemos las métricas
-                
-                accu = metricas["modelo_SVM_LucasB_Test2_10112021"]["val"]["Acc"]
+
+                accu = metricas["modelo_SVM_WM_test1_15102021"]["val"]["Acc"]
 
                 linearResults.append(accu)
                 #predecimos con los datos en Xoptim
-                
+
                 clasificadoresSVM[kernel].append((C, svm1, accu))
 
 
@@ -345,15 +345,19 @@ def main():
 
     plt.plot([str(C) for C in hiperParams["CValues"]], np.asarray(linearResults)*100)
     plt.title("Accuracy para predicciones usando kernel 'linear'")
-    plt.xlabel("Valor de C") 
+    plt.xlabel("Valor de C")
     plt.ylabel("Accuracy (%)")
     plt.show()
 
     #Selecciono dos clasificadores SVM
-    modeloSVM1 = clasificadoresSVM["rbf"][3][1] #modelo 3 con [Model = SVC(C=100.0, kernel='linear'), accu = 0.811]
+    modeloSVM1 = clasificadoresSVM["linear"][2][1] #modelo 3 con [Model = SVC(C=1, kernel='linear'), accu = 0.8]
+    actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
+    path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases',"models")
+    modeloSVM1.saveModel(path, filename = "SVM_WM_linear_15102021.pkl")
+    os.chdir(actualFolder)
 
     gamma = "scale"
-    C = 1000
+    C = 1
 
     for values in clasificadoresSVM["rbf"]:
         if values[1] == gamma and values[0] == C:
@@ -361,7 +365,7 @@ def main():
 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases',"models")
-    modeloSVM2.saveModel(path, filename = "SVM_LucasB_100accu_14102021.pkl")
+    modeloSVM2.saveModel(path, filename = "SVM_WM_rbf_0.85_15102021.pkl")
     os.chdir(actualFolder)
 
 
