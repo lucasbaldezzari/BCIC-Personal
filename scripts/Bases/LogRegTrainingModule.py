@@ -197,16 +197,17 @@ class LogRegTrainingModule():
 
         file = open(f"{self.modelName}_fft.json", "w")
         json.dump(self.PRE_PROCES_PARAMS , file)
+        
         file.close   
 
 def main():
            
     """Empecemos"""
-                
+ 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-    path = os.path.join(actualFolder,"recordedEEG\\LucasB")
+    path = os.path.join(actualFolder,"recordedEEG\WM\ses1")
 
-    frecStimulus = np.array([7, 9, 11, 13])
+    frecStimulus = np.array([6, 7, 8, 9])
 
     trials = 15
     fm = 200.
@@ -214,15 +215,15 @@ def main():
     samplePoints = int(fm*window)
     channels = 4
 
-    filesRun1 = ["lb-R1-S1-E7","lb-R1-S1-E9", "lb-R1-S1-E11","lb-R1-S1-E13"]
+    filesRun1 = ["S3-R1-S1-E6","S3-R1-S1-E7", "S3-R1-S1-E8","S3-R1-S1-E9"]
     run1 = fa.loadData(path = path, filenames = filesRun1)
-    filesRun2 = ["lb-R2-S1-E7","lb-R2-S1-E9", "lb-R2-S1-E11","lb-R2-S1-E13"]
+    filesRun2 = ["S3-R2-S1-E6","S3-R2-S1-E7", "S3-R2-S1-E8","S3-R2-S1-E9"]
     run2 = fa.loadData(path = path, filenames = filesRun2)
 
     #Filtering de EEG
     PRE_PROCES_PARAMS = {
-                    'lfrec': 5.,
-                    'hfrec': 38.,
+                    'lfrec': 4.,
+                    'hfrec': 30.,
                     'order': 8,
                     'sampling_rate': fm,
                     'bandStop': 50.,
@@ -234,8 +235,8 @@ def main():
 
     FFT_PARAMS = {
                     'resolution': resolution,#0.2930,
-                    'start_frequency': 5.0,
-                    'end_frequency': 38.0,
+                    'start_frequency': 4.0,
+                    'end_frequency': 30.0,
                     'sampling_rate': fm
                     }
 
@@ -253,7 +254,7 @@ def main():
     trainSet = trainSet[:,:2,:,:] #nos quedamos con los primeros dos canales
     #trainSet = norm_mean_std(trainSet) #normalizamos los datos
 
-    logreg = LogRegTrainingModule(trainSet, "LucasB",PRE_PROCES_PARAMS,FFT_PARAMS,modelName = "Logreg_LucasB_Test2_10112021")
+    logreg = LogRegTrainingModule(trainSet, "LucasB",PRE_PROCES_PARAMS,FFT_PARAMS,modelName = "logreg_WM_test1_15102021")
     
     spectrum = logreg.computeMSF()
     
@@ -265,7 +266,7 @@ def main():
     print(metricas)
     
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-    path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases',"models")
+    path = os.path.join(actualFolder,"models\\WM\\logreg")
     logreg.saveModel(path)
     os.chdir(actualFolder)
      
