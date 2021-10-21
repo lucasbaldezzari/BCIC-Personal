@@ -60,7 +60,7 @@ def main():
               "ganglion": BoardIds.GANGLION_BOARD, #IMPORTANTE: frecuencia muestro 200Hz
               "synthetic": BoardIds.SYNTHETIC_BOARD}
     
-    placa = placas["synthetic"]  
+    placa = placas["ganglion"]  
     
     puerto = "COM5" #Chequear el puerto al cual se conectará la placa
     
@@ -113,44 +113,46 @@ def main():
 
     """Defino variables para control de Trials"""
     
-    trials = 2 #None implica que se ejecutaran trials de manera indeterminada
-    
-    trialDuration = 10 #secs #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
-    stimuliDuration = 4 #secs
-
-    classifyData = True
+    trials = 1 #None implica que se ejecutaran trials de manera indeterminada
+    trialDuration = 7 #secs #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
+    stimuliDuration = 5 #secs
     
     EEGdata = []
-    fm = BoardShim.get_sampling_rate(args.board_id) #200.
-    
-    samplePoints = int(fm*stimuliDuration)
-    channels = 4
+
     stimuli = 1 #one stimulus
 
     """
     Cargamos clasificador
     """
+    equipo = "neurorace"
+    if equipo == "neurorace":
+        frecStimulus = np.array([7, 9, 11, 13])
+        listaEstims = frecStimulus.tolist()
+        movements = [b'2',b'4',b'1',b'3',b'0']#izquierda, derecha, adelante, retroceso
 
-    path = "E:\reposBCICompetition\BCIC-Personal\scripts\Bases\models"
-    
+    classifyData = True
+    fm = BoardShim.get_sampling_rate(args.board_id)
+    window = stimuliDuration #sec
+    samplePoints = int(fm*window)
+    channels = 4
+
     path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases',"models")
-    
-    modelFile = "SVM14Channels.pkl"
+    modelFile = "Logreg_LucasB_Test2_10112021.pkl" #nombre del modelo
 
-    #Filtering de EEG
+    
+
     PRE_PROCES_PARAMS = {
                     'lfrec': 5.,
                     'hfrec': 38.,
-                    'order': 4,
+                    'order': 8,
                     'sampling_rate': fm,
                     'bandStop': 50.,
-                    'window': 4,
-                    'shiftLen':4
+                    'window': window,
+                    'shiftLen':window
                     }
-    
-    #IMPORTANTE: La resolución DEBE ser la misma con la que se entrenó el clasificador.
+
     resolution = np.round(fm/samplePoints, 4)
-    
+
     FFT_PARAMS = {
                     'resolution': resolution,#0.2930,
                     'start_frequency': 5.0,
@@ -158,8 +160,6 @@ def main():
                     'sampling_rate': fm
                     }
 
-    frecStimulus = np.array([9.25, 11.25, 13.25, 9.75, 11.75, 13.75, 10.25, 12.25, 14.25, 10.75, 12.75, 14.75])    
-        
     svm = SVMClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, path = path)
     
     """Inicio comunicación con Arduino instanciando un objeto AC (ArduinoCommunication)
@@ -172,7 +172,7 @@ def main():
     ntrials = None (default)
     """
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
-    arduino = AC('COM6', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM7', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
     time.sleep(2) 
 
@@ -185,9 +185,13 @@ def main():
             if classifyData and arduino.systemControl[1] == b"0":
                 rawEEG = data_thread.getData(stimuliDuration)
                 frecClasificada = svm.getClassification(rawEEG = rawEEG)
-                print(frecClasificada)
+                print(f"Frecuencia clasificada {frecClasificada}")
+                print(f"Comando a enviar {movements[listaEstims.index(frecClasificada)]}")
+                arduino.systemControl[2] = b"1"#movements[listaEstims.index(int(frecClasificada))]#movements[3]
+                esadoRobot = arduino.sendMessage(arduino.systemControl)
                 classifyData = False
             elif classifyData == False and arduino.systemControl[1] == b"1":
+                # arduino.systemControl[2] = movements[3]
                 classifyData = True
         
     except BaseException as e:

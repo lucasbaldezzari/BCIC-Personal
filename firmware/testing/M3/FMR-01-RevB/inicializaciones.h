@@ -1,25 +1,5 @@
-void iniTimer0();
+void iniTimer2();
 
-void iniTimer0(int frecTimer)
-{
-//Seteamos el Timer0 para que trabaje a 5000Hz = 0.2ms
-  TCCR0A = 0;// pongo a cero el registro de control del timer1
-  TCCR0B = 0;// Lo mismo para el TCCR0B
-  TCNT0  = 0;//initialize counter value to 0
-  
-  // turn on CTC mode
-  TCCR0A |= (1 << WGM01);//Ponemos un 1 en el Bit WGM01 del registro TCCR0A - Modo CTC (ver página 107)
-  // Seteamos el PreScaler en 64 (ver página 109 de la hoja de datos)
-  TCCR0B |= (0 << CS02) | (1 << CS01) | (1 << CS00);
-  int preScaler = 64UL;
-  // Cargamos el comparador del Timer0 para que nos de una interrupción aproximadamente de 0.1ms
-  unsigned char comparador = ((F_CPU/(PRE_SCALER*frecTimer)) - 1);
-  OCR0A = comparador;
-  //OCR0A = 49;// = (16MHz/(preScaler*frecuencia de Interrupción))-1
-
-  //Habilito la interrupción (ver pagina 110 de hoja de datos)
-  TIMSK0 |= (1 << OCIE0A);
-  }
 
 void iniTimer2()
 {

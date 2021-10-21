@@ -106,19 +106,19 @@ def main():
 
     """Defino variables para control de Trials"""
     
-    trials = 15 #cantidad de trials. Sirve para la sesión de entrenamiento.
+    trials = 1 #cantidad de trials. Sirve para la sesión de entrenamiento.
     #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
-    trialDuration = 10 #secs
+    trialDuration = 8 #secs
     stimuliDuration = 5 #secs
 
     saveData = True
     
     EEGdata = []
-
-    if placa == "ganglion":
-        fm = 200.
-    else:
-        fm = 250.
+    fm = BoardShim.get_sampling_rate(args.board_id)
+    # if placa == "ganglion":
+    #     fm = 200.
+    # else:
+    #     fm = 250.
     
     samplePoints = int(fm*stimuliDuration)
     channels = 4
@@ -135,7 +135,7 @@ def main():
     """
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
     #En este ejemplo esta conectada en el COM3
-    arduino = AC('COM12', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM7', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
     time.sleep(1) 
     
@@ -144,9 +144,9 @@ def main():
     #El siguiente diccionario se usa para guardar información relevante cómo así también los datos de EEG
     #registrados durante la sesión de entrenamiento.
     dictionary = {
-                'subject': 'lb-R2-S2-E11',
+                'subject': 'testOnline',
                 'date': '14/10/2021',
-                'generalInformation': 'Ganglion. Estimulos HTML. Adelante.',
+                'generalInformation': 'Ganglion. Estimulos HTML. Adelante y Atras',
                 'stimFrec': "11",
                 'channels': [1,2,3,4], 
                  'dataShape': [stimuli, channels, samplePoints, trials],
@@ -156,7 +156,7 @@ def main():
     arduino.iniSesion() #Inicio sesión en el Arduino.
     # graph = Graph(board_shim)
     time.sleep(1) 
-
+    arduino.systemControl[2] = arduino.movements[3] #comando número 4 (b'3') [b'0',b'1',b'2',b'3',b'4',b'5']
     try:
         while arduino.generalControl() == b"1":
             if saveData and arduino.systemControl[1] == b"0":
@@ -182,7 +182,6 @@ def main():
         rawEEG = rawEEG.swapaxes(1,2).swapaxes(2,3)
         dictionary["eeg"] = rawEEG
         fa.saveData(path = path,dictionary = dictionary, fileName = dictionary["subject"])
-        
 if __name__ == "__main__":
         main()
         

@@ -195,7 +195,7 @@ class SVMTrainingModule():
         file.close
 
         file = open(f"{self.modelName}_fft.json", "w")
-        json.dump(self.PRE_PROCES_PARAMS , file)
+        json.dump(self.FFT_PARAMS , file)
         file.close
 
 def main():

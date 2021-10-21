@@ -34,7 +34,6 @@ char incDataFromRobotIndex = 0;
   Variables para el control de flujo de programa
 ******************************************************************/
 char sessionState = 0; //Sesión sin iniciar
-char LEDVerde = 12; 
 char LEDTesteo = 13; //led de testeo
 
 /******************************************************************
@@ -44,14 +43,14 @@ char LEDTesteo = 13; //led de testeo
 int frecTimer = 5000; //en Hz. Frecuencia de interrupción del timer.
 
 //estímulo izquierdo
-char estimIzq = 13;
+char estimIzq = 12;
 bool estimIzqON = 0;//Esado que define si el LED se apgará o prenderá.
 int frecEstimIzq = 2;
 int acumEstimIzq = 0;
 const int estimIzqMaxValue = (1/float(frecEstimIzq))*frecTimer;
 
 //estímulo derecho
-char estimDer = 12;
+char estimDer = 11;
 bool estimDerON = 0;//Esado que define si el LED se apgará o prenderá.
 int frecEstimDer = 2;
 int acumEstimDer = 0;
@@ -76,7 +75,6 @@ void setup()
   noInterrupts();//Deshabilito todas las interrupciones
   pinMode(estimIzq,OUTPUT);
   pinMode(estimDer,OUTPUT);
-  pinMode(LEDVerde,OUTPUT);
   pinMode(LEDTesteo,OUTPUT);
   iniTimer2(); //inicio timer 2
   Serial.begin(19200); //iniciamos comunicación serie
@@ -109,7 +107,7 @@ ISR(TIMER2_COMPA_vect)//Rutina interrupción Timer2
     //apago estímulos
     digitalWrite(estimIzq,0);
     digitalWrite(estimDer,0);
-    digitalWrite(LEDTesteo,1);
+    //digitalWrite(LEDTesteo,1);
   }
 
   if(1) //para simular que tenemos un mensaje por bluetooth
@@ -209,4 +207,5 @@ void sendMensajeBT()
 {
     byte mensaje = (incDataFromPC[0])|(incDataFromPC[1]<<1)|(incDataFromPC[2]<<2);//Armamos el byte
     BT.write(mensaje); //enviamos byte por bluetooth
+    digitalWrite(LEDTesteo,1);
 }
