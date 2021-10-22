@@ -213,15 +213,15 @@ def main():
     samplePoints = int(fm*window)
     channels = 4
 
-    filesRun1 = ["S3-R1-S1-E6","S3-R1-S1-E7", "S3-R1-S1-E8","S3-R1-S1-E9"]
+    filesRun1 = ["S3_R1_S2_E6","S3-R1-S1-E7", "S3-R1-S1-E8","S3-R1-S1-E9"]
     run1 = fa.loadData(path = path, filenames = filesRun1)
-    filesRun2 = ["S3-R2-S1-E6","S3-R2-S1-E7", "S3-R2-S1-E8","S3-R2-S1-E9"]
+    filesRun2 = ["S3_R2_S2_E6","S3-R2-S1-E7", "S3-R2-S1-E8","S3-R2-S1-E9"]
     run2 = fa.loadData(path = path, filenames = filesRun2)
 
     #Filtering de EEG
     PRE_PROCES_PARAMS = {
                     'lfrec': 4.,
-                    'hfrec': 28.,
+                    'hfrec': 38.,
                     'order': 8,
                     'sampling_rate': fm,
                     'bandStop': 50.,
@@ -234,7 +234,7 @@ def main():
     FFT_PARAMS = {
                     'resolution': resolution,#0.2930,
                     'start_frequency': 4.0,
-                    'end_frequency': 28.0,
+                    'end_frequency': 38.0,
                     'sampling_rate': fm
                     }
 
@@ -255,7 +255,7 @@ def main():
     #trainSet = joinedData[:,:,:,:12] #me quedo con los primeros 12 trials para entrenamiento y validación
     #trainSet = trainSet[:,:2,:,:] #nos quedamos con los primeros dos canales
 
-    svm1 = SVMTrainingModule(trainSet, "WM",PRE_PROCES_PARAMS,FFT_PARAMS, modelName = "SVM_WM_test1_15102021")
+    svm1 = SVMTrainingModule(trainSet, "WM",PRE_PROCES_PARAMS,FFT_PARAMS, modelName = "SVM_WM_2chann_rojo_221021")
 
     spectrum = svm1.computeMSF() #Computamos el espectro de Fourier de la señal
 
@@ -350,14 +350,14 @@ def main():
     plt.show()
 
     #Selecciono dos clasificadores SVM
-    modeloSVM1 = clasificadoresSVM["linear"][2][1] #modelo 3 con [Model = SVC(C=1, kernel='linear'), accu = 0.8]
+    modeloSVM1 = clasificadoresSVM["linear"][4][1] #modelo 3 con [Model = SVC(C=1, kernel='linear'), accu = 0.8]
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases',"models")
-    modeloSVM1.saveModel(path, filename = "SVM_WM_linear_15102021.pkl")
+    modeloSVM1.saveModel(path, filename = "SVM_WM_2chann_rojo_linear_221021.pkl")
     os.chdir(actualFolder)
 
-    gamma = "scale"
-    C = 1
+    gamma = "auto"
+    C = 1000
 
     for values in clasificadoresSVM["rbf"]:
         if values[1] == gamma and values[0] == C:
@@ -365,7 +365,7 @@ def main():
 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases',"models")
-    modeloSVM2.saveModel(path, filename = "SVM_WM_rbf_0.85_15102021.pkl")
+    modeloSVM2.saveModel(path, filename = "SVM_WM_2chann_rojo_rbf_221021.pkl")
     os.chdir(actualFolder)
 
 
