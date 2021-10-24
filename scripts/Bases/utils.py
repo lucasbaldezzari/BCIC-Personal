@@ -75,7 +75,7 @@ def plotEEG(signal, sujeto = 1, trial = 1, blanco = 1,
     if not title:
         title = f"Señal de EEG de sujeto {sujeto}"
     
-    fig.suptitle(title, fontsize=18)
+    fig.suptitle(title, fontsize=11)
     
     axes = axes.reshape(-1)
         
@@ -85,9 +85,9 @@ def plotEEG(signal, sujeto = 1, trial = 1, blanco = 1,
             signalAvg = np.average(signal[blanco - 1, canal - 1, :len(t), trial - 1])
         signalScale = (signal[blanco - 1, canal - 1, :len(t), trial - 1] - signalAvg)*scaling 
         axes[canal].plot(t, signalScale, color = "#e37165")
-        axes[canal].set_xlabel('Tiempo [seg]', fontsize=14) 
-        axes[canal].set_ylabel('Amplitud [uV]', fontsize=14)
-        axes[canal].set_title(f'Sujeto {sujeto} - Blanco {blanco} - Canal {canal + 1}', fontsize=22)
+        axes[canal].set_xlabel('Tiempo [seg]', fontsize=11) 
+        axes[canal].set_ylabel('Amplitud [uV]', fontsize=11)
+        axes[canal].set_title(f'Sujeto {sujeto} - Blanco {blanco} - Canal {canal + 1}', fontsize=11)
         axes[canal].yaxis.grid(True)
 
     if save:

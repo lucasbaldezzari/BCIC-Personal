@@ -53,9 +53,9 @@ def main():
               "ganglion": BoardIds.GANGLION_BOARD, #IMPORTANTE: frecuencia muestro 200Hz
               "synthetic": BoardIds.SYNTHETIC_BOARD}
     
-    placa = placas["ganglion"]  
+    placa = placas["cyton"]  
     
-    puerto = "COM5" #Chequear el puerto al cual se conectará la placa
+    puerto = "COM7" #Chequear el puerto al cual se conectará la placa
     
     parser = argparse.ArgumentParser()
     
@@ -115,13 +115,12 @@ def main():
     
     EEGdata = []
     fm = BoardShim.get_sampling_rate(args.board_id)
-    # if placa == "ganglion":
-    #     fm = 200.
-    # else:
-    #     fm = 250.
+    if placa == "ganglion":
+        channels = 4
+    else:
+        channels = 8
     
     samplePoints = int(fm*stimuliDuration)
-    channels = 4
     stimuli = 1 #one stimulus
     
     """Inicio comunicación con Arduino instanciando un objeto AC (ArduinoCommunication)
@@ -135,7 +134,7 @@ def main():
     """
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
     #En este ejemplo esta conectada en el COM3
-    arduino = AC('COM7', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM6', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
     time.sleep(1) 
     
@@ -144,11 +143,11 @@ def main():
     #El siguiente diccionario se usa para guardar información relevante cómo así también los datos de EEG
     #registrados durante la sesión de entrenamiento.
     dictionary = {
-                'subject': 'testOnline',
+                'subject': 'testeandoElectrodosActivos2',
                 'date': '14/10/2021',
-                'generalInformation': 'Ganglion. Estimulos HTML. Adelante y Atras',
-                'stimFrec': "11",
-                'channels': [1,2,3,4], 
+                'generalInformation': 'Cyton. Se desactivan canales 4 al 8',
+                'stimFrec': "0",
+                'channels': [1,2,3], 
                  'dataShape': [stimuli, channels, samplePoints, trials],
                   'eeg': None
                     }
@@ -160,7 +159,7 @@ def main():
     try:
         while arduino.generalControl() == b"1":
             if saveData and arduino.systemControl[1] == b"0":
-                currentData = data_thread.getData(stimuliDuration)
+                currentData = data_thread.getData(stimuliDuration, channels = channels)
                 EEGdata.append(currentData)
                 saveData = False
             elif saveData == False and arduino.systemControl[1] == b"1":
