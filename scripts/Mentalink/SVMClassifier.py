@@ -19,7 +19,8 @@ import pickle
 import matplotlib.pyplot as plt
 
 from utils import filterEEG, segmentingEEG, computeMagnitudSpectrum
-from utils import plotEEG
+from utils import norm_mean_std
+
 import fileAdmin as fa
 
 class SVMClassifier():
@@ -140,42 +141,30 @@ class SVMClassifier():
     
     
 def main():
+
     """Empecemos"""
 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-    path = os.path.join(actualFolder,"recordedEEG")
+    path = os.path.join(actualFolder,"recordedEEG\WM\ses1")
 
-    frecStimulus = np.array([6, 7])
+    frecStimulus = np.array([6, 7, 8, 9])
 
     trials = 15
-    fm = 250.
+    fm = 200.
     window = 5 #sec
     samplePoints = int(fm*window)
     channels = 4
-    stimuli = 1 #one stimulus
 
-    subjects = [1] #un solo sujeto
-    filenames = ["S1_R1_S1_E6","S1_R1_S1_E7"]
-    allData = fa.loadData(path = path, filenames = filenames)
-    names = list(allData.keys())
-
-    allData['S1_R1_S1_E6']["eeg"] = allData['S1_R1_S1_E6']["eeg"][:,1:5,:,:].reshape(1,4,1250,15).reshape(1,4,1250,15)
-    allData['S1_R1_S1_E7']["eeg"] = allData['S1_R1_S1_E7']["eeg"][:,1:5,:,:].reshape(1,4,1250,15).reshape(1,4,1250,15)
-
-    def joinData(allData, stimuli, channels, samples, trials):
-        joinedData = np.zeros((stimuli, channels, samples, trials))
-        for i, sujeto in enumerate(allData):
-            joinedData[i] = allData[sujeto]["eeg"][0,:,:,:trials]
-
-        return joinedData
-
-    joinedData = joinData(allData, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
+    filesRun1 = ["S3_R1_S2_E6","S3-R1-S1-E7", "S3-R1-S1-E8","S3-R1-S1-E9"]
+    run1 = fa.loadData(path = path, filenames = filesRun1)
+    filesRun2 = ["S3_R2_S2_E6","S3-R2-S1-E7", "S3-R2-S1-E8","S3-R2-S1-E9"]
+    run2 = fa.loadData(path = path, filenames = filesRun2)
 
     #Filtering de EEG
     PRE_PROCES_PARAMS = {
-                    'lfrec': 5.,
+                    'lfrec': 4.,
                     'hfrec': 38.,
-                    'order': 4,
+                    'order': 8,
                     'sampling_rate': fm,
                     'bandStop': 50.,
                     'window': window,
@@ -186,28 +175,34 @@ def main():
 
     FFT_PARAMS = {
                     'resolution': resolution,#0.2930,
-                    'start_frequency': 5.0,
+                    'start_frequency': 4.0,
                     'end_frequency': 38.0,
                     'sampling_rate': fm
                     }
-    
-    # for subject in subjectsNames:
-    #     eeg = rawEEGs[subject]["eeg"]
-    #     eeg = eeg[:,:, muestraDescarte: ,:]
-    #     eeg = eeg[:,:, :tiempoTotal ,:]
-    #     rawEEGs[subject]["eeg"] = filterEEG(eeg,lfrec = PRE_PROCES_PARAMS["lfrec"],
-    #                                         hfrec = PRE_PROCES_PARAMS["hfrec"],
-    #                                         orden = 4, bandStop = 50. , fm  = fm)
 
-    trainSet = joinedData[:,:,:,:8] #me quedo con los primeros 8 trials para entrenamiento y validación
+    def joinData(allData, stimuli, channels, samples, trials):
+        joinedData = np.zeros((stimuli, channels, samples, trials))
+        for i, sujeto in enumerate(allData):
+            joinedData[i] = allData[sujeto]["eeg"][0,:,:,:trials]
 
-    testSet = joinedData[:,:,:,8:] #me quedo con los últimos 2 trials para test
+        return joinedData #la forma de joinedData es [estímulos, canales, muestras, trials]
+
+    run1JoinedData = joinData(run1, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
+    run2JoinedData = joinData(run2, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
+
+    testSet = np.concatenate((run1JoinedData[:,:,:,12:], run2JoinedData[:,:,:,12:]), axis = 3)
+    testSet = testSet[:,:2,:,:] #nos quedamos con los primeros dos canales
+    #testSet = norm_mean_std(testSet) #normalizamos los datos
+
+    #trainSet = joinedData[:,:,:,:12] #me quedo con los primeros 12 trials para entrenamiento y validación
+    #trainSet = trainSet[:,:2,:,:] #nos quedamos con los primeros dos canales
     
     path = "E:\reposBCICompetition\BCIC-Personal\scripts\Bases\models"
     
     path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases',"models")
     
-    modelFile = "testEmi.pkl"
+    #modelFile = "SVM_LucasB_100accu_14102021.pkl" #nombre del modelo
+    modelFile = "SVM_WM_2chann_rojo_rbf_221021.pkl" #nombre del modelo
         
     svm = SVMClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, path = path)
     
@@ -215,21 +210,40 @@ def main():
     #Es importante tener en cuenta que los datos de OpenBCI vienen en la forma [canales x samples]
     
     clase = 1 #corresponde al estímulo de 6Hz
-    trial = 1
-    
-    rawEEG = testSet[clase - 1, :, : , trial - 1]
-    
-    frecClasificada = svm.getClassification(rawEEG = rawEEG)
-    print(f"El estímulo clasificado fue {frecClasificada}")
-    
-    clase = 2 #corresponde al estímulo de 7Hz
     trial = 2
     
     rawEEG = testSet[clase - 1, :, : , trial - 1]
     
     frecClasificada = svm.getClassification(rawEEG = rawEEG)
     print(f"El estímulo clasificado fue {frecClasificada}")
+    
+    clase = 4
+    trial = 3
+    
+    rawEEG = testSet[clase - 1, :, : , trial - 1]
+    
+    frecClasificada = svm.getClassification(rawEEG = rawEEG)
+    print(f"El estímulo clasificado fue {frecClasificada}")
 
+    trials = 6
+    predicciones = np.zeros((len(frecStimulus),trials))
+    
+    for i, clase in enumerate(np.arange(4)):
+        for j, trial in enumerate(np.arange(6)):
+            data = testSet[clase, :, : , trial]
+            classification = svm.getClassification(rawEEG = data)
+            if classification == frecStimulus[clase]:
+                predicciones[i,j] = 1
+
+        #predicciones[i,j+1] = predicciones[i,:].sum()/trials
+
+    predictions = pd.DataFrame(predicciones, index = frecStimulus,
+                    columns = [f"trial {trial+1}" for trial in np.arange(trials)])
+
+    predictions['promedio'] = predictions.mean(numeric_only=True, axis=1)
+    
+    print(f"Predicciones usando el modelo SVM {modelFile}")
+    print(predictions)
 
 if __name__ == "__main__":
     main()

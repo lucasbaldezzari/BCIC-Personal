@@ -28,3 +28,8 @@ eeg2 = allData["testeandoElectrodosActivos2"]["eeg"]
 
 plotEEG(eeg2, sujeto = 1, trial = 1, blanco = 1,
             fm = 250.0, window = [0,4], rmvOffset = False, save = False, title = "", folder = "figs")
+
+eeg2filtered = filterEEG(eeg2, 4, 38, 8, 50., fm = 250.0)
+
+plotEEG(eeg2filtered, sujeto = 1, trial = 1, blanco = 1,
+            fm = 250.0, window = [0,4], rmvOffset = False, save = False, title = "", folder = "figs")

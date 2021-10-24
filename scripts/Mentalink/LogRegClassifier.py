@@ -14,6 +14,7 @@ import os
 import numpy as np
 import numpy.matlib as npm
 import pandas as pd
+import json
 
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
 from sklearn.svm import SVC
@@ -27,6 +28,7 @@ import matplotlib.pyplot as plt
 
 from utils import filterEEG, segmentingEEG, computeMagnitudSpectrum
 from utils import plotEEG
+from utils import norm_mean_std
 import fileAdmin as fa
 
 class LogRegClassifier():
@@ -113,7 +115,7 @@ class LogRegClassifier():
             Con forma [trials*clases x number of features]
             - Labels: labels para entrenar el modelo a partir de las clases"""
         
-        print("Transformando datos para clasificarlos")
+        #print("Transformando datos para clasificarlos")
         
         numFeatures = features.shape[0]
         canales = features.shape[1]
@@ -148,82 +150,108 @@ class LogRegClassifier():
     
 def main():
     """Let's starting"""
-                    
+    
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-    path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\talleres\\taller4\\scripts',"dataset")
+    path = os.path.join(actualFolder,"recordedEEG\WM\ses1")
+
+    frecStimulus = np.array([6, 7, 8, 9])
+
+    trials = 15
+    fm = 200.
+    window = 5 #sec
+    samplePoints = int(fm*window)
+    channels = 4
+
+    filesRun1 = ["S3-R1-S1-E6","S3-R1-S1-E7", "S3-R1-S1-E8","S3-R1-S1-E9"]
+    run1 = fa.loadData(path = path, filenames = filesRun1)
+    filesRun2 = ["S3-R2-S1-E6","S3-R2-S1-E7", "S3-R2-S1-E8","S3-R2-S1-E9"]
+    run2 = fa.loadData(path = path, filenames = filesRun2)
+
+    def joinData(allData, stimuli, channels, samples, trials):
+        joinedData = np.zeros((stimuli, channels, samples, trials))
+        for i, sujeto in enumerate(allData):
+            joinedData[i] = allData[sujeto]["eeg"][0,:,:,:trials]
+
+        return joinedData #la forma de joinedData es [estímulos, canales, muestras, trials]
+
+    run1JoinedData = joinData(run1, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
+    run2JoinedData = joinData(run2, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
+
+    testSet = np.concatenate((run1JoinedData[:,:,:,12:], run2JoinedData[:,:,:,12:]), axis = 3)
+    testSet = testSet[:,:2,:,:] #nos quedamos con los primeros dos canales
+    #testSet = norm_mean_std(testSet)
     
-    subjects = np.arange(0,10)
-    # subjectsNames = [f"s{subject}" for subject in np.arange(1,11)]
-    subjectsNames = ["s8"]
+    #testSet = joinedData[:,:,:,12:] #me quedo con los últimos 2 trials para test
+    #testSet = testSet[:,:2,:,:] #nos quedamos con los primeros dos canales
     
-    fm = 256.0
-    tiempoTotal = int(4*fm) #cantidad de muestras para 4segundos
-    muestraDescarte = 39
-    frecStimulus = np.array([9.25, 11.25, 13.25, 9.75, 11.75, 13.75, 10.25, 12.25, 14.25, 10.75, 12.75, 14.75])
+    path = "E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases"
     
-    """Loading the EEG data"""
-    rawEEGs = fa.loadData(path = path, filenames = subjectsNames)
+    path = os.path.join(path,"models\\WM\\logreg")
     
-    samples = rawEEGs[subjectsNames[0]]["eeg"].shape[2] #the are the same for all sobjecs and trials
-    
-    #Variables para preprocesamiento EEG
+    modelFile = "logreg_WM_test1_15102021.pkl"
+
+    #Filtering de EEG
     PRE_PROCES_PARAMS = {
-                    'lfrec': 5.,
-                    'hfrec': 38.,
-                    'order': 4,
+                    'lfrec': 4.,
+                    'hfrec': 30.,
+                    'order': 8,
                     'sampling_rate': fm,
                     'bandStop': 50.,
-                    'window': 4,
-                    'shiftLen':4
+                    'window': window,
+                    'shiftLen':window
                     }
-    
-    resolution = fm/samples
-    
+
+    resolution = np.round(fm/samplePoints, 4)
+
     FFT_PARAMS = {
                     'resolution': resolution,#0.2930,
-                    'start_frequency': 5.0,
-                    'end_frequency': 38.0,
+                    'start_frequency': 4.0,
+                    'end_frequency': 30.0,
                     'sampling_rate': fm
                     }
-    
-    for subject in subjectsNames:
-        eeg = rawEEGs[subject]["eeg"]
-        eeg = eeg[:,:, muestraDescarte: ,:]
-        eeg = eeg[:,:, :tiempoTotal ,:]
-        rawEEGs[subject]["eeg"] = filterEEG(eeg,lfrec = PRE_PROCES_PARAMS["lfrec"],
-                                            hfrec = PRE_PROCES_PARAMS["hfrec"],
-                                            orden = 4, bandStop = 50. , fm  = fm)
-        
-    testSet = rawEEGs["s8"]["eeg"][:,:,:,11:] #seleccionamos los últimos 4 trials
-    
-    path = "E:\reposBCICompetition\BCIC-Personal\scripts\Bases\models"
-    
-    path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases',"models")
-    
-    modelFile = "LogRegS8.pkl"
         
     logreg = LogRegClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, path = path)
     
     #De nuestro set de datos seleccionamos el EEG de correspondiente a una clase y un trial.
     #Es importante tener en cuenta que los datos de OpenBCI vienen en la forma [canales x samples]
     
-    clase = 5 #corresponde al estímulo de 11.75Hz
-    trial = 2
+    clase = 1 #corresponde al estímulo de 7Hz
+    trial = 6
     
     rawEEG = testSet[clase - 1, :, : , trial - 1]
     
     frecClasificada = logreg.getClassification(rawEEG = rawEEG)
     print(f"El estímulo clasificado fue {frecClasificada}")
     
-    clase = 9 #corresponde al estímulo de 14.25Hz
-    trial = 2
+    clase = 3 #corresponde al estímulo de 11Hz
+    trial = 3
     
     rawEEG = testSet[clase - 1, :, : , trial - 1]
     
     frecClasificada = logreg.getClassification(rawEEG = rawEEG)
     print(f"El estímulo clasificado fue {frecClasificada}")
 
+    trials = 6
+    predicciones = np.zeros((len(frecStimulus),trials))
+    
+    for i, clase in enumerate(np.arange(4)):
+        for j, trial in enumerate(np.arange(6)):
+            data = testSet[clase, :, : , trial]
+            classification = logreg.getClassification(rawEEG = data)
+            if classification == frecStimulus[clase]:
+                predicciones[i,j] = 1
 
-if __name__ == "__main__":
-    main()
+        #predicciones[i,j+1] = predicciones[i,:].sum()/trials
+
+    predictions = pd.DataFrame(predicciones, index = frecStimulus,
+                    columns = [f"trial {trial+1}" for trial in np.arange(trials)])
+
+    predictions['promedio'] = predictions.mean(numeric_only=True, axis=1)
+    
+    print(f"Predicciones usando el modelo LogReg {modelFile}")
+    print(predictions)
+
+
+# if __name__ == "__main__":
+#     main()
 

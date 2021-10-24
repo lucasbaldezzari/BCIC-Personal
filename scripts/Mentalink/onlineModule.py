@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Jun 23 09:57:43 2021
+Created on Wed Sep 16 2021
 
 @author: Lucas Baldezzari
 
-
-Módulo de control utilizado para adquirir y almacenar datos de EEG.
+Módulo para adquirir, procesar y clasificar señales de EEG en busca de SSVEPs para obtener un comando
 
 Los procesos principales son:
     - Seteo de parámetros y conexión con placa OpenBCI (Synthetic, Cyton o Ganglion)
@@ -13,32 +12,40 @@ Los procesos principales son:
     - Comunicación con placa Arduino para control de estímulos.
     - Adquisición de señales de EEG a partir de la placa OpenBCI.
     - Control de trials: Pasado ntrials se finaliza la sesión.
-    - Registro de EEG: Finalizada la sesión se guardan los datos con saveData() de fileAdmin
+    - Sobre el EEG: Procesamiento, extracción de características, clasificación y obtención de un comando (traducción)
     
-    VERSIÓN: SCT-01-RevB
+    *********** VERSIÓN: SCT-01-RevA ***********
     
     Funcionalidades:
         - Comunicación con las boards Cyton, Ganglion y Synthetic de OpenBCI
         - Comunicación con Arduino
         - Control de trials
-        - Registro de datos adquiridos durante la sesión de entrenamiento.
+        - Procesamiento, extracción de características, clasificación y obtención de un comando (traducción)
+        - Actualización de variables de estado que se envían al Arduino M1
 
 """
 
+
+import os
 import argparse
 import time
 import logging
 import numpy as np
+import threading
 # import matplotlib.pyplot as plt
 
 # import pyqtgraph as pg
 # from pyqtgraph.Qt import QtGui, QtCore
 
-from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds
+import brainflow
+from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds, BrainFlowError
+from brainflow.data_filter import DataFilter, FilterTypes, AggOperations, WindowFunctions, DetrendOperations
 from ArduinoCommunication import ArduinoCommunication as AC
 
-from DataThread import DataThread as DT    
+from DataThread import DataThread as DT
+from GraphModule import GraphModule as Graph       
 import fileAdmin as fa
+from SVMClassifier import SVMClassifier as SVMClassifier
 
 def main():
     
@@ -53,9 +60,9 @@ def main():
               "ganglion": BoardIds.GANGLION_BOARD, #IMPORTANTE: frecuencia muestro 200Hz
               "synthetic": BoardIds.SYNTHETIC_BOARD}
     
-    placa = placas["cyton"]  
+    placa = placas["ganglion"]  
     
-    puerto = "COM14" #Chequear el puerto al cual se conectará la placa
+    puerto = "COM5" #Chequear el puerto al cual se conectará la placa
     
     parser = argparse.ArgumentParser()
     
@@ -96,37 +103,8 @@ def main():
     
     board_shim = BoardShim(args.board_id, params) #genero un objeto para control de placas de Brainflow
     board_shim.prepare_session()
-    time.sleep(1) #esperamos 2 segundos
-
-    #### CONFIGURAMOS LA PLACA CYTON ######
-    """
-    IMPORTANTE: No tocar estos parámetros.
-    El string es:
-    x (CHANNEL, POWER_DOWN, GAIN_SET, INPUT_TYPE_SET, BIAS_SET, SRB2_SET, SRB1_SET) X
-
-    Doc: https://docs.openbci.com/Cyton/CytonSDK/#channel-setting-commands
-    """
-    configCanalesCyton = {
-        "canal1": "x1010000X", #ON|Ganancia 2x|Normal input|Remove from Bias|
-        "canal2": "x2010000X", #ON|Ganancia 2x|Normal input|Remove from Bias|
-        "canal3": "x3110000X", #ON|Ganancia 2x|Normal input|Remove from Bias|
-        "canal4": "x4110000X", #ON|Ganancia 2x|Normal input|Remove from Bias|
-        "canal5": "x5110000X", #Canal OFF
-        "canal6": "x6110000X", #Canal OFF
-        "canal7": "x7110000X", #Canal OFF
-        "canal8": "x8110000X", #Canal OFF
-    }
-
-    # if placa == BoardIds.CYTON_BOARD:
-    #     for key in configCanalesCyton.keys():
-    #         mensaje = board_shim.config_board(configCanalesCyton[key])
-    #         time.sleep(1)
-    #         print(mensaje)
-    mensaje = board_shim.config_board("x1020000Xx2020000Xx3020000Xx4020000X")
-    time.sleep(4)
-    print(mensaje)
+    time.sleep(2) #esperamos 2 segundos
     
-
     board_shim.start_stream(450000, args.streamer_params) #iniciamos OpenBCI. Ahora estamos recibiendo datos.
     time.sleep(4) #esperamos 4 segundos
     
@@ -135,21 +113,57 @@ def main():
 
     """Defino variables para control de Trials"""
     
-    trials = 1 #cantidad de trials. Sirve para la sesión de entrenamiento.
-    #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
-    trialDuration = 8 #secs
+    trials = 1 #None implica que se ejecutaran trials de manera indeterminada
+    trialDuration = 7 #secs #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
     stimuliDuration = 5 #secs
-
-    saveData = True
     
     EEGdata = []
-    fm = BoardShim.get_sampling_rate(args.board_id)
-    channels = 4
-    samplePoints = int(fm*stimuliDuration)
+
     stimuli = 1 #one stimulus
+
+    """
+    Cargamos clasificador
+    """
+    equipo = "neurorace"
+    if equipo == "neurorace":
+        frecStimulus = np.array([7, 9, 11, 13])
+        listaEstims = frecStimulus.tolist()
+        movements = [b'2',b'4',b'1',b'3',b'0']#izquierda, derecha, adelante, retroceso
+
+    classifyData = True
+    fm = BoardShim.get_sampling_rate(args.board_id)
+    window = stimuliDuration #sec
+    samplePoints = int(fm*window)
+    channels = 4
+
+    path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases',"models")
+    modelFile = "Logreg_LucasB_Test2_10112021.pkl" #nombre del modelo
+
+    
+
+    PRE_PROCES_PARAMS = {
+                    'lfrec': 5.,
+                    'hfrec': 38.,
+                    'order': 8,
+                    'sampling_rate': fm,
+                    'bandStop': 50.,
+                    'window': window,
+                    'shiftLen':window
+                    }
+
+    resolution = np.round(fm/samplePoints, 4)
+
+    FFT_PARAMS = {
+                    'resolution': resolution,#0.2930,
+                    'start_frequency': 5.0,
+                    'end_frequency': 38.0,
+                    'sampling_rate': fm
+                    }
+
+    svm = SVMClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, path = path)
     
     """Inicio comunicación con Arduino instanciando un objeto AC (ArduinoCommunication)
-    en el COM3, con un timing de 100ms
+    en el COM8, con un timing de 100ms
     
     - El objeto ArduinoCommunication generará una comunicación entre la PC y el Arduino
     una cantidad de veces dada por el parámetro "ntrials". Pasado estos n trials se finaliza la sesión.
@@ -158,37 +172,27 @@ def main():
     ntrials = None (default)
     """
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
-    #En este ejemplo esta conectada en el COM3
-    arduino = AC('COM8', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM7', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
-    time.sleep(1) 
-    
-    path = "recordedEEG" #directorio donde se almacenan los registros de EEG.
-    
-    #El siguiente diccionario se usa para guardar información relevante cómo así también los datos de EEG
-    #registrados durante la sesión de entrenamiento.
-    dictionary = {
-                'subject': 'testeandoElectrodosActivos2',
-                'date': '14/10/2021',
-                'generalInformation': 'Cyton. Se desactivan canales 4 al 8',
-                'stimFrec': "0",
-                'channels': [1,2,3,4], 
-                 'dataShape': [stimuli, channels, samplePoints, trials],
-                  'eeg': None
-                    }
+    time.sleep(2) 
 
     arduino.iniSesion() #Inicio sesión en el Arduino.
-    # graph = Graph(board_shim)
+
     time.sleep(1) 
-    arduino.systemControl[2] = arduino.movements[3] #comando número 4 (b'3') [b'0',b'1',b'2',b'3',b'4',b'5']
+
     try:
         while arduino.generalControl() == b"1":
-            if saveData and arduino.systemControl[1] == b"0":
-                currentData = data_thread.getData(stimuliDuration, channels = channels)
-                EEGdata.append(currentData)
-                saveData = False
-            elif saveData == False and arduino.systemControl[1] == b"1":
-                saveData = True
+            if classifyData and arduino.systemControl[1] == b"0":
+                rawEEG = data_thread.getData(stimuliDuration)
+                frecClasificada = svm.getClassification(rawEEG = rawEEG)
+                print(f"Frecuencia clasificada {frecClasificada}")
+                print(f"Comando a enviar {movements[listaEstims.index(frecClasificada)]}")
+                arduino.systemControl[2] = b"1"#movements[listaEstims.index(int(frecClasificada))]#movements[3]
+                esadoRobot = arduino.sendMessage(arduino.systemControl)
+                classifyData = False
+            elif classifyData == False and arduino.systemControl[1] == b"1":
+                # arduino.systemControl[2] = movements[3]
+                classifyData = True
         
     except BaseException as e:
         logging.warning('Exception', exc_info=True)
@@ -200,13 +204,5 @@ def main():
             
         arduino.close() #cierro comunicación serie para liberar puerto COM
         
-        #Guardo los datos registrados por la placa
-        EEGdata = np.asarray(EEGdata)
-        rawEEG = EEGdata.reshape(1,EEGdata.shape[0],EEGdata.shape[1],EEGdata.shape[2])
-        rawEEG = rawEEG.swapaxes(1,2).swapaxes(2,3)
-        dictionary["eeg"] = rawEEG
-        fa.saveData(path = path,dictionary = dictionary, fileName = dictionary["subject"])
 if __name__ == "__main__":
         main()
-        
-        
