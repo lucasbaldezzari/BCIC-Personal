@@ -53,9 +53,9 @@ def main():
               "ganglion": BoardIds.GANGLION_BOARD.value, #IMPORTANTE: frecuencia muestro 200Hz
               "synthetic": BoardIds.SYNTHETIC_BOARD.value}
     
-    placa = placas["cyton"]  
+    placa = placas["ganglion"]  
     
-    puerto = "COM7" #Chequear el puerto al cual se conectará la placa
+    puerto = "COM5" #Chequear el puerto al cual se conectará la placa
     
     parser = argparse.ArgumentParser()
     
@@ -138,7 +138,8 @@ def main():
     
     EEGdata = []
     fm = BoardShim.get_sampling_rate(args.board_id)
-    channels = 8
+    # channels = 8
+    channels = len(BoardShim.get_eeg_channels(args.board_id))
     samplePoints = int(fm*stimuliDuration)
     stimuli = 1 #one stimulus
     
@@ -162,7 +163,7 @@ def main():
     #El siguiente diccionario se usa para guardar información relevante cómo así también los datos de EEG
     #registrados durante la sesión de entrenamiento.
     dictionary = {
-                'subject': 'lucasB_11hz_elecActivos',
+                'subject': 'lucasB_11hz_ultracortex2',
                 'date': '24/10/2021',
                 'generalInformation': 'Cyton. Se desactivan canales 5 al 8',
                 'stimFrec': "11",

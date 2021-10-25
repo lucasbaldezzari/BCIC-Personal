@@ -19,17 +19,17 @@ actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener e
 path = os.path.join(actualFolder,"recordedEEG")
 
 trials = 10
-fm = 250.
+fm = 200.
 window = 4 #sec
 samplePoints = int(fm*window)
 channels = 4
 stimuli = 1 #one stimulus
 
 subjects = [1]
-filenames = ["lucasB_11hz_elecActivos"]
+filenames = ["lucasB_11hz_ultracortex"]
 allData = fa.loadData(path = path, filenames = filenames)
 
-name = "lucasB_11hz_elecActivos" #nombre de los datos a analizar}
+name = "lucasB_11hz_ultracortex" #nombre de los datos a analizar}
 stimuli = [7,9,11,13] #lista de estímulos
 estim = [11] #L7e pasamos un estímulo para que grafique una linea vertical
 
@@ -45,7 +45,7 @@ print(f"Forma de los datos {eeg.shape}")
 resolution = np.round(fm/eeg.shape[2], 4)
 
 PRE_PROCES_PARAMS = {
-                'lfrec': 7.,
+                'lfrec': 8.,
                 'hfrec': 30.,
                 'order': 4,
                 'sampling_rate': fm,
@@ -109,7 +109,7 @@ plt.show()
 ########################################################################
 
 canales = [1,2,3,4]
-trial = 9
+trial = 3
 
 title = f"Espectro - Trial número {trial} - sujeto {name}"
 fig, plots = plt.subplots(2, 2, figsize=(16, 14), gridspec_kw=dict(hspace=0.45, wspace=0.3))
@@ -136,7 +136,7 @@ plt.show()
 #Graficamos espectro canales promediados y un trial
 ########################################################################
 
-trial = 3
+trial = 4
 
 title = f"Espectro canales promediados - Trial número {trial} - sujeto {name}"
 plt.title(title)
