@@ -82,8 +82,8 @@ def plotEEG(signal, sujeto = 1, trial = 1, blanco = 1,
     for canal in range(channelsNums):
         if rmvOffset:
             # signalAvg = np.average(signal[target][canal-1].T[trial-1][:len(t)])
-            signalAvg = np.average(signal[blanco - 1, canal - 1, :len(t), trial - 1])
-        signalScale = (signal[blanco - 1, canal - 1, :len(t), trial - 1] - signalAvg)*scaling 
+            signalAvg = np.average(signal[blanco - 1, canal, :len(t), trial - 1])
+        signalScale = (signal[blanco - 1, canal, :len(t), trial - 1] - signalAvg)*scaling 
         axes[canal].plot(t, signalScale, color = "#e37165")
         axes[canal].set_xlabel('Tiempo [seg]', fontsize=11) 
         axes[canal].set_ylabel('Amplitud [uV]', fontsize=11)

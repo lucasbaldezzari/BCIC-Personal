@@ -49,13 +49,13 @@ def main():
     BoardShim.enable_dev_board_logger()
     logging.basicConfig(level=logging.DEBUG)
     
-    placas = {"cyton": BoardIds.CYTON_BOARD, #IMPORTANTE: frecuencia muestreo 256Hz
-              "ganglion": BoardIds.GANGLION_BOARD, #IMPORTANTE: frecuencia muestro 200Hz
-              "synthetic": BoardIds.SYNTHETIC_BOARD}
+    placas = {"cyton": BoardIds.CYTON_BOARD.value, #IMPORTANTE: frecuencia muestreo 256Hz
+              "ganglion": BoardIds.GANGLION_BOARD.value, #IMPORTANTE: frecuencia muestro 200Hz
+              "synthetic": BoardIds.SYNTHETIC_BOARD.value}
     
     placa = placas["cyton"]  
     
-    puerto = "COM14" #Chequear el puerto al cual se conectará la placa
+    puerto = "COM7" #Chequear el puerto al cual se conectará la placa
     
     parser = argparse.ArgumentParser()
     
@@ -107,25 +107,19 @@ def main():
     Doc: https://docs.openbci.com/Cyton/CytonSDK/#channel-setting-commands
     """
     configCanalesCyton = {
-        "canal1": "x1010000X", #ON|Ganancia 2x|Normal input|Remove from Bias|
-        "canal2": "x2010000X", #ON|Ganancia 2x|Normal input|Remove from Bias|
-        "canal3": "x3110000X", #ON|Ganancia 2x|Normal input|Remove from Bias|
-        "canal4": "x4110000X", #ON|Ganancia 2x|Normal input|Remove from Bias|
-        "canal5": "x5110000X", #Canal OFF
-        "canal6": "x6110000X", #Canal OFF
-        "canal7": "x7110000X", #Canal OFF
-        "canal8": "x8110000X", #Canal OFF
+        "canal1": "x1000110X", #ON|Ganancia 2x|Normal input|Remove from Bias|
+        "canal2": "x2000110X", #ON|Ganancia 2x|Normal input|Remove from Bias|
+        "canal3": "x3000110X", #ON|Ganancia 2x|Normal input|Remove from Bias|
+        "canal4": "x4000110X", #ON|Ganancia 2x|Normal input|Remove from Bias|
+        "canal5": "x5101000X", #Canal OFF
+        "canal6": "x6101000X", #Canal OFF
+        "canal7": "x7101000X", #Canal OFF
+        "canal8": "x8101000X", #Canal OFF
     }
 
-    # if placa == BoardIds.CYTON_BOARD:
-    #     for key in configCanalesCyton.keys():
-    #         mensaje = board_shim.config_board(configCanalesCyton[key])
-    #         time.sleep(1)
-    #         print(mensaje)
-    mensaje = board_shim.config_board("x1020000Xx2020000Xx3020000Xx4020000X")
-    time.sleep(4)
-    print(mensaje)
-    
+    if placa == BoardIds.CYTON_BOARD.value:
+        board_shim.config_board("x1020110Xx2020110Xx3101000Xx4101000Xx5101000Xx6101000Xx7101000Xx8101000X")
+        time.sleep(4)
 
     board_shim.start_stream(450000, args.streamer_params) #iniciamos OpenBCI. Ahora estamos recibiendo datos.
     time.sleep(4) #esperamos 4 segundos
@@ -135,16 +129,16 @@ def main():
 
     """Defino variables para control de Trials"""
     
-    trials = 1 #cantidad de trials. Sirve para la sesión de entrenamiento.
+    trials = 10 #cantidad de trials. Sirve para la sesión de entrenamiento.
     #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
     trialDuration = 8 #secs
-    stimuliDuration = 5 #secs
+    stimuliDuration = 4 #secs
 
     saveData = True
     
     EEGdata = []
     fm = BoardShim.get_sampling_rate(args.board_id)
-    channels = 4
+    channels = 8
     samplePoints = int(fm*stimuliDuration)
     stimuli = 1 #one stimulus
     
@@ -159,7 +153,7 @@ def main():
     """
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
     #En este ejemplo esta conectada en el COM3
-    arduino = AC('COM8', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM6', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
     time.sleep(1) 
     
@@ -168,10 +162,10 @@ def main():
     #El siguiente diccionario se usa para guardar información relevante cómo así también los datos de EEG
     #registrados durante la sesión de entrenamiento.
     dictionary = {
-                'subject': 'testeandoElectrodosActivos2',
-                'date': '14/10/2021',
-                'generalInformation': 'Cyton. Se desactivan canales 4 al 8',
-                'stimFrec': "0",
+                'subject': 'lucasB_11hz_elecActivos',
+                'date': '24/10/2021',
+                'generalInformation': 'Cyton. Se desactivan canales 5 al 8',
+                'stimFrec': "11",
                 'channels': [1,2,3,4], 
                  'dataShape': [stimuli, channels, samplePoints, trials],
                   'eeg': None

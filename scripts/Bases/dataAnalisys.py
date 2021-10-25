@@ -4,6 +4,7 @@ Created on Wed Jul 28 16:05:39 2021
 @author: Lucas
         VERSIÓN: SCT-01-RevA
 """
+
 import os
 import numpy as np
 
@@ -15,25 +16,25 @@ from utils import norm_mean_std
 import matplotlib.pyplot as plt
 
 actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-path = os.path.join(actualFolder,"recordedEEG\WM\ses1")
+path = os.path.join(actualFolder,"recordedEEG")
 
-trials = 15
-fm = 200.
-window = 5 #sec
+trials = 10
+fm = 250.
+window = 4 #sec
 samplePoints = int(fm*window)
 channels = 4
 stimuli = 1 #one stimulus
 
 subjects = [1]
-filenames = ["S3-R1-S1-E6","S3-R1-S1-E7","S3-R1-S1-E8","S3-R1-S1-E9","S3-R1-S1-E15","S3-R1-S1-E17"]
+filenames = ["lucasB_11hz_elecActivos"]
 allData = fa.loadData(path = path, filenames = filenames)
 
-name = "S3-R1-S1-E17" #nombre de los datos a analizar}
+name = "lucasB_11hz_elecActivos" #nombre de los datos a analizar}
 stimuli = [7,9,11,13] #lista de estímulos
-estim = [17] #L7e pasamos un estímulo para que grafique una linea vertical
+estim = [11] #L7e pasamos un estímulo para que grafique una linea vertical
 
 eeg = allData[name]['eeg'][:,:4,:,:] #utilizamos solo los dos primeros canales
-eeg = norm_mean_std(eeg) #normalizamos los datos
+#eeg = norm_mean_std(eeg) #normalizamos los datos
 
 #Chequeamos información del registro eeg 1
 print(allData[name]["generalInformation"])
@@ -44,9 +45,9 @@ print(f"Forma de los datos {eeg.shape}")
 resolution = np.round(fm/eeg.shape[2], 4)
 
 PRE_PROCES_PARAMS = {
-                'lfrec': 5.,
-                'hfrec': 28.,
-                'order': 8,
+                'lfrec': 7.,
+                'hfrec': 30.,
+                'order': 4,
                 'sampling_rate': fm,
                 'window': window,
                 'shiftLen':window
@@ -55,7 +56,7 @@ PRE_PROCES_PARAMS = {
 FFT_PARAMS = {
                 'resolution': resolution,
                 'start_frequency': 0.,
-                'end_frequency': 28.0,
+                'end_frequency': 30.0,
                 'sampling_rate': fm
                 }
 
@@ -108,7 +109,7 @@ plt.show()
 ########################################################################
 
 canales = [1,2,3,4]
-trial = 12
+trial = 9
 
 title = f"Espectro - Trial número {trial} - sujeto {name}"
 fig, plots = plt.subplots(2, 2, figsize=(16, 14), gridspec_kw=dict(hspace=0.45, wspace=0.3))
@@ -152,7 +153,7 @@ plt.show()
 #graficamos espectro para todos los trials y un canal
 ########################################################################
 
-canal = 2 #elegimos un canal
+canal = 1 #elegimos un canal
 
 title = f"Espectro para cada trial - Canal {canal} - Estímulo {estim[0]}Hz - Sujeto {name}"
 
