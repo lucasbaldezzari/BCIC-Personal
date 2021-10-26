@@ -16,7 +16,7 @@ from utils import norm_mean_std
 import matplotlib.pyplot as plt
 
 actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-path = os.path.join(actualFolder,"recordedEEG\WM\ses1")
+path = os.path.join(actualFolder,"recordedEEG\LucasB\ses1")
 
 trials = 15
 fm = 200.
@@ -26,12 +26,12 @@ channels = 4
 stimuli = 1 #one stimulus
 
 subjects = [1]
-filenames = ["S3-R2-S1-E6", "S3-R1-S1-E7", "S3-R1-S1-E8", "S3-R1-S1-E9"]
+filenames = ["lb-R1-S1-E7", "lb-R1-S1-E9", "lb-R1-S1-E11", "lb-R1-S1-E13"]
 allData = fa.loadData(path = path, filenames = filenames)
 
-name = "S3-R2-S1-E6" #nombre de los datos a analizar}
+name = "lb-R1-S1-E13" #nombre de los datos a analizar}
 stimuli = [7,9,11,13] #lista de estímulos
-estim = [11] #L7e pasamos un estímulo para que grafique una linea vertical
+estim = [13] #L7e pasamos un estímulo para que grafique una linea vertical
 
 eeg = allData[name]['eeg'][:,:4,:,:]
 #eeg = norm_mean_std(eeg) #normalizamos los datos
@@ -45,8 +45,8 @@ print(f"Forma de los datos {eeg.shape}")
 resolution = np.round(fm/eeg.shape[2], 4)
 
 PRE_PROCES_PARAMS = {
-                'lfrec': 4.,
-                'hfrec': 38.,
+                'lfrec': 5.,
+                'hfrec': 28.,
                 'order': 4,
                 'sampling_rate': fm,
                 'window': window,
@@ -56,7 +56,7 @@ PRE_PROCES_PARAMS = {
 FFT_PARAMS = {
                 'resolution': resolution,
                 'start_frequency': 0.,
-                'end_frequency': 38.0,
+                'end_frequency': 28.0,
                 'sampling_rate': fm
                 }
 
