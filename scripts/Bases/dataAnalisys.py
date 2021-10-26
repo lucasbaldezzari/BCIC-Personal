@@ -16,9 +16,9 @@ from utils import norm_mean_std
 import matplotlib.pyplot as plt
 
 actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-path = os.path.join(actualFolder,"recordedEEG")
+path = os.path.join(actualFolder,"recordedEEG\WM\ses1")
 
-trials = 10
+trials = 15
 fm = 200.
 window = 4 #sec
 samplePoints = int(fm*window)
@@ -26,14 +26,14 @@ channels = 4
 stimuli = 1 #one stimulus
 
 subjects = [1]
-filenames = ["lucasB_11hz_ultracortex"]
+filenames = ["S3-R2-S1-E6", "S3-R1-S1-E7", "S3-R1-S1-E8", "S3-R1-S1-E9"]
 allData = fa.loadData(path = path, filenames = filenames)
 
-name = "lucasB_11hz_ultracortex" #nombre de los datos a analizar}
+name = "S3-R2-S1-E6" #nombre de los datos a analizar}
 stimuli = [7,9,11,13] #lista de estímulos
 estim = [11] #L7e pasamos un estímulo para que grafique una linea vertical
 
-eeg = allData[name]['eeg'][:,:4,:,:] #utilizamos solo los dos primeros canales
+eeg = allData[name]['eeg'][:,:4,:,:]
 #eeg = norm_mean_std(eeg) #normalizamos los datos
 
 #Chequeamos información del registro eeg 1
@@ -45,8 +45,8 @@ print(f"Forma de los datos {eeg.shape}")
 resolution = np.round(fm/eeg.shape[2], 4)
 
 PRE_PROCES_PARAMS = {
-                'lfrec': 8.,
-                'hfrec': 30.,
+                'lfrec': 4.,
+                'hfrec': 38.,
                 'order': 4,
                 'sampling_rate': fm,
                 'window': window,
@@ -56,7 +56,7 @@ PRE_PROCES_PARAMS = {
 FFT_PARAMS = {
                 'resolution': resolution,
                 'start_frequency': 0.,
-                'end_frequency': 30.0,
+                'end_frequency': 38.0,
                 'sampling_rate': fm
                 }
 
