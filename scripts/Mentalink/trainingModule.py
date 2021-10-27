@@ -49,9 +49,9 @@ def main():
     BoardShim.enable_dev_board_logger()
     logging.basicConfig(level=logging.DEBUG)
     
-    placas = {"cyton": BoardIds.CYTON_BOARD, #IMPORTANTE: frecuencia muestreo 256Hz
-              "ganglion": BoardIds.GANGLION_BOARD, #IMPORTANTE: frecuencia muestro 200Hz
-              "synthetic": BoardIds.SYNTHETIC_BOARD}
+    placas = {"cyton": BoardIds.CYTON_BOARD.value, #IMPORTANTE: frecuencia muestreo 256Hz
+              "ganglion": BoardIds.GANGLION_BOARD.value, #IMPORTANTE: frecuencia muestro 200Hz
+              "synthetic": BoardIds.SYNTHETIC_BOARD.value}
     
     placa = placas["ganglion"]  
     
@@ -97,7 +97,30 @@ def main():
     board_shim = BoardShim(args.board_id, params) #genero un objeto para control de placas de Brainflow
     board_shim.prepare_session()
     time.sleep(1) #esperamos 2 segundos
-    
+
+    #### CONFIGURAMOS LA PLACA CYTON ######
+    """
+    IMPORTANTE: No tocar estos parámetros.
+    El string es:
+    x (CHANNEL, POWER_DOWN, GAIN_SET, INPUT_TYPE_SET, BIAS_SET, SRB2_SET, SRB1_SET) X
+
+    Doc: https://docs.openbci.com/Cyton/CytonSDK/#channel-setting-commands
+    """
+    configCanalesCyton = {
+        "canal1": "x1000110X", #ON|Ganancia 2x|Normal input|Remove from Bias|
+        "canal2": "x2000110X", #ON|Ganancia 2x|Normal input|Remove from Bias|
+        "canal3": "x3000110X", #ON|Ganancia 2x|Normal input|Remove from Bias|
+        "canal4": "x4000110X", #ON|Ganancia 2x|Normal input|Remove from Bias|
+        "canal5": "x5101000X", #Canal OFF
+        "canal6": "x6101000X", #Canal OFF
+        "canal7": "x7101000X", #Canal OFF
+        "canal8": "x8101000X", #Canal OFF
+    }
+
+    if placa == BoardIds.CYTON_BOARD.value:
+        board_shim.config_board("x1020110Xx2020110Xx3101000Xx4101000Xx5101000Xx6101000Xx7101000Xx8101000X")
+        time.sleep(4)
+
     board_shim.start_stream(450000, args.streamer_params) #iniciamos OpenBCI. Ahora estamos recibiendo datos.
     time.sleep(4) #esperamos 4 segundos
     
@@ -106,22 +129,18 @@ def main():
 
     """Defino variables para control de Trials"""
     
-    trials = 1 #cantidad de trials. Sirve para la sesión de entrenamiento.
+    trials = 10 #cantidad de trials. Sirve para la sesión de entrenamiento.
     #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
     trialDuration = 8 #secs
-    stimuliDuration = 5 #secs
+    stimuliDuration = 4 #secs
 
     saveData = True
     
     EEGdata = []
     fm = BoardShim.get_sampling_rate(args.board_id)
-    # if placa == "ganglion":
-    #     fm = 200.
-    # else:
-    #     fm = 250.
-    
+    # channels = 8
+    channels = len(BoardShim.get_eeg_channels(args.board_id))
     samplePoints = int(fm*stimuliDuration)
-    channels = 4
     stimuli = 1 #one stimulus
     
     """Inicio comunicación con Arduino instanciando un objeto AC (ArduinoCommunication)
@@ -135,7 +154,7 @@ def main():
     """
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
     #En este ejemplo esta conectada en el COM3
-    arduino = AC('COM7', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM6', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
     time.sleep(1) 
     
@@ -144,9 +163,9 @@ def main():
     #El siguiente diccionario se usa para guardar información relevante cómo así también los datos de EEG
     #registrados durante la sesión de entrenamiento.
     dictionary = {
-                'subject': 'testOnline',
-                'date': '14/10/2021',
-                'generalInformation': 'Ganglion. Estimulos HTML. Adelante y Atras',
+                'subject': 'lucasB_11hz_ultracortex2',
+                'date': '24/10/2021',
+                'generalInformation': 'Cyton. Se desactivan canales 5 al 8',
                 'stimFrec': "11",
                 'channels': [1,2,3,4], 
                  'dataShape': [stimuli, channels, samplePoints, trials],
@@ -160,7 +179,7 @@ def main():
     try:
         while arduino.generalControl() == b"1":
             if saveData and arduino.systemControl[1] == b"0":
-                currentData = data_thread.getData(stimuliDuration)
+                currentData = data_thread.getData(stimuliDuration, channels = channels)
                 EEGdata.append(currentData)
                 saveData = False
             elif saveData == False and arduino.systemControl[1] == b"1":

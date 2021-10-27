@@ -53,9 +53,9 @@ def main():
               "ganglion": BoardIds.GANGLION_BOARD.value, #IMPORTANTE: frecuencia muestro 200Hz
               "synthetic": BoardIds.SYNTHETIC_BOARD.value}
     
-    placa = placas["ganglion"]  
+    placa = placas["cyton"]  
     
-    puerto = "COM5" #Chequear el puerto al cual se conectará la placa
+    puerto = "COM14" #Chequear el puerto al cual se conectará la placa
     
     parser = argparse.ArgumentParser()
     
@@ -131,8 +131,8 @@ def main():
     
     trials = 10 #cantidad de trials. Sirve para la sesión de entrenamiento.
     #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
-    trialDuration = 8 #secs
-    stimuliDuration = 4 #secs
+    trialDuration = 10 #secs
+    stimuliDuration = 5 #secs
 
     saveData = True
     
@@ -163,10 +163,10 @@ def main():
     #El siguiente diccionario se usa para guardar información relevante cómo así también los datos de EEG
     #registrados durante la sesión de entrenamiento.
     dictionary = {
-                'subject': 'lucasB_11hz_ultracortex2',
+                'subject': 'lucasB_activos_14hz',
                 'date': '24/10/2021',
-                'generalInformation': 'Cyton. Se desactivan canales 5 al 8',
-                'stimFrec': "11",
+                'generalInformation': 'Cyton. Se desactivan canales 3 al 8',
+                'stimFrec': "14",
                 'channels': [1,2,3,4], 
                  'dataShape': [stimuli, channels, samplePoints, trials],
                   'eeg': None
