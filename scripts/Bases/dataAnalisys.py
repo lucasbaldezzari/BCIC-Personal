@@ -16,22 +16,22 @@ from utils import norm_mean_std
 import matplotlib.pyplot as plt
 
 actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-path = os.path.join(actualFolder,"recordedEEG\LucasB\ses1")
+path = os.path.join(actualFolder,"recordedEEG")
 
-trials = 15
-fm = 200.
-window = 4 #sec
+trials = 10
+fm = 250.
+window = 5 #sec
 samplePoints = int(fm*window)
 channels = 4
 stimuli = 1 #one stimulus
 
 subjects = [1]
-filenames = ["lb-R1-S1-E7", "lb-R1-S1-E9", "lb-R1-S1-E11", "lb-R1-S1-E13"]
+filenames = ["lucasB_activos_7hz", "lucasB_activos_14hz"]
 allData = fa.loadData(path = path, filenames = filenames)
 
-name = "lb-R1-S1-E13" #nombre de los datos a analizar}
-stimuli = [7,9,11,13] #lista de estímulos
-estim = [13] #L7e pasamos un estímulo para que grafique una linea vertical
+name = "lucasB_activos_14hz" #nombre de los datos a analizar}
+stimuli = [7,14] #lista de estímulos
+estim = [14] #L7e pasamos un estímulo para que grafique una linea vertical
 
 eeg = allData[name]['eeg'][:,:4,:,:]
 #eeg = norm_mean_std(eeg) #normalizamos los datos
@@ -136,7 +136,7 @@ plt.show()
 #Graficamos espectro canales promediados y un trial
 ########################################################################
 
-trial = 4
+trial = 5
 
 title = f"Espectro canales promediados - Trial número {trial} - sujeto {name}"
 plt.title(title)
@@ -153,7 +153,7 @@ plt.show()
 #graficamos espectro para todos los trials y un canal
 ########################################################################
 
-canal = 1 #elegimos un canal
+canal = 2 #elegimos un canal
 
 title = f"Espectro para cada trial - Canal {canal} - Estímulo {estim[0]}Hz - Sujeto {name}"
 

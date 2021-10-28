@@ -100,7 +100,7 @@ def plotEEG(signal, sujeto = 1, trial = 1, blanco = 1,
     plt.show()
 
 
-def pasaBanda(signal, lfrec, hfrec, order, fm = 250.0, plot = False):
+def pasaBanda(signal, lfrec, hfrec, order, fm = 250.0, plot = False, axis = 2):
     '''
     Filtra la señal entre las frecuencias de corte lfrec (inferior) y hfrec (superior).
     Filtro del tipo "pasa banda"
@@ -123,11 +123,11 @@ def pasaBanda(signal, lfrec, hfrec, order, fm = 250.0, plot = False):
     low = lfrec / nyquist
     high = hfrec / nyquist
     b, a = butter(order, [low, high], btype='band') #obtengo los parámetros del filtro
-    signalFiltered = filtfilt(b, a, signal, axis = 2) #generamos filtro con los parámetros obtenidos
+    signalFiltered = filtfilt(b, a, signal, axis = axis) #generamos filtro con los parámetros obtenidos
     
     return signalFiltered
 
-def notch(signal, bandStop, fm = 250.0):
+def notch(signal, bandStop, fm = 250.0, axis = 2):
     '''
     Filtra la señal entre las frecuencias de corte lfrec (inferior) y hfrec (superior).
     Filtro del tipo "pasa banda"
@@ -147,12 +147,12 @@ def notch(signal, bandStop, fm = 250.0):
     '''
     
     b, a = iirnotch(bandStop, 30, fm) #obtengo los parámetros del filtro
-    signalFiltered = filtfilt(b, a, signal, axis = 2) #generamos filtro con los parámetros obtenidos
+    signalFiltered = filtfilt(b, a, signal, axis = axis) #generamos filtro con los parámetros obtenidos
     
     return signalFiltered
 
     
-def filterEEG(signal, lfrec, hfrec, orden, bandStop, fm = 250.0):
+def filterEEG(signal, lfrec, hfrec, orden, bandStop, fm = 250.0, axis = 2):
     '''
     Toma una señal de EEG y la filtra entre las frecuencias de corte lfrec (inferior) y hfrec (superior).
 
@@ -167,8 +167,8 @@ def filterEEG(signal, lfrec, hfrec, orden, bandStop, fm = 250.0):
         - retorna la señal filtrada de la forma (numpy.ndarray)[númeroClases, númeroCanales, númeroMuestras, númeroTrials]
     '''
     
-    signalFiltered = notch(signal, bandStop = 50.0, fm = fm)
-    signalFiltered = pasaBanda(signal, lfrec, hfrec, orden, fm)
+    signalFiltered = notch(signal, bandStop = 50.0, fm = fm, axis = axis)
+    signalFiltered = pasaBanda(signal, lfrec, hfrec, orden, fm, axis = axis)
                 
     return signalFiltered
     # return signalFiltered
