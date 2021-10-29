@@ -171,8 +171,6 @@ def filterEEG(signal, lfrec, hfrec, orden, bandStop, fm = 250.0, axis = 2):
     signalFiltered = pasaBanda(signal, lfrec, hfrec, orden, fm, axis = axis)
                 
     return signalFiltered
-    # return signalFiltered
-
 
 def ventaneo(data, duration, solapamiento):
     '''

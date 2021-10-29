@@ -47,9 +47,9 @@ class SVMClassifier():
         
         self.frecStimulusList = frecStimulus #clases
         
-        self.rawEEG = None
+        self.rawDATA = None
         
-        self.MSF = np.array([]) #Magnitud Spectrum Features
+        self.signalPSD = np.array([]) #Magnitud Spectrum Features
         
         #Setting variables for EEG processing.
         self.PRE_PROCES_PARAMS = PRE_PROCES_PARAMS
@@ -66,9 +66,9 @@ class SVMClassifier():
         
         numCanales = rawEEG.shape[0]
         numFeatures = rawEEG.shape[1]
-        self.rawEEG = rawEEG.reshape(1, numCanales, numFeatures, 1)
+        self.rawDATA = rawEEG.reshape(1, numCanales, numFeatures, 1)
         
-        return self.rawEEG 
+        return self.rawDATA 
         
     def computeMSF(self):
         """Compute the FFT over segmented EEG data.
@@ -78,7 +78,7 @@ class SVMClassifier():
         Return: The Magnitud Spectrum Feature (MSF)."""
         
         #eeg data filtering
-        filteredEEG = filterEEG(self.rawEEG, self.PRE_PROCES_PARAMS["lfrec"],
+        filteredEEG = filterEEG(self.rawDATA, self.PRE_PROCES_PARAMS["lfrec"],
                                 self.PRE_PROCES_PARAMS["hfrec"],
                                 self.PRE_PROCES_PARAMS["order"],
                                 self.PRE_PROCES_PARAMS["bandStop"],
@@ -89,9 +89,9 @@ class SVMClassifier():
                                       self.PRE_PROCES_PARAMS["shiftLen"],
                                       self.PRE_PROCES_PARAMS["sampling_rate"])
         
-        self.MSF = computeMagnitudSpectrum(eegSegmented, self.FFT_PARAMS)
+        self.signalPSD = computeMagnitudSpectrum(eegSegmented, self.FFT_PARAMS)
         
-        return self.MSF
+        return self.signalPSD
     
     #Transofrmamos los datos del magnitud spectrum features en un formato para la SVM
     def transformDataForClassifier(self, features, canal = False):
@@ -138,7 +138,6 @@ class SVMClassifier():
         index = self.svm.predict(dataForSVM)[0] #clasificamos
         
         return self.frecStimulusList[index] #retornamos la frecuencia clasificada
-    
     
 def main():
 
