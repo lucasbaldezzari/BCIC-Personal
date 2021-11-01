@@ -6,7 +6,7 @@ import numpy as np
 import numpy.matlib as npm
 import json
 
-from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
+from sklearn.metrics import accuracy_score
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 from sklearn.model_selection import train_test_split
@@ -19,8 +19,6 @@ import pickle
 
 import matplotlib.pyplot as plt
 
-from utils import filterEEG, segmentingEEG, computeMagnitudSpectrum
-from utils import norm_mean_std
 import fileAdmin as fa
 
 class LDATrainingModule():

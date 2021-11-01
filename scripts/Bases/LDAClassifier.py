@@ -9,8 +9,7 @@ import pickle
 
 import matplotlib.pyplot as plt
 
-from utils import filterEEG, segmentingEEG, computeMagnitudSpectrum
-from utils import norm_mean_std
+from utils import filterEEG
 
 from scipy.signal import butter, filtfilt, windows
 from scipy.signal import welch

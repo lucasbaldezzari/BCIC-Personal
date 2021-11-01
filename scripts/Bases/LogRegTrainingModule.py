@@ -20,8 +20,7 @@ from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 
 import matplotlib.pyplot as plt
 
-from utils import filterEEG, segmentingEEG, computeMagnitudSpectrum, computeComplexSpectrum, plotSpectrum
-from utils import norm_mean_std
+from utils import filterEEG
 import fileAdmin as fa
 
 

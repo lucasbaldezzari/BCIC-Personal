@@ -16,12 +16,6 @@ import numpy.matlib as npm
 import pandas as pd
 import json
 
-from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
-from sklearn.svm import SVC
-
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import precision_recall_fscore_support
-
 import pickle
 
 from scipy.signal import butter, filtfilt, windows
@@ -29,9 +23,7 @@ from scipy.signal import welch
 
 import matplotlib.pyplot as plt
 
-from utils import filterEEG, segmentingEEG, computeMagnitudSpectrum
-from utils import plotEEG
-from utils import norm_mean_std
+from utils import filterEEG
 import fileAdmin as fa
 
 class LogRegClassifier():

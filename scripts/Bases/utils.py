@@ -21,9 +21,6 @@ import math
 
 import os
 
-from scipy.fftpack import fft, fftfreq
-import scipy.fftpack
-
 from scipy.signal import butter, filtfilt, iirnotch
     
 def plotEEG(signal, sujeto = 1, trial = 1, blanco = 1,

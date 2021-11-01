@@ -17,6 +17,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.io as sio
 from sklearn.model_selection import KFold
+import fileAdmin as fa
 
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense, Activation, Flatten, Dropout, Conv2D, BatchNormalization
@@ -369,12 +370,18 @@ class CNNTrainingModule():
     
 def main():
         
-    import fileAdmin as fa
-                
-    actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-    path = os.path.join(actualFolder,"recordedEEG\\LucasB")
+    """Empecemos"""
 
-    frecStimulus = np.array([7, 9, 11, 13])
+    """
+    **********************************************************************
+    First step: Loading the EEG
+    **********************************************************************
+    """
+
+    actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
+    path = os.path.join(actualFolder,"recordedEEG\WM\ses1")
+
+    frecStimulus = np.array([6, 7, 8, 9])
 
     trials = 15
     fm = 200.
@@ -382,22 +389,14 @@ def main():
     samplePoints = int(fm*window)
     channels = 4
 
-    """
-    **********************************************************************
-    First step: Loading and plotting the EEG
-    **********************************************************************
-    """
-    
-    """Loading the EEG data"""
-
-    filesRun1 = ["lb-R1-S1-E7","lb-R1-S1-E9", "lb-R1-S1-E11","lb-R1-S1-E13"]
+    filesRun1 = ["S3_R1_S2_E6","S3-R1-S1-E7", "S3-R1-S1-E8","S3-R1-S1-E9"]
     run1 = fa.loadData(path = path, filenames = filesRun1)
-    filesRun2 = ["lb-R2-S1-E7","lb-R2-S1-E9", "lb-R2-S1-E11","lb-R2-S1-E13"]
+    filesRun2 = ["S3_R2_S2_E6","S3-R2-S1-E7", "S3-R2-S1-E8","S3-R2-S1-E9"]
     run2 = fa.loadData(path = path, filenames = filesRun2)
 
     #Filtering de EEG
     PRE_PROCES_PARAMS = {
-                    'lfrec': 5.,
+                    'lfrec': 4.,
                     'hfrec': 38.,
                     'order': 8,
                     'sampling_rate': fm,
@@ -410,11 +409,10 @@ def main():
 
     FFT_PARAMS = {
                     'resolution': resolution,#0.2930,
-                    'start_frequency': 5.0,
+                    'start_frequency': 4.0,
                     'end_frequency': 38.0,
                     'sampling_rate': fm
                     }
-
     CNN_PARAMS = {
                     'batch_size': 64,
                     'epochs': 50,
@@ -437,7 +435,8 @@ def main():
     run1JoinedData = joinData(run1, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
     run2JoinedData = joinData(run2, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
 
-    trainSet = np.concatenate((run1JoinedData[:,:2,:,:12], run2JoinedData[:,:2,:,:12]), axis = 3)
+    trainSet = np.concatenate((run1JoinedData[:,:,:,:12], run2JoinedData[:,:,:,:12]), axis = 3)
+    trainSet = trainSet[:,:2,:,:] #nos quedamos con los primeros dos canales
     
     """
     **********************************************************************
@@ -529,7 +528,7 @@ def main():
     
     complexCNN.saveCNNModel()
         
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
 
 

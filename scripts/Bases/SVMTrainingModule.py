@@ -6,7 +6,7 @@ import numpy as np
 import numpy.matlib as npm
 import json
 
-from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
+from sklearn.metrics import accuracy_score
 from sklearn.svm import SVC
 
 from sklearn.model_selection import train_test_split
@@ -19,8 +19,7 @@ import pickle
 
 import matplotlib.pyplot as plt
 
-from utils import filterEEG, segmentingEEG, computeMagnitudSpectrum
-from utils import norm_mean_std
+from utils import filterEEG
 import fileAdmin as fa
 
 
