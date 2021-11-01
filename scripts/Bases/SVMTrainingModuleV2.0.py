@@ -122,6 +122,7 @@ class SVMTrainingModule():
             filename = self.modelName
 
         np.savetxt(f'{filename}_signalPSD.txt', signalPSD, delimiter=',')
+        np.savetxt(f'{filename}_signalSampleFrec.txt', self.signalSampleFrec, delimiter=',')
 
     #Transforming data for training
     def getDataForTraining(self, features):

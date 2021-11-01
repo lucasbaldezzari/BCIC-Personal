@@ -24,9 +24,9 @@ from scipy.signal import butter, filtfilt, iirnotch
 
 
 actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-path = os.path.join(actualFolder,"recordedEEG\WM\ses1")
+path = os.path.join(actualFolder,"recordedEEG\LucasB\ses1")
 
-frecStimulus = np.array([6, 7, 8, 9])
+frecStimulus = np.array([7, 9, 11, 13])
 
 trials = 15
 fm = 200.
@@ -34,9 +34,9 @@ window = 5 #sec
 samplePoints = int(fm*window)
 channels = 4
 
-filesRun1 = ["S3_R1_S2_E6","S3-R1-S1-E7", "S3-R1-S1-E8","S3-R1-S1-E9"]
+filesRun1 = ["lb-R1-S1-E7","lb-R1-S1-E9", "lb-R1-S1-E11","lb-R1-S1-E13"]
 run1 = fa.loadData(path = path, filenames = filesRun1)
-filesRun2 = ["S3_R2_S2_E6","S3-R2-S1-E7", "S3-R2-S1-E8","S3-R2-S1-E9"]
+filesRun2 = ["lb-R2-S1-E7","lb-R2-S1-E9", "lb-R2-S1-E11","lb-R2-S1-E13"]
 run2 = fa.loadData(path = path, filenames = filesRun2)
 
 #Filtering de EEG

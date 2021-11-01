@@ -31,7 +31,7 @@ class SVMClassifier():
         
         self.modelName = modelFile
         
-        actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
+        actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio featureVector
         os.chdir(path)
         
         with open(self.modelName, 'rb') as file:
@@ -45,9 +45,15 @@ class SVMClassifier():
         
         self.rawDATA = None
         self.signalPSD = None
+        self.signalSampleFrec = None
+        self.signalPSDCentroid = None
+        self.featureVector = None
         
-        self.trainingSignalPSD = None
-        
+        self.traingSigPSD = None
+        self.trainSampleFrec = None
+        self.trainPSDCent = []
+        self.trainPSDDist = []
+
         #Setting variables for EEG processing.
         self.PRE_PROCES_PARAMS = PRE_PROCES_PARAMS
         self.FFT_PARAMS = FFT_PARAMS
@@ -97,11 +103,43 @@ class SVMClassifier():
             r_i = covarianza/np.sqrt(covarianza[0][0]*covarianza[1][1])
             r_pearson.append(r_i[0][1])
 
-        print(r_pearson)
         indexFfeature = r_pearson.index(max(r_pearson))  
-        print(self.frecStimulus[indexFfeature])
 
         return self.trainingSignalPSD[indexFfeature]
+
+    def computetrainPSDCent(self):
+        
+        trainPSDCent = []
+        trainPSDDist = []
+        for clase, frecuencia in enumerate(self.frecStimulus):
+            powerCenter = sum(self.traingSigPSD[clase])/len(self.traingSigPSD[clase])
+            frecCenter = sum(self.trainSampleFrec)/len(self.trainSampleFrec)
+            trainPSDCent.append([powerCenter, frecCenter])
+            trainPSDDist.append(np.sqrt((self.traingSigPSD[clase]-powerCenter)**2 + (self.trainSampleFrec-frecCenter)**2).mean())
+
+        self.trainPSDCent = np.asarray(trainPSDCent)
+        self.trainPSDDist = np.asarray(trainPSDDist)
+
+    def bouldinFilter(self, signalPSD, sampleFrec):
+        """Lo utilizamos para extraer nuestro vector de características utilizando el método de Davies Bouldin"""
+
+        centroideSignal = [sum(signalPSD)/len(signalPSD), sum(sampleFrec)/len(sampleFrec)]
+        distSignal = np.sqrt((signalPSD-centroideSignal[0])**2 + (sampleFrec-centroideSignal[1])**2).mean()
+        print("Distancia signal", distSignal)
+        db = []
+
+        for clase, frecuencia in enumerate(self.frecStimulus):
+            distPower = centroideSignal[0] - self.trainPSDCent[clase][0]
+            distFrec = centroideSignal[1] - self.trainPSDCent[clase][1]
+            distanciaCentroides = np.sqrt((distPower)**2 + (distFrec)**2).mean()
+            print("distancias centroides", distanciaCentroides)
+            db.append((distSignal + self.trainPSDDist[clase]) / distanciaCentroides)
+
+
+        print(db)
+        indexFfeature = db.index(max(db))  
+
+        return self.traingSigPSD[indexFfeature]
 
     def extractFeatures(self, rawDATA, ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1):
 
@@ -122,7 +160,9 @@ class SVMClassifier():
                                                 ventana = ventana, anchoVentana = anchoVentana,
                                                 average = "median", axis = axis)
 
-        return self.signalSampleFrec, self.signalPSD
+        self.featureVector = self.pearsonFilter()
+
+        return self.featureVector
 
     def loadTrainingSignalPSD(self, filename = "", path = "models"):
 
@@ -134,6 +174,15 @@ class SVMClassifier():
         self.trainingSignalPSD = np.loadtxt(filename, delimiter=',')
         
         os.chdir(actualFolder)
+
+    def getClassification(self, featureVector):
+        """Método para clasificar y obtener una frecuencia de estimulación a partir del EEG
+        Argumentos:
+            - rawEEG(matriz de flotantes [canales x samples]): Señal de EEG"""
+
+        predicted = self.svm.predict(featureVector.reshape(1, -1))
+        
+        return self.frecStimulus[predicted[0]]
 
 def main():
 
@@ -185,13 +234,13 @@ def main():
     run1JoinedData = joinData(run1, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
     run2JoinedData = joinData(run2, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
 
-    trainSet = np.concatenate((run1JoinedData[:,:,:,12:], run2JoinedData[:,:,:,12:]), axis = 3) #últimos 3 tríals para testeo
-    trainSet = trainSet[:,:2,:,:] #nos quedamos con los primeros dos canales
+    testSet = np.concatenate((run1JoinedData[:,:,:,12:], run2JoinedData[:,:,:,12:]), axis = 3) #últimos 3 tríals para testeo
+    testSet = testSet[:,:2,:,:] #nos quedamos con los primeros dos canales
 
-    trainSet = np.mean(trainSet, axis = 1) #promedio sobre los canales. Forma datos ahora [clases, samples, trials]
+    testSet = np.mean(testSet, axis = 1) #promedio sobre los canales. Forma datos ahora [clases, samples, trials]
 
-    nsamples = trainSet.shape[1]
-    ntrials = trainSet.shape[2]
+    nsamples = testSet.shape[1]
+    ntrials = testSet.shape[2]
 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     
@@ -202,28 +251,37 @@ def main():
     svm = SVMClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, nsamples = nsamples, path = path) #cargamos clasificador entrenado
     svm.loadTrainingSignalPSD(filename = "SVM_test_rbf_signalPSD.txt", path = path) #cargamos el PSD de mis datos de entrenamiento
 
-    rawDATA = trainSet[2,:,5]
+    trainingSignalPSD = svm.trainingSignalPSD
 
-    filteredEEG = filterEEG(rawDATA, svm.PRE_PROCES_PARAMS["lfrec"],
-                            svm.PRE_PROCES_PARAMS["hfrec"],
-                            svm.PRE_PROCES_PARAMS["order"],
-                            svm.PRE_PROCES_PARAMS["bandStop"],
-                            svm.PRE_PROCES_PARAMS["sampling_rate"],
-                            axis = 0)
+    clase = 4
+    trial = 2
 
-    dataBanked = svm.applyFilterBank(filteredEEG, bw=1, order = 8)
+    rawDATA = testSet[clase-1,:,trial-1]
 
-    anchoVentana = int(svm.PRE_PROCES_PARAMS["sampling_rate"]*5) #fm * segundos
-    ventana = windows.hamming(anchoVentana)
+    featureVector = svm.extractFeatures(rawDATA = rawDATA, ventana = windows.hamming, anchoVentana = 5, bw = 2.0, order = 4, axis = 0)
 
-    signalSampleFrec, signalPSD = svm.computWelchPSD(dataBanked,
-                                            fm = svm.PRE_PROCES_PARAMS["sampling_rate"],
-                                            ventana = ventana, anchoVentana = anchoVentana,
-                                            average = "median", axis = 0)
+    print("Freceuncia clasificada:", svm.getClassification(featureVector = featureVector))
 
-    svm.extractFeatures(rawDATA = rawDATA, ventana = windows.hamming, anchoVentana = 5, bw = 2.0, order = 4, axis = 0)
-    featureVector = svm.pearsonFilter()
-    # frecClasificada = svm.getClassification(rawDATA = rawDATA)
+    trials = 6
+    predicciones = np.zeros((len(frecStimulus),trials))
+
+    for i, clase in enumerate(np.arange(len(frecStimulus))):
+        for j, trial in enumerate(np.arange(trials)):
+            data = testSet[clase, :, trial]
+            featureVector = svm.extractFeatures(rawDATA = data, ventana = windows.hamming, anchoVentana = 5, bw = 2.0, order = 4, axis = 0)
+            classification = svm.getClassification(featureVector = featureVector)
+            if classification == frecStimulus[clase]:
+                predicciones[i,j] = 1
+
+        predicciones[i,j] = predicciones[i,:].sum()/trials
+
+    predictions = pd.DataFrame(predicciones, index = frecStimulus,
+                    columns = [f"trial {trial+1}" for trial in np.arange(trials)])
+
+    predictions['promedio'] = predictions.mean(numeric_only=True, axis=1)
+    
+    print(f"Predicciones usando el modelo SVM {modelFile}")
+    print(predictions)
 
 if __name__ == "__main__":
     main()
