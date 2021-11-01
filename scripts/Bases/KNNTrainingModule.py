@@ -1,4 +1,4 @@
-"""SVMTrainingModule V2.0"""
+"""SVMTrainingModule V1.0"""
 
 
 import os
@@ -7,7 +7,7 @@ import numpy.matlib as npm
 import json
 
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
-from sklearn.svm import SVC
+from sklearn.cluster import KMeans
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import precision_recall_fscore_support
@@ -24,7 +24,7 @@ from utils import norm_mean_std
 import fileAdmin as fa
 
 
-class SVMTrainingModule():
+class KNNTrainingModule():
 
     def __init__(self, rawDATA, PRE_PROCES_PARAMS, FFT_PARAMS, frecStimulus, nchannels,nsamples,ntrials,modelName = ""):
         """Variables de configuración
@@ -67,10 +67,10 @@ class SVMTrainingModule():
         self.METRICAS = {f'modelo_{self.modelName}': {'trn': {'Pr': None, 'Rc': None, 'Acc': None, 'F1':None},
                                                       'val': {'Pr': None, 'Rc': None, 'Acc': None, 'F1':None}}}
 
-    def createSVM(self, kernel = "rbf", gamma = "scale", C = 1, probability=False, randomSeed = None):
+    def createSVM(self, n_clusters = 4, algorithm = "auto", randomSeed = None):
         """Se crea modelo"""
 
-        self.model = SVC(C = C, kernel = kernel, gamma = gamma, probability=probability, random_state = randomSeed)
+        self.model = KMeans(n_clusters = n_clusters, algorithm = algorithm, random_state = randomSeed)
 
         return self.model
 
@@ -91,11 +91,7 @@ class SVMTrainingModule():
             low = (frecuencia-bw/2)/nyquist
             high = (frecuencia+bw/2)/nyquist
             b, a = butter(order, [low, high], btype='band') #obtengo los parámetros del filtro
-            central = filtfilt(b, a, eeg[clase], axis = 0)
-            b, a = butter(order, [low*2, high*2], btype='band') #obtengo los parámetros del filtro
-            firstHarmonic = filtfilt(b, a, eeg[clase], axis = 0)
-            # signalFilteredbyBank[clase] = filtfilt(b, a, eeg[clase], axis = 0) #filtramos
-            signalFilteredbyBank[clase] = central + firstHarmonic
+            signalFilteredbyBank[clase] = filtfilt(b, a, eeg[clase], axis = 0) #filtramos
 
         self.dataBanked = signalFilteredbyBank
 
@@ -106,7 +102,6 @@ class SVMTrainingModule():
         self.signalSampleFrec, self.signalPSD = welch(signalBanked, fs = fm, window = ventana, nperseg = anchoVentana, average='median',axis = axis)
 
         return self.signalSampleFrec, self.signalPSD
-
 
     def featuresExtraction(self, ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1):
 
@@ -282,118 +277,20 @@ def main():
     nsamples = trainSet.shape[1]
     ntrials = trainSet.shape[2]
 
-    svm = SVMTrainingModule(trainSet, PRE_PROCES_PARAMS, FFT_PARAMS, frecStimulus=frecStimulus,
+    knn = KNNTrainingModule(trainSet, PRE_PROCES_PARAMS, FFT_PARAMS, frecStimulus=frecStimulus,
     nchannels = 1, nsamples = nsamples, ntrials = ntrials, modelName = "test")
     
     seed = np.random.randint(100)
 
-    modelo = svm.createSVM(kernel = "rbf", gamma = 0.05, C = 24, probability = True, randomSeed = seed)
-    svm.model
+    modelo = knn.createSVM(n_clusters = len(frecStimulus), algorithm = "auto", randomSeed = seed)
 
     anchoVentana = int(fm*5) #fm * segundos
     ventana = windows.hamming
 
-    sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = 5, bw = 1.0, order = 4, axis = 1)
+    sampleFrec, signalPSD  = knn.featuresExtraction(ventana = ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1)
 
-    metricas = svm.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2, randomSeed = seed)
+    metricas = knn.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2, randomSeed = seed)
     print(metricas)
 
-    ######################################################################
-    ################## Buscando el mejor clasificador ####################
-    ######################################################################
-
-    hiperParams = {"kernels": ["linear", "rbf"],
-        "gammaValues": [1e-2, 1e-1, 1, 1e+1, 1e+2, "scale", "auto"],
-        "CValues": [8e-1,9e-1, 1, 1e2, 1e3]
-        }
-
-    clasificadoresSVM = {"linear": list(),
-                    "rbf": list()
-        }
-
-    rbfResults = np.zeros((len(hiperParams["gammaValues"]), len(hiperParams["CValues"])))
-    linearResults = list()
-
-    seed = np.random.randint(100)
-
-    for i, kernel in enumerate(hiperParams["kernels"]):
-
-        if kernel != "linear":
-            for j, gamma in enumerate(hiperParams["gammaValues"]):
-
-                for k, C in enumerate(hiperParams["CValues"]):
-                    #Instanciamos el modelo para los hipermarametros
-
-                    svm = SVMTrainingModule(trainSet, PRE_PROCES_PARAMS, FFT_PARAMS, frecStimulus=frecStimulus,
-                            nchannels = 1, nsamples = nsamples, ntrials = ntrials, modelName = "testSVMv2")
-
-                    modelo = svm.createSVM(kernel = kernel, gamma = gamma, C = C, probability = True, randomSeed = seed)
-
-                    sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1)
-
-                    metricas = svm.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2, randomSeed = seed) #entrenamos el modelo y obtenemos las métricas
-                    accu = metricas["modelo_testSVMv2"]["val"]["Acc"]
-                    rbfResults[j,k] = accu
-
-                    clasificadoresSVM[kernel].append((C, gamma, svm, accu))
-        else:
-            for k, C in enumerate(hiperParams["CValues"]):
-
-                svm = SVMTrainingModule(trainSet, PRE_PROCES_PARAMS, FFT_PARAMS, frecStimulus=frecStimulus,
-                        nchannels = 1, nsamples = nsamples, ntrials = ntrials, modelName = "testSVMv2")
-
-                modelo = svm.createSVM(kernel = kernel, C = C, probability = True, randomSeed = seed)
-
-                sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1)
-
-                metricas = svm.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2, randomSeed = seed)
-
-                accu = metricas["modelo_testSVMv2"]["val"]["Acc"]
-
-                linearResults.append(accu)
-                #predecimos con los datos en Xoptim
-
-                clasificadoresSVM[kernel].append((C, svm, accu))
-
-    plt.figure(figsize=(15,10))
-    plt.imshow(rbfResults)
-    plt.xlabel("Valor de C")
-    plt.xticks(np.arange(len(hiperParams["CValues"])), hiperParams["CValues"])
-    plt.ylabel("Valor de Gamma")
-    plt.yticks(np.arange(len(hiperParams["gammaValues"])), hiperParams["gammaValues"])
-    plt.colorbar()
-
-    for i in range(rbfResults.shape[0]):
-        for j in range(rbfResults.shape[1]):
-            plt.text(j, i, "{:.2f}".format(rbfResults[i, j]), va='center', ha='center')
-    plt.show()
-
-    plt.plot([str(C) for C in hiperParams["CValues"]], np.asarray(linearResults)*100)
-    plt.title("Accuracy para predicciones usando kernel 'linear'")
-    plt.xlabel("Valor de C")
-    plt.ylabel("Accuracy (%)")
-    plt.show()
-
-    #Selecciono dos clasificadores SVM
-    modeloSVM1 = clasificadoresSVM["linear"][4][1] #modelo 3 con [Model = SVC(C=1, kernel='linear'), accu = 0.8]
-    actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-    path = os.path.join(actualFolder,"models")
-    modeloSVM1.saveModel(path, filename = "SVM_test_linear.pkl")
-    modeloSVM1.saveTrainingSignalPSD(signalPSD.mean(axis = 2), filename = "SVM_test_linear")
-    os.chdir(actualFolder)
-
-    gamma = "scale"
-    C = 100
-
-    for values in clasificadoresSVM["rbf"]:
-        if values[1] == gamma and values[0] == C:
-            modeloSVM2 = values[2] #modelo 2 es un SVM con kernel = rbf
-
-    actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-    path = os.path.join(actualFolder, "models")
-    modeloSVM2.saveModel(path, filename = "SVM_test_rbf.pkl")
-    modeloSVM2.saveTrainingSignalPSD(signalPSD.mean(axis = 2), filename = "SVM_test_rbf")
-    os.chdir(actualFolder)
-
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()

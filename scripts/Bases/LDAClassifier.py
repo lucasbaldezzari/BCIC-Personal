@@ -1,42 +1,26 @@
-"""
-Created on Fri Sep 10 17:46:17 2021
-
-@author: Lucas Baldezzari
-
-LogRegClassifier: Clase que permite usar un clasificador
-por Logistic Regression para clasificar SSVEPs a partir de datos de EEG
-
-Versión: 2.0
-************ VERSIÓN SCP-01-RevA ************
-"""
+"""LDAClassifierV1.0"""
 
 import os
 import numpy as np
 import numpy.matlib as npm
 import pandas as pd
-import json
-
-from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
-from sklearn.svm import SVC
-
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import precision_recall_fscore_support
 
 import pickle
-
-from scipy.signal import butter, filtfilt, windows
-from scipy.signal import welch
 
 import matplotlib.pyplot as plt
 
 from utils import filterEEG, segmentingEEG, computeMagnitudSpectrum
-from utils import plotEEG
 from utils import norm_mean_std
+
+from scipy.signal import butter, filtfilt, windows
+from scipy.signal import welch
+
 import fileAdmin as fa
 
-class LogRegClassifier():
+class LDAClassifier():
+    
     def __init__(self, modelFile, frecStimulus,
-                    PRE_PROCES_PARAMS, FFT_PARAMS, nsamples, path = "models"):
+                 PRE_PROCES_PARAMS, FFT_PARAMS, nsamples, path = "models"):
 
         """Cosntructor de clase
         Argumentos:
@@ -85,7 +69,7 @@ class LogRegClassifier():
         self.trainingSignalPSD = np.loadtxt(filename, delimiter=',')
         
         os.chdir(actualFolder)
-
+        
     def applyFilterBank(self, eeg, bw = 2.0, order = 4):
         """Aplicamos banco de filtro a nuestros datos.
         Se recomienda aplicar un notch en los 50Hz y un pasabanda en las frecuencias deseadas antes
@@ -171,7 +155,6 @@ class LogRegClassifier():
         
         return self.frecStimulus[predicted[0]]
 
-
 def main():
 
     """Empecemos"""
@@ -234,37 +217,19 @@ def main():
     
     path = os.path.join(actualFolder,"models")
     
-    modelFile = "LogReg_WM_testing.pkl" #nombre del modelo
+    modelFile = "test.pkl" #nombre del modelo
 
-    logreg = LogRegClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, nsamples = nsamples, path = path) #cargamos clasificador entrenado
-    logreg.loadTrainingSignalPSD(filename = "LogReg_WM_testing_signalPSD.txt", path = path) #cargamos el PSD de mis datos de entrenamiento
+    lda = LDAClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, nsamples = nsamples, path = path) #cargamos clasificador entrenado
+    lda.loadTrainingSignalPSD(filename = "LDA_WM_testing_signalPSD.txt", path = path) #cargamos el PSD de mis datos de entrenamiento
 
     clase = 4
-    trial = 6
+    trial = 2
 
     rawDATA = testSet[clase-1,:,trial-1]
 
-    featureVector = logreg.extractFeatures(rawDATA = rawDATA, ventana = windows.hamming, anchoVentana = 5, bw = 2.0, order = 4, axis = 0)
+    featureVector = lda.extractFeatures(rawDATA = rawDATA, ventana = windows.hamming, anchoVentana = 5, bw = 2.0, order = 4, axis = 0)
+    print("Freceuncia clasificada:", lda.getClassification(featureVector = featureVector))
 
-    print("Freceuncia clasificada:", logreg.getClassification(featureVector = featureVector))
 
-    trials = 6
-    predicciones = np.zeros((len(frecStimulus),trials))
-
-    for i, clase in enumerate(np.arange(len(frecStimulus))):
-        for j, trial in enumerate(np.arange(trials)):
-            data = testSet[clase, :, trial]
-            featureVector = logreg.extractFeatures(rawDATA = data, ventana = windows.hamming, anchoVentana = 5, bw = 2.0, order = 4, axis = 0)
-            classification = logreg.getClassification(featureVector = featureVector)
-            if classification == frecStimulus[clase]:
-                predicciones[i,j] = 1
-
-        predicciones[i,j] = predicciones[i,:].sum()/trials
-
-    predictions = pd.DataFrame(predicciones, index = frecStimulus,
-                    columns = [f"trial {trial+1}" for trial in np.arange(trials)])
-
-    predictions['promedio'] = predictions.mean(numeric_only=True, axis=1)
-    
-    print(f"Predicciones usando el modelo SVM {modelFile}")
-    print(predictions)
+if __name__ == "__main__":
+    main()

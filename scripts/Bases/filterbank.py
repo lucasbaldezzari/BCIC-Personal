@@ -101,7 +101,10 @@ for clase, frecuencia in enumerate(frecStimulus):
     low = (frecuencia-bw/2)/nyquist
     high = (frecuencia+bw/2)/nyquist
     b, a = butter(order, [low, high], btype='band') #obtengo los parámetros del filtro
-    signalFilteredbyBank[clase] = filtfilt(b, a, signalFiltered[clase], axis = 0) #filtramos
+    central = filtfilt(b, a, signalFiltered[clase], axis = 0)
+    b, a = butter(order, [low*2, high*2], btype='band') #obtengo los parámetros del filtro
+    firstArmonic = filtfilt(b, a, signalFiltered[clase], axis = 0)
+    signalFilteredbyBank[clase] = central + firstArmonic #filtramos
 
 #Computamos el psd de los datos filtrados por el banco.
 from scipy.fft import fft

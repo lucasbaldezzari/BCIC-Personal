@@ -77,20 +77,24 @@ class SVMClassifier():
         de applyFilterBank()
         
         Args:
-            - eeg: datos a aplicar el filtro. Forma [samples]
+            - eeg: datos a aplicar el filtro. Forma [clase, samples, trials]
             - frecStimulus: lista con la frecuencia central de cada estímulo/clase
             - bw: ancho de banda desde la frecuencia central de cada estímulo/clase. Default = 2.0
             - order: orden del filtro. Default = 4"""
 
         nyquist = 0.5 * self.FFT_PARAMS["sampling_rate"]
-        signalFilteredbyBank = np.zeros((self.nclases,self.nsamples))
+        signalFilteredbyBank = np.zeros((self.nclases,self.nsamples,self.ntrials))
         for clase, frecuencia in enumerate(self.frecStimulus):   
             low = (frecuencia-bw/2)/nyquist
             high = (frecuencia+bw/2)/nyquist
             b, a = butter(order, [low, high], btype='band') #obtengo los parámetros del filtro
-            signalFilteredbyBank[clase] = filtfilt(b, a, eeg) #filtramos
+            central = filtfilt(b, a, eeg[clase], axis = 0)
+            b, a = butter(order, [low*2, high*2], btype='band') #obtengo los parámetros del filtro
+            firstHarmonic = filtfilt(b, a, eeg[clase], axis = 0)
+            # signalFilteredbyBank[clase] = filtfilt(b, a, eeg[clase], axis = 0) #filtramos
+            signalFilteredbyBank[clase] = central + firstHarmonic
 
-        self.dataBanked = signalFilteredbyBank.mean(axis = 0)
+        self.dataBanked = signalFilteredbyBank
 
         return self.dataBanked
 
