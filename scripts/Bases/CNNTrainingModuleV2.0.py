@@ -17,6 +17,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.io as sio
 from sklearn.model_selection import KFold
+import fileAdmin as fa
 
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense, Activation, Flatten, Dropout, Conv2D, BatchNormalization
@@ -52,7 +53,6 @@ class CNNTrainingModule():
         Args:
             - rawDATA: Raw EEG. The rawDATA data is expected as
             [Number of targets, Number of channels, Number of sampling points, Number of trials]
-            - subject: Subject number
             - PRE_PROCES_PARAMS: The params used in order to pre process the raw EEG.
             - FFT_PARAMS: The params used in order to compute the FFT
             - CNN_PARAMS: The params used for the CNN model.
@@ -109,14 +109,14 @@ class CNNTrainingModule():
         self.MSF = np.array([]) #Magnitud Spectrum Features
         self.CSF = np.array([]) #Momplex Spectrum Features
 
-    def CNN_model(self,inputShape):
+    def CNN_model(self, inputShape):
         '''
         
         Make the CNN model
     
         Args:
             inputShape (numpy.ndarray): shape of input training data with form
-            [Number of Channels x Number of features]
+            [Trials totales x Cantidad de features por trial]
     
         Returns:
             (keras.Sequential): CNN model.
@@ -128,6 +128,11 @@ class CNNTrainingModule():
                          input_shape=(inputShape[0], inputShape[1], inputShape[2]),
                          padding="valid", kernel_regularizer=regularizers.l2(self.CNN_PARAMS['l2_lambda']),
                          kernel_initializer=initializers.RandomNormal(mean=0.0, stddev=0.01, seed=None)))
+
+        # model.add(Conv2D(2*self.CNN_PARAMS['n_ch'], kernel_size=(self.CNN_PARAMS['n_ch'], 1),
+        #                  input_shape=(inputShape[0], inputShape[1], inputShape[2]),
+        #                  padding="valid", kernel_regularizer=regularizers.l2(self.CNN_PARAMS['l2_lambda']),
+        #                  kernel_initializer=initializers.RandomNormal(mean=0.0, stddev=0.01, seed=None)))
         
         model.add(BatchNormalization())
         
@@ -219,6 +224,104 @@ class CNNTrainingModule():
 
         return self.signalSampleFrec, self.signalPSD
 
+    #Transforming data for training
+    def getDataForTraining(self, features):
+        """Preparación del set de entrenamiento.
+
+        Argumentos:
+            - features: Parte Real del Espectro or Parte Real e Imaginaria del Espectro
+            con forma [número de características x canales x clases x trials x número de segmentos]
+            - clases: Lista con las clases para formar las labels
+
+        Retorna:
+            - trainingData: Set de datos de entrenamiento para alimentar el modelo SVM
+            Con forma [trials*clases x number of features]
+            - Labels: labels para entrenar el modelo a partir de las clases
+        """
+
+        numFeatures = features.shape[1]
+        trainingData = features.swapaxes(2,1).reshape(self.nclases*self.ntrials, numFeatures)
+
+        classLabels = np.arange(self.nclases)
+
+        labels = (npm.repmat(classLabels, self.ntrials, 1).T).ravel()
+
+        labels = to_categorical(labels)
+
+        return trainingData.reshape(self.nclases*self.ntrials,self.nchannels,numFeatures,1), labels
+
+    def trainCNN(self, trainingData, labels, nFolds = 10, saveBestWeights = True):
+        """
+        Perform a CNN training using a cross validation method.
+        
+        Arguments:
+            - trainingData: Data to use in roder to train the CNN with shape
+            e.g. [num_training_examples, num_channels, n_fc] or [num_training_examples, num_channels, 2*n_fc].
+            - labels: The labels for data training.
+            - nFolds: Number of folds for he cross validation.
+            - saveBestWeights = True: If we want to save the best weights for the CNN training
+            
+        Return:
+            - Accuracy for the CNN model using the trainingData
+        """
+        
+        kf = KFold(n_splits = nFolds, shuffle=True)
+        kf.get_n_splits(trainingData)
+        accu = np.zeros((nFolds, 1))
+        fold = -1
+        
+        score = 0.0
+        
+        listaAccu = []
+        
+
+        if not self.model: #Check if themodel is empty
+            print("Empty model. You should invoke createModel() method first")
+        
+        else:
+    
+            for trainIndex, testIndex in kf.split(trainingData):
+                
+                xValuesTrain, xValuesTest = trainingData[trainIndex], trainingData[testIndex]
+                yValuesTrain, yValuesTest = labels[trainIndex], labels[testIndex]
+                
+                fold = fold + 1
+                print(f"Model: {self.modelName} - Fold: {fold+1} Training...")
+                
+                sgd = optimizers.SGD(lr = self.CNN_PARAMS['learning_rate'],
+                                      decay = self.CNN_PARAMS['lr_decay'],
+                                      momentum = self.CNN_PARAMS['momentum'], nesterov=False)
+                
+                self.model.compile(loss = categorical_crossentropy, optimizer = sgd, metrics = ["accuracy"])
+                
+                history = self.model.fit(xValuesTrain, yValuesTrain, batch_size = self.CNN_PARAMS['batch_size'],
+                                    epochs = self.CNN_PARAMS['epochs'], verbose=0)
+        
+                actualSscore = self.model.evaluate(xValuesTest, yValuesTest, verbose=0)
+                
+                # print(history.history.keys())
+                
+                if saveBestWeights:
+                    
+                    try:
+                        actualFolder = os.getcwd()
+                        os.makedirs("models/cnn")    
+                        print("Directory 'models' created ")
+                    except FileExistsError:
+                        print("")
+                        
+                    if actualSscore[1] > score:
+                        score = actualSscore[1]
+                        self.model.save_weights(f'models//cnn/bestWeightss_{self.modelName}.h5')
+                
+                accu[fold, :] = actualSscore[1]*100
+                
+                print("%s: %.2f%%" % (self.model.metrics_names[1], actualSscore[1]*100))
+                
+            print(f"Mean accuracy for overall folds for model {self.modelName}: {np.mean(accu)}")
+            
+            return accu
+
 def main():
         
     """Empecemos"""
@@ -266,8 +369,8 @@ def main():
                     'lr_decay': 0.0,
                     'l2_lambda': 0.0001,
                     'momentum': 0.9,
-                    'kernel_f': 10,
-                    'n_ch': 2,
+                    'kernel_f': 4,
+                    'n_ch': 1,
                     'num_classes': 4}
 
     def joinData(allData, stimuli, channels, samples, trials):
@@ -283,6 +386,8 @@ def main():
     trainSet = np.concatenate((run1JoinedData[:,:,:,:12], run2JoinedData[:,:,:,:12]), axis = 3)
     trainSet = trainSet[:,:2,:,:] #nos quedamos con los primeros dos canales
 
+    trainSet = np.mean(trainSet, axis = 1) #promedio sobre los canales. Forma datos ahora [clases, samples, trials]
+
     """
     **********************************************************************
     Second step: Create the CNN model
@@ -295,9 +400,40 @@ def main():
     #Make a CNNTrainingModule object in order to use the data's Magnitude Features
     cnn = CNNTrainingModule(trainSet, PRE_PROCES_PARAMS = PRE_PROCES_PARAMS, FFT_PARAMS = FFT_PARAMS, CNN_PARAMS = CNN_PARAMS,
                         frecStimulus = frecStimulus, nchannels = 1,nsamples = nsamples, ntrials = ntrials, modelName = "cnntesting")
+    
+    """
+    **********************************************************************
+    Third step: Compute and get the Features
+    **********************************************************************
+    """
 
-    # >>> trainingData_MSF, labels_MSF = magnitudCNN.getDataForTraining(magnitudFeatures)
-    # >>> trainingData_MSF.shape
-    # (96, 2, 171, 1)
-    # >>> labels_MSF.shape
-    # (96, 4)
+    anchoVentana = int(fm*5) #fm * segundos
+    ventana = windows.hamming
+
+    sampleFrec, signalPSD  = cnn.featuresExtraction(ventana = ventana, anchoVentana = 5, bw = 1.0, order = 4, axis = 1)
+
+    trainingData, labels = cnn.getDataForTraining(signalPSD)
+
+    #inputshape [Number of Channels x Number of Features x 1]
+    totalTrials = trainingData.shape[0]
+    featuresPerTrial = trainingData.shape[1]
+    #inputshape [Number of Channels x Number of Features x 1]
+    inputshape = np.array([trainingData.shape[1], trainingData.shape[2], trainingData.shape[3]])
+
+
+    """
+    **********************************************************************
+    Fourth step: Create the CNN model
+    **********************************************************************
+    """
+    cnn.createModel(inputshape)
+
+
+    """
+    **********************************************************************
+      Fifth step: Trainn the CNN
+    **********************************************************************
+    """
+    
+    accu_CNN_using_MSF = cnn.trainCNN(trainingData, labels, nFolds = 5)
+    print(f"Maxima accu {accu_CNN_using_MSF.max()}")
