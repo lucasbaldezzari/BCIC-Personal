@@ -10,9 +10,12 @@ Created on Thu Jun 24 16:53:29 2021
 
 import os
 
+import warnings
 import numpy as np
 import numpy.matlib as npm
+import pandas as pd
 import matplotlib.pyplot as plt
+import scipy.io as sio
 from sklearn.model_selection import KFold
 import fileAdmin as fa
 
@@ -23,12 +26,8 @@ from tensorflow.keras import initializers, regularizers
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.utils import plot_model
 from tensorflow.keras import optimizers
+from tensorflow.keras.callbacks import ModelCheckpoint
 from tensorflow.keras.losses import categorical_crossentropy
-
-from scipy.signal import butter, filtfilt, windows
-from scipy.signal import welch
-
-import pickle
 
 #own packages
 
@@ -38,7 +37,9 @@ from utils import filterEEG, segmentingEEG, computeMagnitudSpectrum, computeComp
 
 class CNNTrainingModule():
     
-    def __init__(self, rawDATA, PRE_PROCES_PARAMS, FFT_PARAMS, CNN_PARAMS, frecStimulus, nchannels,nsamples,ntrials,modelName = ""):
+    def __init__(self, rawEEG, subject = "1", PRE_PROCES_PARAMS = dict(), FFT_PARAMS = dict(),
+                 CNN_PARAMS = dict(),
+                 modelName = ""):
         
         """
         Some important variables configuration and initialization in order to implement a CNN model for training.
@@ -47,8 +48,9 @@ class CNNTrainingModule():
         training of CNN for SSVEP BCI' study.
         
         Args:
-            - rawDATA: Raw EEG. The rawDATA data is expected as
+            - rawEEG: Raw EEG. The rawEEG data is expected as
             [Number of targets, Number of channels, Number of sampling points, Number of trials]
+            - subject: Subject number
             - PRE_PROCES_PARAMS: The params used in order to pre process the raw EEG.
             - FFT_PARAMS: The params used in order to compute the FFT
             - CNN_PARAMS: The params used for the CNN model.
@@ -65,37 +67,19 @@ class CNNTrainingModule():
                 CNN_PARAMS['num_classes'] (int): number of SSVEP targets/classes
             - modelName: The model name used to identify the object and the model        
         """
-        self.rawDATA = rawDATA
-
+        
+        self.rawEEG = rawEEG
+        self.subject = subject
+        
         if not modelName:
-            self.modelName = f"CNNModelSubject"
-
-        else:
-            self.modelName = modelName
-
-        #Setting variables for EEG processing.
-        self.PRE_PROCES_PARAMS = PRE_PROCES_PARAMS
+            self.modelName = f"CNNModelSubject{subject}"
             
-        #Setting variables for CNN training
-        self.CNN_PARAMS = CNN_PARAMS
-             
-        #Setting variables for the Magnitude and Complex features extracted from FFT
-        self.FFT_PARAMS = FFT_PARAMS
-
-        self.frecStimulus = frecStimulus
-        self.nclases = len(frecStimulus)
-        self.nchannels = nchannels #ex nchannels
-        self.nsamples = nsamples #ex nsamples
-        self.ntrials = ntrials #ex ntrials
-
-        self.dataBanked = None #datos de EEG filtrados con el banco
-        self.model = None #donde almacenaremos el modelo CNN
-        self.trainingData = None
-        self.labels = None
-
-        self.signalPSD = None #Power Spectrum Density de mi señal
-        self.signalSampleFrec = None
-       
+        self.modelName = modelName
+        
+        self.eeg_channels = self.rawEEG.shape[0]
+        self.total_trial_len = self.rawEEG.shape[2]
+        self.num_trials = self.rawEEG.shape[3]
+        
         self.modelSummary = None
         self.model = None
         self.bestWeights = None
@@ -104,15 +88,143 @@ class CNNTrainingModule():
         
         self.MSF = np.array([]) #Magnitud Spectrum Features
         self.CSF = np.array([]) #Momplex Spectrum Features
-
-    def CNN_model(self, inputShape):
+        
+        #Setting variables for EEG processing.
+        if not PRE_PROCES_PARAMS:
+            self.PRE_PROCES_PARAMS = {
+                'lfrec': 3.,
+                'hfrec': 80.,
+                'order': 4,
+                'sampling_rate': 256.,
+                'window': 4,
+                'shiftLen':4
+                }
+        else:
+            self.PRE_PROCES_PARAMS = PRE_PROCES_PARAMS
+            
+        #Setting variables for CNN training
+        if not CNN_PARAMS:     
+            self.CNN_PARAMS = {
+                'batch_size': 64,
+                'epochs': 50,
+                'droprate': 0.25,
+                'learning_rate': 0.001,
+                'lr_decay': 0.0,
+                'l2_lambda': 0.0001,
+                'momentum': 0.9,
+                'kernel_f': 10,
+                'n_ch': 8,
+                'num_classes': 12}
+        else:
+             self.CNN_PARAMS = CNN_PARAMS
+             
+        #Setting variables for the Magnitude and Complex features extracted from FFT
+        if not FFT_PARAMS:        
+            self.FFT_PARAMS = {
+                'resolution': 0.2930,
+                'start_frequency': 0.0,
+                'end_frequency': 38.0,
+                'sampling_rate': 256.
+                }
+        else:
+            self.FFT_PARAMS = FFT_PARAMS
+        
+        
+    def computeMSF(self):
+        """
+        Compute the FFT over segmented EEG data.
+        
+        Argument: None. This method use variables from the own class
+        
+        Return: The Magnitud Spectrum Feature (MSF).
+        """
+        
+        #eeg data filtering
+        filteredEEG = filterEEG(self.rawEEG, self.PRE_PROCES_PARAMS["lfrec"],
+                                self.PRE_PROCES_PARAMS["hfrec"],
+                                self.PRE_PROCES_PARAMS["order"],
+                                self.PRE_PROCES_PARAMS["sampling_rate"])
+        
+        #eeg data segmentation
+        eegSegmented = segmentingEEG(filteredEEG, self.PRE_PROCES_PARAMS["window"],
+                                     self.PRE_PROCES_PARAMS["shiftLen"],
+                                     self.PRE_PROCES_PARAMS["sampling_rate"])
+        
+        self.MSF = computeMagnitudSpectrum(eegSegmented, self.FFT_PARAMS)
+        
+        return self.MSF
+    
+    def computeCSF(self):
+        """
+        Compute the FFT over segmented EEG data.
+        
+        Argument: None. This method use variables from the own class
+        
+        Return: The Complex Spectrum Feature (CSF) and the MSF in the same matrix
+        """
+        
+        #eeg data filtering
+        filteredEEG = filterEEG(self.rawEEG, self.PRE_PROCES_PARAMS["lfrec"],
+                                self.PRE_PROCES_PARAMS["hfrec"],
+                                self.PRE_PROCES_PARAMS["order"],
+                                self.PRE_PROCES_PARAMS["sampling_rate"])
+        
+        #eeg data segmentation
+        eegSegmented = segmentingEEG(filteredEEG, self.PRE_PROCES_PARAMS["window"],
+                                     self.PRE_PROCES_PARAMS["shiftLen"],
+                                     self.PRE_PROCES_PARAMS["sampling_rate"])
+        
+        self.CSF = computeComplexSpectrum(eegSegmented, self.FFT_PARAMS)
+        
+        return self.CSF
+    
+    def getDataForTraining(self, features):
+        """
+        Prepare the features set in order to fit and train the CNN model.
+        
+        Arguments:
+            - features: Magnitud Spectrum Features or Complex Spectrum Features
+        """
+        # print("Original features shape: ", features.shape)
+        featuresData = np.reshape(features, (features.shape[0], features.shape[1],features.shape[2],
+                                             features.shape[3]*features.shape[4]))
+        
+        # print("featuresData shape: ", featuresData.shape)
+        
+        trainingData = featuresData[:, :, 0, :].T
+        # print("Transpose trainData shape(1), ", trainingData.shape)
+        
+        #Reshaping the data into dim [classes*trials x channels x features]
+        for target in range(1, featuresData.shape[2]):
+            trainingData = np.vstack([trainingData, np.squeeze(featuresData[:, :, target, :]).T])
+            
+        # print("trainData shape (2), ",trainingData.shape)
+    
+        trainingData = np.reshape(trainingData, (trainingData.shape[0], trainingData.shape[1], 
+                                             trainingData.shape[2], 1))
+        
+        # print("Final trainData shape (3), ",trainingData.shape)
+        
+        epochsPerClass = featuresData.shape[3]
+        
+        classLabels = np.arange(self.CNN_PARAMS['num_classes'])
+        labels = (npm.repmat(classLabels, epochsPerClass, 1).T).ravel()
+        
+        labels = to_categorical(labels)     
+        
+        # print(labels[:,1])
+        # print("Labels shape: ", labels.shape)
+        
+        return trainingData, labels
+    
+    def CNN_model(self,inputShape):
         '''
         
         Make the CNN model
     
         Args:
             inputShape (numpy.ndarray): shape of input training data with form
-            [Trials totales x Cantidad de features por trial]
+            [Number of Channels x Number of features x 1]
     
         Returns:
             (keras.Sequential): CNN model.
@@ -124,11 +236,6 @@ class CNNTrainingModule():
                          input_shape=(inputShape[0], inputShape[1], inputShape[2]),
                          padding="valid", kernel_regularizer=regularizers.l2(self.CNN_PARAMS['l2_lambda']),
                          kernel_initializer=initializers.RandomNormal(mean=0.0, stddev=0.01, seed=None)))
-
-        # model.add(Conv2D(2*self.CNN_PARAMS['n_ch'], kernel_size=(self.CNN_PARAMS['n_ch'], 1),
-        #                  input_shape=(inputShape[0], inputShape[1], inputShape[2]),
-        #                  padding="valid", kernel_regularizer=regularizers.l2(self.CNN_PARAMS['l2_lambda']),
-        #                  kernel_initializer=initializers.RandomNormal(mean=0.0, stddev=0.01, seed=None)))
         
         model.add(BatchNormalization())
         
@@ -164,88 +271,7 @@ class CNNTrainingModule():
         self.model = self.CNN_model(inputShape)
         
         self.modelSummary = self.model.summary()
-
-    def applyFilterBank(self, eeg, bw = 2.0, order = 4):
-        """Aplicamos banco de filtro a nuestros datos.
-        Se recomienda aplicar un notch en los 50Hz y un pasabanda en las frecuencias deseadas antes
-        de applyFilterBank()
-        
-        Args:
-            - eeg: datos a aplicar el filtro. Forma [clase, samples, trials]
-            - frecStimulus: lista con la frecuencia central de cada estímulo/clase
-            - bw: ancho de banda desde la frecuencia central de cada estímulo/clase. Default = 2.0
-            - order: orden del filtro. Default = 4"""
-
-        nyquist = 0.5 * self.FFT_PARAMS["sampling_rate"]
-        signalFilteredbyBank = np.zeros((self.nclases,self.nsamples,self.ntrials))
-        for clase, frecuencia in enumerate(self.frecStimulus):   
-            low = (frecuencia-bw/2)/nyquist
-            high = (frecuencia+bw/2)/nyquist
-            b, a = butter(order, [low, high], btype='band') #obtengo los parámetros del filtro
-            central = filtfilt(b, a, eeg[clase], axis = 0)
-            b, a = butter(order, [low*2, high*2], btype='band') #obtengo los parámetros del filtro
-            firstHarmonic = filtfilt(b, a, eeg[clase], axis = 0)
-            # signalFilteredbyBank[clase] = filtfilt(b, a, eeg[clase], axis = 0) #filtramos
-            signalFilteredbyBank[clase] = central + firstHarmonic
-
-        self.dataBanked = signalFilteredbyBank
-
-        return self.dataBanked
-
-    def computWelchPSD(self, signalBanked, fm, ventana, anchoVentana, average = "median", axis = 1):
-
-        self.signalSampleFrec, self.signalPSD = welch(signalBanked, fs = fm, window = ventana, nperseg = anchoVentana, average='median',axis = axis)
-
-        return self.signalSampleFrec, self.signalPSD
-
-
-    def featuresExtraction(self, ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1):
-
-        filteredEEG = filterEEG(self.rawDATA, self.PRE_PROCES_PARAMS["lfrec"],
-                                self.PRE_PROCES_PARAMS["hfrec"],
-                                self.PRE_PROCES_PARAMS["order"],
-                                self.PRE_PROCES_PARAMS["bandStop"],
-                                self.PRE_PROCES_PARAMS["sampling_rate"],
-                                axis = axis)
-
-        dataBanked = self.applyFilterBank(filteredEEG, bw=bw, order = 4)
-
-        anchoVentana = int(self.PRE_PROCES_PARAMS["sampling_rate"]*anchoVentana) #fm * segundos
-        ventana = ventana(anchoVentana)
-
-        self.signalSampleFrec, self.signalPSD = self.computWelchPSD(dataBanked,
-                                                fm = self.PRE_PROCES_PARAMS["sampling_rate"],
-                                                ventana = ventana, anchoVentana = anchoVentana,
-                                                average = "median", axis = axis)
-
-        return self.signalSampleFrec, self.signalPSD
-
-    #Transforming data for training
-    def getDataForTraining(self, features):
-        """Preparación del set de entrenamiento.
-
-        Argumentos:
-            - features: Parte Real del Espectro or Parte Real e Imaginaria del Espectro
-            con forma [número de características x canales x clases x trials x número de segmentos]
-            - clases: Lista con las clases para formar las labels
-
-        Retorna:
-            - trainingData: Set de datos de entrenamiento para alimentar el modelo SVM
-            Con forma [trials*clases x number of features]
-            - Labels: labels para entrenar el modelo a partir de las clases
-        """
-
-        numFeatures = features.shape[1]
-        trainingData = features.swapaxes(2,1).reshape(self.nclases*self.ntrials, numFeatures)
-
-        classLabels = np.arange(self.nclases)
-
-        labels = (npm.repmat(classLabels, self.ntrials, 1).T).ravel()
-
-        labels = to_categorical(labels)
-
-        return trainingData.reshape(self.nclases*self.ntrials,self.nchannels,numFeatures,1), labels
-
+    
     def trainCNN(self, trainingData, labels, nFolds = 10, saveBestWeights = True):
         """
         Perform a CNN training using a cross validation method.
@@ -282,7 +308,7 @@ class CNNTrainingModule():
                 yValuesTrain, yValuesTest = labels[trainIndex], labels[testIndex]
                 
                 fold = fold + 1
-                print(f"Model: {self.modelName} - Fold: {fold+1} Training...")
+                print(f"Subject: {self.subject} - Fold: {fold+1} Training...")
                 
                 sgd = optimizers.SGD(lr = self.CNN_PARAMS['learning_rate'],
                                       decay = self.CNN_PARAMS['lr_decay'],
@@ -314,10 +340,10 @@ class CNNTrainingModule():
                 
                 print("%s: %.2f%%" % (self.model.metrics_names[1], actualSscore[1]*100))
                 
-            print(f"Mean accuracy for overall folds for model {self.modelName}: {np.mean(accu)}")
+            print(f"Mean accuracy for overall folds for subject {self.subject}: {np.mean(accu)}")
             
             return accu
-
+    
     def saveCNNModel(self):
         """
         Save the model created.
@@ -339,20 +365,18 @@ class CNNTrainingModule():
                 
             self.model.save(f"models/cnn/{self.modelName}.h5")
             modelInJson = self.model.to_json()
-            with open(f"models/cnn/{self.modelName}.json", "w") as jsonFile:
+            with open(f"models/{self.modelName}.json", "w") as jsonFile:
                 jsonFile.write(modelInJson)
-
-    def saveTrainingSignalPSD(self, signalPSD, filename = ""):
-        
-        if not filename:
-            filename = self.modelName
-
-        np.savetxt(f'{filename}_signalPSD.txt', signalPSD, delimiter=',')
-        np.savetxt(f'{filename}_signalSampleFrec.txt', self.signalSampleFrec, delimiter=',')
-
+    
 def main():
         
     """Empecemos"""
+
+    """
+    **********************************************************************
+    First step: Loading the EEG
+    **********************************************************************
+    """
 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join(actualFolder,"recordedEEG\WM\ses1")
@@ -397,8 +421,8 @@ def main():
                     'lr_decay': 0.0,
                     'l2_lambda': 0.0001,
                     'momentum': 0.9,
-                    'kernel_f': 4,
-                    'n_ch': 1,
+                    'kernel_f': 10,
+                    'n_ch': 2,
                     'num_classes': 4}
 
     def joinData(allData, stimuli, channels, samples, trials):
@@ -413,61 +437,98 @@ def main():
 
     trainSet = np.concatenate((run1JoinedData[:,:,:,:12], run2JoinedData[:,:,:,:12]), axis = 3)
     trainSet = trainSet[:,:2,:,:] #nos quedamos con los primeros dos canales
-
-    trainSet = np.mean(trainSet, axis = 1) #promedio sobre los canales. Forma datos ahora [clases, samples, trials]
-
-    """
-    **********************************************************************
-    Second step: Create the CNN model
-    **********************************************************************
-    """
-
-    nsamples = trainSet.shape[1]
-    ntrials = trainSet.shape[2]
-
-    #Make a CNNTrainingModule object in order to use the data's Magnitude Features
-    cnn = CNNTrainingModule(trainSet, PRE_PROCES_PARAMS = PRE_PROCES_PARAMS, FFT_PARAMS = FFT_PARAMS, CNN_PARAMS = CNN_PARAMS,
-                        frecStimulus = frecStimulus, nchannels = 1,nsamples = nsamples, ntrials = ntrials, modelName = "cnntesting")
     
     """
     **********************************************************************
-    Third step: Compute and get the Features
+    Second step: Create the CNN
     **********************************************************************
     """
-
-    anchoVentana = int(fm*5) #fm * segundos
-    ventana = windows.hamming
-
-    sampleFrec, signalPSD  = cnn.featuresExtraction(ventana = ventana, anchoVentana = 5, bw = 1.0, order = 4, axis = 1)
-
-    trainingData, labels = cnn.getDataForTraining(signalPSD)
-
+    sujeto = "lucasB"
+    #Make a CNNTrainingModule object in order to use the data's Magnitude Features
+    magnitudCNN = CNNTrainingModule(rawEEG = trainSet, subject = 1,
+                                    PRE_PROCES_PARAMS = PRE_PROCES_PARAMS,
+                                    FFT_PARAMS = FFT_PARAMS,
+                                    CNN_PARAMS = CNN_PARAMS,
+                                    modelName = f"CNN_UsingMagnitudFeatures_Subject{sujeto}")
+    
+    """
+    **********************************************************************
+    Third step: Compute and get the Magnitud Spectrum Features
+    **********************************************************************
+    """
+    #Computing and getting the magnitude Spectrum Features
+    magnitudFeatures = magnitudCNN.computeMSF()
+    
+    ### Descomentar las líneas de abajo para graficar el espectro
+    
+    plotSpectrum(magnitudFeatures, resolution, blancos = 4, sujeto = sujeto, canal = 1, frecStimulus = frecStimulus,
+                  startFrecGraph = FFT_PARAMS['start_frequency'],
+                  save = False, title = "", folder = "figs",
+                  rows = 2, columns = 2)
+    
+    
+    # Get the training and testing data for CNN using Magnitud Spectrum Features
+    trainingData_MSF, labels_MSF = magnitudCNN.getDataForTraining(magnitudFeatures)
+    
     #inputshape [Number of Channels x Number of Features x 1]
-    totalTrials = trainingData.shape[0]
-    featuresPerTrial = trainingData.shape[1]
-    #inputshape [Number of Channels x Number of Features x 1]
-    inputshape = np.array([trainingData.shape[1], trainingData.shape[2], trainingData.shape[3]])
-
-
+    inputshape = np.array([trainingData_MSF.shape[1], trainingData_MSF.shape[2], trainingData_MSF.shape[3]])
+    
+    
     """
     **********************************************************************
     Fourth step: Create the CNN model
     **********************************************************************
     """
-    cnn.createModel(inputshape)
-
-
+    magnitudCNN.createModel(inputshape)
+    
     """
     **********************************************************************
       Fifth step: Trainn the CNN
     **********************************************************************
     """
     
-    accu_CNN_using_MSF = cnn.trainCNN(trainingData, labels, nFolds = 5)
+    accu_CNN_using_MSF = magnitudCNN.trainCNN(trainingData_MSF, labels_MSF, nFolds = 6)
     print(f"Maxima accu {accu_CNN_using_MSF.max()}")
-
-    #Guardamos modelo
-
-    cnn.saveCNNModel()
-    cnn.saveTrainingSignalPSD(signalPSD.mean(axis = 2), filename = "cnntesting")
     
+    #saving the model
+    magnitudCNN.saveCNNModel()
+    
+    """
+    **************************************
+                  END           
+    **************************************
+    """
+    
+    
+    """
+    **************************************
+    Make the same as before, but now using Magnitud and Complex features from the EEG
+    **************************************
+    """
+    """Make a CNNTrainingModule object in order to use the data's Magnitude and data's Complex Features"""
+    complexCNN = CNNTrainingModule(rawEEG = trainSet, subject = 1,
+                                    PRE_PROCES_PARAMS = PRE_PROCES_PARAMS,
+                                    FFT_PARAMS = FFT_PARAMS,
+                                    CNN_PARAMS = CNN_PARAMS,
+                                    modelName = f"CNN_UsingComplexFeatures_Subject{sujeto}")
+    
+    complexFeatures = complexCNN.computeCSF()
+    
+    # Training and testing CNN suing Complex Spectrum Features
+    trainingData_CSF, labels_CSF = complexCNN.getDataForTraining(complexFeatures)
+    
+    #inputshape [Number of Channels x Number of Features x 1]
+    inputshape = np.array([trainingData_CSF.shape[1], trainingData_CSF.shape[2], trainingData_CSF.shape[3]])
+    
+    # Create the CNN model
+    complexCNN.createModel(inputshape)
+    
+    accu_CNN_using_CSF = complexCNN.trainCNN(trainingData_CSF, labels_CSF, nFolds = 6)
+    print(f"Maxima accu {accu_CNN_using_CSF.max()}")
+    
+    complexCNN.saveCNNModel()
+        
+# if __name__ == "__main__":
+#     main()
+
+

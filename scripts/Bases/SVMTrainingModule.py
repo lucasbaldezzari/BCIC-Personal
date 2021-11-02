@@ -29,7 +29,7 @@ class SVMTrainingModule():
         """Variables de configuración
 
         Args:
-            - rawDATA(matrix[clases x canales x samples x trials]): Señal de EEG
+            - rawDATA(matrix[clases, samples, trials]): Señal de EEG
             - subject (string o int): Número de sujeto o nombre de sujeto
             - PRE_PROCES_PARAMS: Parámetros para preprocesar los datos de EEG
             - FFT_PARAMS: Parametros para computar la FFT
@@ -93,18 +93,16 @@ class SVMTrainingModule():
             signalFilteredbyBank[clase] = filtfilt(b, a, eeg[clase], axis = 0) #filtramos
 
         self.dataBanked = signalFilteredbyBank
-
         return self.dataBanked
 
     def computWelchPSD(self, signalBanked, fm, ventana, anchoVentana, average = "median", axis = 1):
-
+        """Computa la transformada de Welch al EEG"""
         self.signalSampleFrec, self.signalPSD = welch(signalBanked, fs = fm, window = ventana, nperseg = anchoVentana, average='median',axis = axis)
-
         return self.signalSampleFrec, self.signalPSD
 
 
     def featuresExtraction(self, ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1):
-
+        """EXtracción de características a partir de datos de EEG sin procesar"""
         filteredEEG = filterEEG(self.rawDATA, self.PRE_PROCES_PARAMS["lfrec"],
                                 self.PRE_PROCES_PARAMS["hfrec"],
                                 self.PRE_PROCES_PARAMS["order"],
@@ -112,7 +110,7 @@ class SVMTrainingModule():
                                 self.PRE_PROCES_PARAMS["sampling_rate"],
                                 axis = axis)
 
-        dataBanked = self.applyFilterBank(filteredEEG, bw=bw, order = 4)
+        dataBanked = self.applyFilterBank(filteredEEG, bw=bw, order = 4) #Aplicamos banco de filtro
 
         anchoVentana = int(self.PRE_PROCES_PARAMS["sampling_rate"]*anchoVentana) #fm * segundos
         ventana = ventana(anchoVentana)
@@ -241,9 +239,9 @@ def main():
 
     #Filtering de EEG
     PRE_PROCES_PARAMS = {
-                    'lfrec': 4.,
-                    'hfrec': 38.,
-                    'order': 8,
+                    'lfrec': 5.,
+                    'hfrec': 30.,
+                    'order': 6,
                     'sampling_rate': fm,
                     'bandStop': 50.,
                     'window': window,
@@ -254,8 +252,8 @@ def main():
 
     FFT_PARAMS = {
                     'resolution': resolution,#0.2930,
-                    'start_frequency': 4.0,
-                    'end_frequency': 38.0,
+                    'start_frequency': 5.0,
+                    'end_frequency': 30.0,
                     'sampling_rate': fm
                     }
 
@@ -277,18 +275,19 @@ def main():
     nsamples = trainSet.shape[1]
     ntrials = trainSet.shape[2]
 
+    #Creo objeto SVMTrainingModule
     svm = SVMTrainingModule(trainSet, PRE_PROCES_PARAMS, FFT_PARAMS, frecStimulus=frecStimulus,
     nchannels = 1, nsamples = nsamples, ntrials = ntrials, modelName = "test")
     
-    seed = np.random.randint(100)
+    seed = np.random.randint(500) #iniciamos una semilla
 
+    #Creamos modelo SVM
     modelo = svm.createSVM(kernel = "rbf", gamma = 0.05, C = 24, probability = True, randomSeed = seed)
-    svm.model
 
     anchoVentana = int(fm*5) #fm * segundos
-    ventana = windows.hamming
+    ventana = windows.hamming #Usamos ventana Hamming
 
-    sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = 5, bw = 1.0, order = 4, axis = 1)
+    sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = 5, bw = 2.0, order = 6, axis = 1)
 
     metricas = svm.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2, randomSeed = seed)
     print(metricas)
@@ -324,7 +323,7 @@ def main():
 
                     modelo = svm.createSVM(kernel = kernel, gamma = gamma, C = C, probability = True, randomSeed = seed)
 
-                    sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1)
+                    sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = 5, bw = 2.0, order = 6, axis = 1)
 
                     metricas = svm.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2, randomSeed = seed) #entrenamos el modelo y obtenemos las métricas
                     accu = metricas["modelo_testSVMv2"]["val"]["Acc"]
@@ -339,7 +338,7 @@ def main():
 
                 modelo = svm.createSVM(kernel = kernel, C = C, probability = True, randomSeed = seed)
 
-                sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1)
+                sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = 5, bw = 2.0, order = 6, axis = 1)
 
                 metricas = svm.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2, randomSeed = seed)
 
@@ -390,5 +389,5 @@ def main():
     modeloSVM2.saveTrainingSignalPSD(signalPSD.mean(axis = 2), filename = "SVM_test_rbf")
     os.chdir(actualFolder)
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()

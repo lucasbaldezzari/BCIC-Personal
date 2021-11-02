@@ -20,6 +20,7 @@ import pickle
 import matplotlib.pyplot as plt
 
 import fileAdmin as fa
+from utils import filterEEG
 
 class LDATrainingModule():
 
@@ -278,7 +279,7 @@ def main():
     ntrials = trainSet.shape[2]
 
     lda = LDATrainingModule(trainSet, PRE_PROCES_PARAMS, FFT_PARAMS, frecStimulus=frecStimulus,
-    nchannels = 1, nsamples = nsamples, ntrials = ntrials, modelName = "test")
+    nchannels = 1, nsamples = nsamples, ntrials = ntrials, modelName = "LDAtest")
     
     seed = np.random.randint(100)
 
@@ -297,7 +298,6 @@ def main():
     print(metricas)
     
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-    # path = os.path.join(actualFolder,"models\\WM\\logreg")
     path = os.path.join(actualFolder,"models")
     lda.saveModel(path)
     lda.saveTrainingSignalPSD(signalPSD.mean(axis = 2), filename = "LDA_WM_testing")

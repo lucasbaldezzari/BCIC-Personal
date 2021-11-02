@@ -294,12 +294,11 @@ def main():
     print(metricas)
     
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-    # path = os.path.join(actualFolder,"models\\WM\\logreg")
     path = os.path.join(actualFolder,"models")
     logreg.saveModel(path)
     logreg.saveTrainingSignalPSD(signalPSD.mean(axis = 2), filename = "LogReg_WM_testing")
     os.chdir(actualFolder)
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()
      

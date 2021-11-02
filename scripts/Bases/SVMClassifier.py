@@ -90,7 +90,6 @@ class SVMClassifier():
             signalFilteredbyBank[clase] = filtfilt(b, a, eeg) #filtramos
 
         self.dataBanked = signalFilteredbyBank.mean(axis = 0)
-
         return self.dataBanked
 
     def computWelchPSD(self, signalBanked, fm, ventana, anchoVentana, average = "median", axis = 1):
@@ -207,9 +206,9 @@ def main():
 
     #Filtering de EEG
     PRE_PROCES_PARAMS = {
-                    'lfrec': 4.,
-                    'hfrec': 38.,
-                    'order': 8,
+                    'lfrec': 5.,
+                    'hfrec': 30.,
+                    'order': 6,
                     'sampling_rate': fm,
                     'bandStop': 50.,
                     'window': window,
@@ -220,8 +219,8 @@ def main():
 
     FFT_PARAMS = {
                     'resolution': resolution,#0.2930,
-                    'start_frequency': 4.0,
-                    'end_frequency': 38.0,
+                    'start_frequency': 5.0,
+                    'end_frequency': 30.0,
                     'sampling_rate': fm
                     }
 
@@ -247,10 +246,10 @@ def main():
     
     path = os.path.join(actualFolder,"models")
     
-    modelFile = "SVM_test_rbf.pkl" #nombre del modelo
+    modelFile = "SVM_test_linear.pkl" #nombre del modelo
 
     svm = SVMClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, nsamples = nsamples, path = path) #cargamos clasificador entrenado
-    svm.loadTrainingSignalPSD(filename = "SVM_test_rbf_signalPSD.txt", path = path) #cargamos el PSD de mis datos de entrenamiento
+    svm.loadTrainingSignalPSD(filename = "SVM_test_linear_signalPSD.txt", path = path) #cargamos el PSD de mis datos de entrenamiento
 
     trainingSignalPSD = svm.trainingSignalPSD
 
@@ -263,13 +262,14 @@ def main():
 
     print("Freceuncia clasificada:", svm.getClassification(featureVector = featureVector))
 
-    trials = 6
-    predicciones = np.zeros((len(frecStimulus),trials))
+    ### Realizamos clasificación sobre mis datos de testeo. Estos nunca fueron vistos por el clasificador ###
+    trials = 6 #cantidad de trials
+    predicciones = np.zeros((len(frecStimulus),trials)) #donde almacenaremos las predicciones
 
     for i, clase in enumerate(np.arange(len(frecStimulus))):
         for j, trial in enumerate(np.arange(trials)):
             data = testSet[clase, :, trial]
-            featureVector = svm.extractFeatures(rawDATA = data, ventana = windows.hamming, anchoVentana = 5, bw = 2.0, order = 4, axis = 0)
+            featureVector = svm.extractFeatures(rawDATA = data, ventana = windows.hamming, anchoVentana = 5, bw = 2.0, order = 6, axis = 0)
             classification = svm.getClassification(featureVector = featureVector)
             if classification == frecStimulus[clase]:
                 predicciones[i,j] = 1

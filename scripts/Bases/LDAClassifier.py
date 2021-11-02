@@ -212,7 +212,7 @@ def main():
     
     path = os.path.join(actualFolder,"models")
     
-    modelFile = "test.pkl" #nombre del modelo
+    modelFile = "LDAtest.pkl" #nombre del modelo
 
     lda = LDAClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, nsamples = nsamples, path = path) #cargamos clasificador entrenado
     lda.loadTrainingSignalPSD(filename = "LDA_WM_testing_signalPSD.txt", path = path) #cargamos el PSD de mis datos de entrenamiento
@@ -225,14 +225,9 @@ def main():
     featureVector = lda.extractFeatures(rawDATA = rawDATA, ventana = windows.hamming, anchoVentana = 5, bw = 2.0, order = 4, axis = 0)
     print("Freceuncia clasificada:", lda.getClassification(featureVector = featureVector))
 
-    plt.plot(featureVector)
-    plt.show()
-
-    trials = 6
-    predicciones = np.zeros((len(frecStimulus),trials))
-
-    trials = 6
-    predicciones = np.zeros((len(frecStimulus),trials))
+    ### Realizamos clasificación sobre mis datos de testeo. Estos nunca fueron vistos por el clasificador ###
+    trials = 6 #cantidad de trials
+    predicciones = np.zeros((len(frecStimulus),trials)) #donde almacenaremos las predicciones
 
     for i, clase in enumerate(np.arange(len(frecStimulus))):
         for j, trial in enumerate(np.arange(trials)):
@@ -252,5 +247,5 @@ def main():
     print(f"Predicciones usando el modelo LDA {modelFile}")
     print(predictions)
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()

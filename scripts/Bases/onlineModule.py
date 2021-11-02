@@ -31,21 +31,19 @@ import argparse
 import time
 import logging
 import numpy as np
-import threading
+
 # import matplotlib.pyplot as plt
 
 # import pyqtgraph as pg
 # from pyqtgraph.Qt import QtGui, QtCore
 
 import brainflow
-from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds, BrainFlowError
-from brainflow.data_filter import DataFilter, FilterTypes, AggOperations, WindowFunctions, DetrendOperations
+from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds
 from ArduinoCommunication import ArduinoCommunication as AC
 
 from DataThread import DataThread as DT
-from GraphModule import GraphModule as Graph       
-import fileAdmin as fa
 from SVMClassifier import SVMClassifier as SVMClassifier
+from scipy.signal import windows
 
 def main():
     
@@ -139,8 +137,6 @@ def main():
     path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases',"models")
     modelFile = "Logreg_LucasB_Test2_10112021.pkl" #nombre del modelo
 
-    
-
     PRE_PROCES_PARAMS = {
                     'lfrec': 5.,
                     'hfrec': 38.,
@@ -161,6 +157,7 @@ def main():
                     }
 
     svm = SVMClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, path = path)
+    # svm.loadTrainingSignalPSD(filename = "SVM_test_linear_signalPSD.txt", path = path) #cargamos el PSD de mis datos de entrenamiento
     
     """Inicio comunicación con Arduino instanciando un objeto AC (ArduinoCommunication)
     en el COM8, con un timing de 100ms
@@ -184,6 +181,7 @@ def main():
         while arduino.generalControl() == b"1":
             if classifyData and arduino.systemControl[1] == b"0":
                 rawEEG = data_thread.getData(stimuliDuration)
+                featureVector = svm.extractFeatures(rawDATA = rawEEG, ventana = windows.hamming, anchoVentana = 5, bw = 2.0, order = 4, axis = 0)
                 frecClasificada = svm.getClassification(rawEEG = rawEEG)
                 print(f"Frecuencia clasificada {frecClasificada}")
                 print(f"Comando a enviar {movements[listaEstims.index(frecClasificada)]}")
