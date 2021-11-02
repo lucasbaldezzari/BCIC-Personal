@@ -69,31 +69,27 @@ class SVMClassifier():
         self.trainingSignalPSD = np.loadtxt(filename, delimiter=',')
         
         os.chdir(actualFolder)
-        
+
     def applyFilterBank(self, eeg, bw = 2.0, order = 4):
         """Aplicamos banco de filtro a nuestros datos.
         Se recomienda aplicar un notch en los 50Hz y un pasabanda en las frecuencias deseadas antes
         de applyFilterBank()
         
         Args:
-            - eeg: datos a aplicar el filtro. Forma [clase, samples, trials]
+            - eeg: datos a aplicar el filtro. Forma [samples]
             - frecStimulus: lista con la frecuencia central de cada estímulo/clase
             - bw: ancho de banda desde la frecuencia central de cada estímulo/clase. Default = 2.0
             - order: orden del filtro. Default = 4"""
 
         nyquist = 0.5 * self.FFT_PARAMS["sampling_rate"]
-        signalFilteredbyBank = np.zeros((self.nclases,self.nsamples,self.ntrials))
+        signalFilteredbyBank = np.zeros((self.nclases,self.nsamples))
         for clase, frecuencia in enumerate(self.frecStimulus):   
             low = (frecuencia-bw/2)/nyquist
             high = (frecuencia+bw/2)/nyquist
             b, a = butter(order, [low, high], btype='band') #obtengo los parámetros del filtro
-            central = filtfilt(b, a, eeg[clase], axis = 0)
-            b, a = butter(order, [low*2, high*2], btype='band') #obtengo los parámetros del filtro
-            firstHarmonic = filtfilt(b, a, eeg[clase], axis = 0)
-            # signalFilteredbyBank[clase] = filtfilt(b, a, eeg[clase], axis = 0) #filtramos
-            signalFilteredbyBank[clase] = central + firstHarmonic
+            signalFilteredbyBank[clase] = filtfilt(b, a, eeg) #filtramos
 
-        self.dataBanked = signalFilteredbyBank
+        self.dataBanked = signalFilteredbyBank.mean(axis = 0)
 
         return self.dataBanked
 
@@ -185,7 +181,7 @@ class SVMClassifier():
         Argumentos:
             - rawEEG(matriz de flotantes [canales x samples]): Señal de EEG"""
 
-        predicted = self.svm.predict(featureVector.reshape(1, -1))
+        predicted = self.model.predict(featureVector.reshape(1, -1))
         
         return self.frecStimulus[predicted[0]]
 
@@ -258,8 +254,8 @@ def main():
 
     trainingSignalPSD = svm.trainingSignalPSD
 
-    clase = 4
-    trial = 2
+    clase = 1
+    trial = 4
 
     rawDATA = testSet[clase-1,:,trial-1]
 

@@ -90,11 +90,7 @@ class SVMTrainingModule():
             low = (frecuencia-bw/2)/nyquist
             high = (frecuencia+bw/2)/nyquist
             b, a = butter(order, [low, high], btype='band') #obtengo los parámetros del filtro
-            central = filtfilt(b, a, eeg[clase], axis = 0)
-            b, a = butter(order, [low*2, high*2], btype='band') #obtengo los parámetros del filtro
-            firstHarmonic = filtfilt(b, a, eeg[clase], axis = 0)
-            # signalFilteredbyBank[clase] = filtfilt(b, a, eeg[clase], axis = 0) #filtramos
-            signalFilteredbyBank[clase] = central + firstHarmonic
+            signalFilteredbyBank[clase] = filtfilt(b, a, eeg[clase], axis = 0) #filtramos
 
         self.dataBanked = signalFilteredbyBank
 

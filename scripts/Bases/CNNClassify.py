@@ -254,67 +254,6 @@ def main():
     run2JoinedData = joinData(run2, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
 
     testSet = np.concatenate((run1JoinedData[:,:2,:,12:], run2JoinedData[:,:2,:,12:]), axis = 3) #nos quedamos con los últimos trials de cada run
-
-    # import fileAdmin as fa
-    
-    # # actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-    # actualFolder = "E:/reposBCICompetition/BCIC-Personal/talleres/taller4/scripts"
-    # path = os.path.join(actualFolder,"dataset")
-    
-    # subjects = [8]
-    # subjectsNames = ["s8"]
-        
-    # fm = 256.0 #IMPORTANTE: La frecuencia de muestreo DEBE SER LA MISMA que se uso cuando se entrenó la CNN
-    # tiempoTotal = int(4*fm) #cantidad de muestras para 4segundos
-    # muestraDescarte = 39
-    # frecStimulus = np.array([9.25, 11.25, 13.25,
-    #                           9.75, 11.75, 13.75,
-    #                           10.25, 12.25, 14.25,
-    #                           10.75, 12.75, 14.75])
-    
-    # """
-    # **********************************************************************
-    # Loading and plotting the EEG
-    # IMPORTANT: In real time BCI, the "loading data" will be replaced
-    # for real data coming from the OpenBCI board
-    # **********************************************************************
-    # """
-    
-    # rawEEG = fa.loadData(path = path, filenames = subjectsNames)[f"s{subjects[0]}"]["eeg"]
-    
-    # #selec the last 3 trials
-    # rawEEG = rawEEG[:, :, :, 12:]
-    
-    # stimulus = 12 #slected stimulus for classification
-    # trial = 1 #selected trial
-     
-    # #get the selected trial and stimulus from rawEEG
-    # data = rawEEG[stimulus-1,:,:,trial-1].reshape(1, rawEEG.shape[1],rawEEG.shape[2],1)
-    # path = os.path.join(actualFolder,"models")
-    
-    # samples = rawEEG.shape[2]
-    # # resolution = fm/samples #IMPORTANTE: La resolución DEBE SER LA MISMA que se uso cuando se entrenó la CNN
-    # resolution = np.round(fm/samples,4) #IMPORTANTE: La resolución DEBE SER LA MISMA que se uso cuando se entrenó la CNN
-    
-    # rawEEG = rawEEG[:,:, muestraDescarte: ,:]
-    # rawEEG = rawEEG[:,:, :tiempoTotal ,:]
-    
-    # PRE_PROCES_PARAMS = {
-    #                 'lfrec': 3.,
-    #                 'hfrec': 36.,
-    #                 'order': 4,
-    #                 'sampling_rate': fm,
-    #                 'window': 4,
-    #                 'shiftLen':4
-    #                 }
-    
-    
-    # FFT_PARAMS = {
-    #                 'resolution': resolution,#0.2930,
-    #                 'start_frequency': 5.0,
-    #                 'end_frequency': 38.0,
-    #                 'sampling_rate': fm
-    #                 }
     
     """
     **********************************************************************
@@ -402,7 +341,7 @@ def main():
     print(predCom)
     
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
 
 

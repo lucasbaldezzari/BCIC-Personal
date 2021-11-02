@@ -1,64 +1,68 @@
-"""LDAClassifierV1.0"""
-
 import os
+
 import numpy as np
 import numpy.matlib as npm
-import pandas as pd
-
-import pickle
-
 import matplotlib.pyplot as plt
+from sklearn.model_selection import KFold
+import fileAdmin as fa
 
-from utils import filterEEG
+from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.layers import Dense, Activation, Flatten, Dropout, Conv2D, BatchNormalization
+from tensorflow.keras import initializers, regularizers
+
+from tensorflow.keras.models import load_model, model_from_json
+
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.utils import plot_model
+from tensorflow.keras import optimizers
+from tensorflow.keras.losses import categorical_crossentropy
 
 from scipy.signal import butter, filtfilt, windows
 from scipy.signal import welch
 
-import fileAdmin as fa
+from utils import filterEEG, segmentingEEG, computeMagnitudSpectrum, computeComplexSpectrum, plotSpectrum
 
-class LDAClassifier():
+
+import pickle
+
+class CNNClassify():
     
-    def __init__(self, modelFile, frecStimulus,
-                 PRE_PROCES_PARAMS, FFT_PARAMS, nsamples, path = "models"):
-
-        """Cosntructor de clase
-        Argumentos:
-            - modelFile: Nombre del archivo que contiene el modelo a cargar
-            - frecStimulus: Lista con las frecuencias a clasificar
-            - PRE_PROCES_PARAMS: Parámetros para preprocesar los datos de EEG
-            - FFT_PARAMS: Parametros para computar la FFT
-            -path: Carpeta donde esta guardado el modelo a cargar"""
+    def __init__(self, modelFile, weightFile, frecStimulus, nchannels,nsamples,ntrials,
+                 PRE_PROCES_PARAMS, FFT_PARAMS, classiName = ""):
+        """
+        Some important variables configuration and initialization in order to implement a CNN 
+        model for CLASSIFICATION.
         
-        self.modelName = modelFile
+        Args:
+            - modelFile: File's name to load the pre trained model.
+            - weightFile: File's name to load the pre model's weights
+            - PRE_PROCES_PARAMS: The params used in order to pre process the raw EEG.
+            - FFT_PARAMS: The params used in order to compute the FFT
+            - CNN_PARAMS: The params used for the CNN model.
+        """
         
-        actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio featureVector
-        os.chdir(path)
+        # load model from JSON file
+        with open(f"models/cnn/{modelFile}.json", "r") as json_file:
+            model = json_file.read()
         
-        with open(self.modelName, 'rb') as file:
-            self.model = pickle.load(file)
+            self.model = model_from_json(model)
             
-        os.chdir(actualFolder)
+        self.model.load_weights(f"models/cnn/{weightFile}.h5")
+        self.model.make_predict_function()
         
         self.frecStimulus = frecStimulus
         self.nclases = len(frecStimulus)
-        self.nsamples = nsamples
+        self.nchannels = nchannels #ex nchannels
+        self.nsamples = nsamples #ex nsamples
+        self.ntrials = ntrials #ex ntrials
         
-        self.rawDATA = None
-        self.signalPSD = None
-        self.signalSampleFrec = None
-        self.signalPSDCentroid = None
-        self.featureVector = None
+        self.classiName = classiName #Classfier object name
         
-        self.traingSigPSD = None
-        self.trainSampleFrec = None
-        self.trainPSDCent = []
-        self.trainPSDDist = []
-
         #Setting variables for EEG processing.
         self.PRE_PROCES_PARAMS = PRE_PROCES_PARAMS
         self.FFT_PARAMS = FFT_PARAMS
 
-    def loadTrainingSignalPSD(self, filename = "", path = "models"):
+    def loadTrainingSignalPSD(self, filename = "", path = "models/cnn/"):
 
         actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
         os.chdir(path)
@@ -68,27 +72,31 @@ class LDAClassifier():
         self.trainingSignalPSD = np.loadtxt(filename, delimiter=',')
         
         os.chdir(actualFolder)
-        
+
     def applyFilterBank(self, eeg, bw = 2.0, order = 4):
         """Aplicamos banco de filtro a nuestros datos.
         Se recomienda aplicar un notch en los 50Hz y un pasabanda en las frecuencias deseadas antes
         de applyFilterBank()
         
         Args:
-            - eeg: datos a aplicar el filtro. Forma [samples]
+            - eeg: datos a aplicar el filtro. Forma [clase, samples, trials]
             - frecStimulus: lista con la frecuencia central de cada estímulo/clase
             - bw: ancho de banda desde la frecuencia central de cada estímulo/clase. Default = 2.0
             - order: orden del filtro. Default = 4"""
 
         nyquist = 0.5 * self.FFT_PARAMS["sampling_rate"]
-        signalFilteredbyBank = np.zeros((self.nclases,self.nsamples))
+        signalFilteredbyBank = np.zeros((self.nclases,self.nsamples,self.ntrials))
         for clase, frecuencia in enumerate(self.frecStimulus):   
             low = (frecuencia-bw/2)/nyquist
             high = (frecuencia+bw/2)/nyquist
             b, a = butter(order, [low, high], btype='band') #obtengo los parámetros del filtro
-            signalFilteredbyBank[clase] = filtfilt(b, a, eeg) #filtramos
+            central = filtfilt(b, a, eeg[clase], axis = 0)
+            b, a = butter(order, [low*2, high*2], btype='band') #obtengo los parámetros del filtro
+            firstHarmonic = filtfilt(b, a, eeg[clase], axis = 0)
+            # signalFilteredbyBank[clase] = filtfilt(b, a, eeg[clase], axis = 0) #filtramos
+            signalFilteredbyBank[clase] = central + firstHarmonic
 
-        self.dataBanked = signalFilteredbyBank.mean(axis = 0)
+        self.dataBanked = signalFilteredbyBank
 
         return self.dataBanked
 
@@ -141,14 +149,41 @@ class LDAClassifier():
 
         return self.featureVector
 
-    def getClassification(self, featureVector):
-        """Método para clasificar y obtener una frecuencia de estimulación a partir del EEG
-        Argumentos:
-            - rawEEG(matriz de flotantes [canales x samples]): Señal de EEG"""
+    #Transforming data for training
+    def getDataForClassification(self, features):
+        """Preparación del set de entrenamiento.
 
-        predicted = self.model.predict(featureVector.reshape(1, -1))
+        Argumentos:
+            - features: Parte Real del Espectro or Parte Real e Imaginaria del Espectro
+            con forma [número de características x canales x clases x trials x número de segmentos]
+            - clases: Lista con las clases para formar las labels
+
+        Retorna:
+            - trainingData: Set de datos de entrenamiento para alimentar el modelo SVM
+            Con forma [trials*clases x number of features]
+            - Labels: labels para entrenar el modelo a partir de las clases
+
+            [targets, channels, trials, segments, samples].
+        """
+
+        numFeatures = features.shape[1]
+        trainingData = features.swapaxes(2,1).reshape(self.nclases*self.ntrials, numFeatures)
+
+        return trainingData.reshape(self.nclases*self.ntrials,self.nchannels,numFeatures,1)
+
+    def classifyEEGSignal(self, dataForClassification):
+        """
+        Method used to classify new data.
         
-        return self.frecStimulus[predicted[0]]
+        Args:
+            - dataForClassification: Data for classification. The shape must be
+            []
+        """
+        self.preds = self.model.predict(dataForClassification)
+        
+        return self.frecStimulus[np.argmax(self.preds[0])]
+        # return np.argmax(self.preds[0]) #máximo índice
+
 
 def main():
 
@@ -190,6 +225,7 @@ def main():
                     'sampling_rate': fm
                     }
 
+
     def joinData(allData, stimuli, channels, samples, trials):
         joinedData = np.zeros((stimuli, channels, samples, trials))
         for i, sujeto in enumerate(allData):
@@ -210,47 +246,35 @@ def main():
 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     
-    path = os.path.join(actualFolder,"models")
-    
-    modelFile = "test.pkl" #nombre del modelo
+    path = os.path.join(actualFolder,"models\\cnn")
 
-    lda = LDAClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, nsamples = nsamples, path = path) #cargamos clasificador entrenado
-    lda.loadTrainingSignalPSD(filename = "LDA_WM_testing_signalPSD.txt", path = path) #cargamos el PSD de mis datos de entrenamiento
+    
+
+    # Cargamos modelo previamente entrenado
+    cnn = CNNClassify(modelFile = "cnntesting",
+                    weightFile = "bestWeightss_cnntesting",
+                    frecStimulus = frecStimulus.tolist(),
+                    nchannels = 1,nsamples = nsamples,ntrials = ntrials,
+                    PRE_PROCES_PARAMS = PRE_PROCES_PARAMS,
+                    FFT_PARAMS = FFT_PARAMS,
+                    classiName = f"CNN_Classifier")
+
+    cnn.loadTrainingSignalPSD(filename = "cnntesting_signalPSD.txt", path = path) #cargamos el PSD de mis datos de entrenamiento
+
+    anchoVentana = int(fm*5) #fm * segundos
+    ventana = windows.hamming
 
     clase = 4
     trial = 2
 
     rawDATA = testSet[clase-1,:,trial-1]
 
-    featureVector = lda.extractFeatures(rawDATA = rawDATA, ventana = windows.hamming, anchoVentana = 5, bw = 2.0, order = 4, axis = 0)
-    print("Freceuncia clasificada:", lda.getClassification(featureVector = featureVector))
+    #extrameos características
+    features  = cnn.extractFeatures(rawDATA = rawDATA, ventana = ventana, anchoVentana = 5, bw = 1.0, order = 4, axis = 0)
 
-    plt.plot(featureVector)
-    plt.show()
+    features = cnn.getDataForClassification(signalPSD)
 
-    trials = 6
-    predicciones = np.zeros((len(frecStimulus),trials))
+    cnn.classifyEEGSignal(features)
 
-    trials = 6
-    predicciones = np.zeros((len(frecStimulus),trials))
 
-    for i, clase in enumerate(np.arange(len(frecStimulus))):
-        for j, trial in enumerate(np.arange(trials)):
-            data = testSet[clase, :, trial]
-            featureVector = lda.extractFeatures(rawDATA = data, ventana = windows.hamming, anchoVentana = 5, bw = 2.0, order = 4, axis = 0)
-            classification = lda.getClassification(featureVector = featureVector)
-            if classification == frecStimulus[clase]:
-                predicciones[i,j] = 1
 
-        predicciones[i,j] = predicciones[i,:].sum()/trials
-
-    predictions = pd.DataFrame(predicciones, index = frecStimulus,
-                    columns = [f"trial {trial+1}" for trial in np.arange(trials)])
-
-    predictions['promedio'] = predictions.mean(numeric_only=True, axis=1)
-    
-    print(f"Predicciones usando el modelo LDA {modelFile}")
-    print(predictions)
-
-# if __name__ == "__main__":
-#     main()

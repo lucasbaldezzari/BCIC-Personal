@@ -10,12 +10,9 @@ Created on Thu Jun 24 16:53:29 2021
 
 import os
 
-import warnings
 import numpy as np
 import numpy.matlib as npm
-import pandas as pd
 import matplotlib.pyplot as plt
-import scipy.io as sio
 from sklearn.model_selection import KFold
 import fileAdmin as fa
 
@@ -26,7 +23,6 @@ from tensorflow.keras import initializers, regularizers
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.utils import plot_model
 from tensorflow.keras import optimizers
-from tensorflow.keras.callbacks import ModelCheckpoint
 from tensorflow.keras.losses import categorical_crossentropy
 
 from scipy.signal import butter, filtfilt, windows
@@ -322,6 +318,38 @@ class CNNTrainingModule():
             
             return accu
 
+    def saveCNNModel(self):
+        """
+        Save the model created.
+        
+        Argument: None. This method use variables from the own class
+        """
+        #https://www.tensorflow.org/api_docs/python/tf/keras/Model#save
+        
+        if not self.model: #Check if themodel is empty
+            print("Empty model")
+            
+        else:
+            try:
+                actualFolder = os.getcwd()
+                os.makedirs("models/cnn")    
+                print("Directory 'models/cnn' created ")
+            except FileExistsError:
+                print("")
+                
+            self.model.save(f"models/cnn/{self.modelName}.h5")
+            modelInJson = self.model.to_json()
+            with open(f"models/cnn/{self.modelName}.json", "w") as jsonFile:
+                jsonFile.write(modelInJson)
+
+    def saveTrainingSignalPSD(self, signalPSD, filename = ""):
+        
+        if not filename:
+            filename = self.modelName
+
+        np.savetxt(f'{filename}_signalPSD.txt', signalPSD, delimiter=',')
+        np.savetxt(f'{filename}_signalSampleFrec.txt', self.signalSampleFrec, delimiter=',')
+
 def main():
         
     """Empecemos"""
@@ -437,3 +465,9 @@ def main():
     
     accu_CNN_using_MSF = cnn.trainCNN(trainingData, labels, nFolds = 5)
     print(f"Maxima accu {accu_CNN_using_MSF.max()}")
+
+    #Guardamos modelo
+
+    cnn.saveCNNModel()
+    cnn.saveTrainingSignalPSD(signalPSD.mean(axis = 2), filename = "cnntesting")
+    

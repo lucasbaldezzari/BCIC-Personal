@@ -84,24 +84,20 @@ class LogRegClassifier():
         de applyFilterBank()
         
         Args:
-            - eeg: datos a aplicar el filtro. Forma [clase, samples, trials]
+            - eeg: datos a aplicar el filtro. Forma [samples]
             - frecStimulus: lista con la frecuencia central de cada estímulo/clase
             - bw: ancho de banda desde la frecuencia central de cada estímulo/clase. Default = 2.0
             - order: orden del filtro. Default = 4"""
 
         nyquist = 0.5 * self.FFT_PARAMS["sampling_rate"]
-        signalFilteredbyBank = np.zeros((self.nclases,self.nsamples,self.ntrials))
+        signalFilteredbyBank = np.zeros((self.nclases,self.nsamples))
         for clase, frecuencia in enumerate(self.frecStimulus):   
             low = (frecuencia-bw/2)/nyquist
             high = (frecuencia+bw/2)/nyquist
             b, a = butter(order, [low, high], btype='band') #obtengo los parámetros del filtro
-            central = filtfilt(b, a, eeg[clase], axis = 0)
-            b, a = butter(order, [low*2, high*2], btype='band') #obtengo los parámetros del filtro
-            firstHarmonic = filtfilt(b, a, eeg[clase], axis = 0)
-            # signalFilteredbyBank[clase] = filtfilt(b, a, eeg[clase], axis = 0) #filtramos
-            signalFilteredbyBank[clase] = central + firstHarmonic
+            signalFilteredbyBank[clase] = filtfilt(b, a, eeg) #filtramos
 
-        self.dataBanked = signalFilteredbyBank
+        self.dataBanked = signalFilteredbyBank.mean(axis = 0)
 
         return self.dataBanked
 
@@ -258,5 +254,8 @@ def main():
 
     predictions['promedio'] = predictions.mean(numeric_only=True, axis=1)
     
-    print(f"Predicciones usando el modelo SVM {modelFile}")
+    print(f"Predicciones usando el modelo Regresión Logística {modelFile}")
     print(predictions)
+
+if __name__ == "__main__":
+    main()
