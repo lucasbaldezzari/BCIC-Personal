@@ -252,6 +252,7 @@ def main():
 
     #Filtering de EEG
     PRE_PROCES_PARAMS = {
+                    'fm': fm,
                     'lfrec': 5.,
                     'hfrec': 30.,
                     'order': 6,

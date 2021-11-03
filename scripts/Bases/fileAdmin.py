@@ -108,6 +108,7 @@ def loadPArams(modelName, path):
     
     actualFolder = os.getcwd()#directorio donde estamos actualmente
     os.chdir(path)
+    
     with open(f"{modelName}_preproces.json", "r") as read_file:
         PRE_PROCES_PARAMS = json.load(read_file)
 

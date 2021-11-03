@@ -39,8 +39,6 @@ class DataThread(threading.Thread):
         
         return eeg[:channels,:]
         
-        # return self.board.get_current_board_data(int(duration*self.sampling_rate))[:channels]
-        
     def run (self):
         
         window_size = self.trialDuration

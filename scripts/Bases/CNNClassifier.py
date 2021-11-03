@@ -15,7 +15,7 @@ from scipy.signal import welch
 from utils import filterEEG
 import pickle
 
-class CNNClassify():
+class CNNClassifier():
     
     def __init__(self, modelFile, weightFile, frecStimulus, nchannels,nsamples,ntrials,
                  PRE_PROCES_PARAMS, FFT_PARAMS, classiName = ""):
@@ -216,7 +216,7 @@ def main():
 
     # Cargamos modelo previamente entrenado
     modefile = "cnntesting"
-    cnn = CNNClassify(modelFile = modefile,
+    cnn = CNNClassifier(modelFile = modefile,
                     weightFile = "bestWeightss_cnntesting",
                     frecStimulus = frecStimulus.tolist(),
                     nchannels = 1,nsamples = nsamples,ntrials = ntrials,
