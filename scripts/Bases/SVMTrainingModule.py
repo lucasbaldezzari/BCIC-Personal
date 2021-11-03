@@ -189,7 +189,10 @@ class SVMTrainingModule():
 
         return self.METRICAS
 
-    def saveTrainingSignalPSD(self, signalPSD, filename = ""):
+    def saveTrainingSignalPSD(self, signalPSD, path, filename = ""):
+
+        actualFolder = os.getcwd()#directorio donde estamos actualmente
+        os.chdir(path)
         
         if not filename:
             filename = self.modelName
@@ -197,25 +200,35 @@ class SVMTrainingModule():
         np.savetxt(f'{filename}_signalPSD.txt', signalPSD, delimiter=',')
         np.savetxt(f'{filename}_signalSampleFrec.txt', self.signalSampleFrec, delimiter=',')
 
+        os.chdir(actualFolder)
+
     def saveModel(self, path, filename = ""):
         """Método para guardar el modelo"""
 
+        actualFolder = os.getcwd()#directorio donde estamos actualmente
         os.chdir(path)
 
         if not filename:
+            modelName = self.modelName
             filename = f"{self.modelName}.pkl"
+
+        else:
+            modelName = filename
+            filename = f"{filename}.pkl"
 
         with open(filename, 'wb') as file:
             pickle.dump(self.model, file)
 
         #Guardamos los parámetros usados para entrenar el SVM
-        file = open(f"{self.modelName}_preproces.json", "w")
+        file = open(f"{modelName}_preproces.json", "w")
         json.dump(self.PRE_PROCES_PARAMS , file)
         file.close
 
-        file = open(f"{self.modelName}_fft.json", "w")
+        file = open(f"{modelName}_fft.json", "w")
         json.dump(self.FFT_PARAMS , file)
         file.close
+
+        os.chdir(actualFolder)
 
 def main():
 
@@ -369,11 +382,11 @@ def main():
     plt.show()
 
     #Selecciono dos clasificadores SVM
-    modeloSVM1 = clasificadoresSVM["linear"][4][1] #modelo 3 con [Model = SVC(C=1, kernel='linear'), accu = 0.8]
+    modeloSVM1 = clasificadoresSVM["linear"][3][1]
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join(actualFolder,"models")
-    modeloSVM1.saveModel(path, filename = "SVM_test_linear.pkl")
-    modeloSVM1.saveTrainingSignalPSD(signalPSD.mean(axis = 2), filename = "SVM_test_linear")
+    modeloSVM1.saveModel(path, filename = "SVM_test_linear")
+    modeloSVM1.saveTrainingSignalPSD(signalPSD.mean(axis = 2), path = path, filename = "SVM_test_linear")
     os.chdir(actualFolder)
 
     gamma = "scale"
@@ -385,9 +398,9 @@ def main():
 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join(actualFolder, "models")
-    modeloSVM2.saveModel(path, filename = "SVM_test_rbf.pkl")
-    modeloSVM2.saveTrainingSignalPSD(signalPSD.mean(axis = 2), filename = "SVM_test_rbf")
+    modeloSVM2.saveModel(path, filename = "SVM_test_rbf")
+    modeloSVM2.saveTrainingSignalPSD(signalPSD.mean(axis = 2), path = path, filename = "SVM_test_rbf")
     os.chdir(actualFolder)
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()

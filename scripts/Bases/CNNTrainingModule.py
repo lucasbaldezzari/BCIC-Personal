@@ -15,8 +15,9 @@ import numpy.matlib as npm
 import matplotlib.pyplot as plt
 from sklearn.model_selection import KFold
 import fileAdmin as fa
+import json
 
-from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Activation, Flatten, Dropout, Conv2D, BatchNormalization
 from tensorflow.keras import initializers, regularizers
 
@@ -27,8 +28,6 @@ from tensorflow.keras.losses import categorical_crossentropy
 
 from scipy.signal import butter, filtfilt, windows
 from scipy.signal import welch
-
-import pickle
 
 #own packages
 
@@ -344,6 +343,15 @@ class CNNTrainingModule():
 
         np.savetxt(f'{filename}_signalPSD.txt', signalPSD, delimiter=',')
         np.savetxt(f'{filename}_signalSampleFrec.txt', self.signalSampleFrec, delimiter=',')
+
+        #Guardamos los parámetros usados para entrenar el SVM
+        file = open(f"{self.modelName}_preproces.json", "w")
+        json.dump(self.PRE_PROCES_PARAMS , file)
+        file.close
+
+        file = open(f"{self.modelName}_fft.json", "w")
+        json.dump(self.FFT_PARAMS , file)
+        file.close
 
 def main():
         

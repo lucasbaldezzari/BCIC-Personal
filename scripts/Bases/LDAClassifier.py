@@ -170,26 +170,6 @@ def main():
     filesRun2 = ["S3_R2_S2_E6","S3-R2-S1-E7", "S3-R2-S1-E8","S3-R2-S1-E9"]
     run2 = fa.loadData(path = path, filenames = filesRun2)
 
-    #Filtering de EEG
-    PRE_PROCES_PARAMS = {
-                    'lfrec': 4.,
-                    'hfrec': 38.,
-                    'order': 8,
-                    'sampling_rate': fm,
-                    'bandStop': 50.,
-                    'window': window,
-                    'shiftLen':window
-                    }
-
-    resolution = np.round(fm/samplePoints, 4)
-
-    FFT_PARAMS = {
-                    'resolution': resolution,#0.2930,
-                    'start_frequency': 4.0,
-                    'end_frequency': 38.0,
-                    'sampling_rate': fm
-                    }
-
     def joinData(allData, stimuli, channels, samples, trials):
         joinedData = np.zeros((stimuli, channels, samples, trials))
         for i, sujeto in enumerate(allData):
@@ -209,10 +189,12 @@ def main():
     ntrials = testSet.shape[2]
 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-    
     path = os.path.join(actualFolder,"models")
-    
-    modelFile = "LDAtest.pkl" #nombre del modelo
+
+    #Abrimos archivos
+    modelName = "LDAtest"
+    modelFile = f"{modelName}.pkl" #nombre del modelo
+    PRE_PROCES_PARAMS, FFT_PARAMS = fa.loadPArams(modelName = modelName, path = os.path.join(actualFolder,"models"))
 
     lda = LDAClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, nsamples = nsamples, path = path) #cargamos clasificador entrenado
     lda.loadTrainingSignalPSD(filename = "LDA_WM_testing_signalPSD.txt", path = path) #cargamos el PSD de mis datos de entrenamiento

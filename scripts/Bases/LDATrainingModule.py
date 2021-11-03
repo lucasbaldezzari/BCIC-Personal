@@ -191,7 +191,10 @@ class LDATrainingModule():
         return trainingData, labels
 
 
-    def saveTrainingSignalPSD(self, signalPSD, filename = ""):
+    def saveTrainingSignalPSD(self, signalPSD, path, filename = ""):
+
+        actualFolder = os.getcwd()#directorio donde estamos actualmente
+        os.chdir(path)
         
         if not filename:
             filename = self.modelName
@@ -199,25 +202,35 @@ class LDATrainingModule():
         np.savetxt(f'{filename}_signalPSD.txt', signalPSD, delimiter=',')
         np.savetxt(f'{filename}_signalSampleFrec.txt', self.signalSampleFrec, delimiter=',')
 
+        os.chdir(actualFolder)
+        
     def saveModel(self, path, filename = ""):
         """Método para guardar el modelo"""
 
+        actualFolder = os.getcwd()#directorio donde estamos actualmente
         os.chdir(path)
 
         if not filename:
+            modelName = self.modelName
             filename = f"{self.modelName}.pkl"
+
+        else:
+            modelName = filename
+            filename = f"{filename}.pkl"
 
         with open(filename, 'wb') as file:
             pickle.dump(self.model, file)
 
-        #Guardamos los parámetros usados para entrenar el LDA
-        file = open(f"{self.modelName}_preproces.json", "w")
+        #Guardamos los parámetros usados para entrenar el SVM
+        file = open(f"{modelName}_preproces.json", "w")
         json.dump(self.PRE_PROCES_PARAMS , file)
         file.close
 
-        file = open(f"{self.modelName}_fft.json", "w")
+        file = open(f"{modelName}_fft.json", "w")
         json.dump(self.FFT_PARAMS , file)
         file.close
+
+        os.chdir(actualFolder)
 
 
 def main():
@@ -300,8 +313,9 @@ def main():
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join(actualFolder,"models")
     lda.saveModel(path)
-    lda.saveTrainingSignalPSD(signalPSD.mean(axis = 2), filename = "LDA_WM_testing")
+    lda.saveTrainingSignalPSD(signalPSD.mean(axis = 2), path = path, filename = "LDA_WM_testing")
     os.chdir(actualFolder)
+
     
 if __name__ == "__main__":
     main()

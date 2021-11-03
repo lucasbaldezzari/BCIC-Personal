@@ -137,10 +137,11 @@ def main():
     path = os.path.join('E:\\reposBCICompetition\\BCIC-Personal\\scripts\\Bases',"models")
     modelFile = "Logreg_LucasB_Test2_10112021.pkl" #nombre del modelo
 
+    #Filtering de EEG
     PRE_PROCES_PARAMS = {
                     'lfrec': 5.,
-                    'hfrec': 38.,
-                    'order': 8,
+                    'hfrec': 30.,
+                    'order': 6,
                     'sampling_rate': fm,
                     'bandStop': 50.,
                     'window': window,
@@ -152,7 +153,7 @@ def main():
     FFT_PARAMS = {
                     'resolution': resolution,#0.2930,
                     'start_frequency': 5.0,
-                    'end_frequency': 38.0,
+                    'end_frequency': 30.0,
                     'sampling_rate': fm
                     }
 

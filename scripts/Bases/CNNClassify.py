@@ -137,7 +137,7 @@ class CNNClassify():
 
         return self.featureVector
 
-    def classifyEEGSignal(self, featureVector):
+    def getClassification(self, featureVector):
         """
         Method used to classify new data.
         
@@ -237,7 +237,7 @@ def main():
     #extrameos características
     featureVector  = cnn.extractFeatures(rawDATA = rawDATA, ventana = ventana, anchoVentana = 5, bw = 1.0, order = 4, axis = 0)
 
-    cnn.classifyEEGSignal(featureVector = featureVector)
+    cnn.getClassification(featureVector = featureVector)
 
     ### Realizamos clasificación sobre mis datos de testeo. Estos nunca fueron vistos por el clasificador ###
     trials = 6 #cantidad de trials
@@ -247,7 +247,7 @@ def main():
         for j, trial in enumerate(np.arange(trials)):
             rawDATA = testSet[clase, :, trial]
             featureVector  = cnn.extractFeatures(rawDATA = rawDATA, ventana = ventana, anchoVentana = 5, bw = 1.0, order = 4, axis = 0)
-            classification = cnn.classifyEEGSignal(featureVector = featureVector)
+            classification = cnn.getClassification(featureVector = featureVector)
             if classification == frecStimulus[clase]:
                 predicciones[i,j] = 1
 

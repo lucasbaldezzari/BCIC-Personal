@@ -10,7 +10,7 @@ Created on Fri May  7 19:05:10 2021
         VERSIÓN: SCT-01-RevA
 """
 
-import sys
+
 import os
 from os import listdir
 from os.path import isfile, join
@@ -18,8 +18,7 @@ from os.path import isfile, join
 import numpy as np
 import scipy.io as sciio #Para manejar archivos de matlab .mat
 
-from utils import filterEEG, segmentingEEG, computeMagnitudSpectrum, computeComplexSpectrum
-from utils import plotSpectrum, plotOneSpectrum
+import json
 
 from brainflow.data_filter import DataFilter
 
@@ -104,6 +103,20 @@ def csvGenerator(path ="dataset", subject = 2, trial = 1, target = 1, filename =
     # data[0] = samples
     # data[1:] = eeg
     # np.savetxt(filename, data.T, delimiter=" ")
+
+def loadPArams(modelName, path):
+    
+    actualFolder = os.getcwd()#directorio donde estamos actualmente
+    os.chdir(path)
+    with open(f"{modelName}_preproces.json", "r") as read_file:
+        PRE_PROCES_PARAMS = json.load(read_file)
+
+    with open(f"{modelName}_fft.json", "r") as read_file:
+        FFT_PARAMS = json.load(read_file)
+
+    os.chdir(actualFolder)
+
+    return PRE_PROCES_PARAMS, FFT_PARAMS
     
 def main():
     

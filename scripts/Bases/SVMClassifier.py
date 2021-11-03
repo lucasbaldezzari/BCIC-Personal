@@ -5,6 +5,7 @@ import os
 import numpy as np
 import numpy.matlib as npm
 import pandas as pd
+import json
 
 import pickle
 
@@ -32,7 +33,7 @@ class SVMClassifier():
         
         self.modelName = modelFile
         
-        actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio featureVector
+        actualFolder = os.getcwd()#directorio donde estamos actualmente
         os.chdir(path)
         
         with open(self.modelName, 'rb') as file:
@@ -204,26 +205,6 @@ def main():
     filesRun2 = ["S3_R2_S2_E6","S3-R2-S1-E7", "S3-R2-S1-E8","S3-R2-S1-E9"]
     run2 = fa.loadData(path = path, filenames = filesRun2)
 
-    #Filtering de EEG
-    PRE_PROCES_PARAMS = {
-                    'lfrec': 5.,
-                    'hfrec': 30.,
-                    'order': 6,
-                    'sampling_rate': fm,
-                    'bandStop': 50.,
-                    'window': window,
-                    'shiftLen':window
-                    }
-
-    resolution = np.round(fm/samplePoints, 4)
-
-    FFT_PARAMS = {
-                    'resolution': resolution,#0.2930,
-                    'start_frequency': 5.0,
-                    'end_frequency': 30.0,
-                    'sampling_rate': fm
-                    }
-
     def joinData(allData, stimuli, channels, samples, trials):
         joinedData = np.zeros((stimuli, channels, samples, trials))
         for i, sujeto in enumerate(allData):
@@ -243,10 +224,12 @@ def main():
     ntrials = testSet.shape[2]
 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-    
     path = os.path.join(actualFolder,"models")
-    
-    modelFile = "SVM_test_linear.pkl" #nombre del modelo
+
+    #Abrimos archivos
+    modelName = "SVM_test_linear"
+    modelFile = f"{modelName}.pkl" #nombre del modelo
+    PRE_PROCES_PARAMS, FFT_PARAMS = fa.loadPArams(modelName = modelName, path = os.path.join(actualFolder,"models"))
 
     svm = SVMClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, nsamples = nsamples, path = path) #cargamos clasificador entrenado
     svm.loadTrainingSignalPSD(filename = "SVM_test_linear_signalPSD.txt", path = path) #cargamos el PSD de mis datos de entrenamiento
