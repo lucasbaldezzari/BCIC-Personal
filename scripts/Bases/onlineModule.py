@@ -42,6 +42,8 @@ from ArduinoCommunication import ArduinoCommunication as AC
 
 from DataThread import DataThread as DT
 from SVMClassifier import SVMClassifier as SVMClassifier
+from CNNClassifier import CNNClassifier
+
 from scipy.signal import windows
 
 import fileAdmin as fa
@@ -64,6 +66,21 @@ def cargarClasificador(modelo, modelName, signalPSDName,frecStimulus, nsamples, 
         
         clasificador.loadTrainingSignalPSD(filename = signalPSDName, path = path) #cargamos el PSD de mis datos de entrenamiento
 
+    if modelo == "CNN":
+        path = os.path.join(actualFolder,path)
+        os.chdir(path)
+        weightFile = f'bestWeightss_{modelName}'
+        PRE_PROCES_PARAMS, FFT_PARAMS = fa.loadPArams(modelName = modelName, path = path)
+        clasificador = CNNClassifier(modelFile = modelName,
+                        weightFile = weightFile,
+                        frecStimulus = frecStimulus.tolist(),
+                        nchannels = 1, nsamples = nsamples, ntrials = 1,
+                        PRE_PROCES_PARAMS = PRE_PROCES_PARAMS,
+                        FFT_PARAMS = FFT_PARAMS,
+                        classiName = f"CNN_Classifier", path = path)
+
+        clasificador.loadTrainingSignalPSD(filename = signalPSDName, path = path) #cargamos el PSD de mis datos de entrenamiento
+
     os.chdir(actualFolder)
 
     return clasificador
@@ -74,9 +91,15 @@ def clasificar(rawEEG, modelo, clasificador, canalesElegidos = 2, anchoVentana =
     
     rawEEG = rawEEG[:canalesElegidos,:]
     rawEEG = np.mean(rawEEG, axis = 0)
+
     if modelo == "SVM":
         featureVector = clasificador.extractFeatures(rawDATA = rawEEG, ventana = windows.hamming,
-                        anchoVentana = anchoVentana, bw = bw, order = 4, axis = axis)
+                        anchoVentana = anchoVentana, bw = bw, order = order, axis = axis)
+        comando = clasificador.getClassification(featureVector = featureVector)
+
+    if modelo == "CNN":
+        featureVector = clasificador.extractFeatures(rawDATA = rawEEG, ventana = windows.hamming,
+                        anchoVentana = anchoVentana, bw = bw, order = order, axis = axis)
         comando = clasificador.getClassification(featureVector = featureVector)
 
     return comando
@@ -96,7 +119,7 @@ def main():
     
     placa = placas["ganglion"]
 
-    trials = 5 #None implica que se ejecutaran trials de manera indeterminada
+    trials = 3 #None implica que se ejecutaran trials de manera indeterminada
     trialDuration = 10 #secs #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
     stimuliDuration = 5 #secs
 
@@ -115,9 +138,18 @@ def main():
     PASO 2: Cargamos datos necesarios para el clasificador y cargamos clasificador
     ##########################################################################################"""
 
-    modelName = "SVM_test_linear"
-    signalPSDName = "SVM_test_linear_signalPSD.txt"
-    modeloClasificador = "SVM"
+    #### Cargamos clasificador SVM ###
+    # modelName = "SVM_test_linear" #Nombre archivo que contiene el modelo SVM
+    # signalPSDName = "SVM_test_linear_signalPSD.txt"
+    # modeloClasificador = "SVM"
+    # clasificador = cargarClasificador(modelo = modeloClasificador, modelName = modelName, signalPSDName = signalPSDName,
+    #                                 frecStimulus = frecStimulus, nsamples = nsamples, path = path)
+
+    ## Cargamos clasificador CNN ###
+    modeloClasificador = "CNN"
+    modelName = "cnntesting"
+    modelFile = f"{modelName}.h5" #nombre del modelo
+    signalPSDName = "cnntesting_signalPSD.txt"
     clasificador = cargarClasificador(modelo = modeloClasificador, modelName = modelName, signalPSDName = signalPSDName,
                                     frecStimulus = frecStimulus, nsamples = nsamples, path = path)
 
@@ -221,7 +253,7 @@ def main():
         while arduino.generalControl() == b"1":
             if classifyData and arduino.systemControl[1] == b"0":
                 rawEEG = data_thread.getData(stimuliDuration)
-                frecClasificada = clasificar(rawEEG, modeloClasificador, clasificador, canalesElegidos = 2, anchoVentana = 5, bw = 2., order = 6, axis = 0)
+                frecClasificada = clasificar(rawEEG, modeloClasificador, clasificador, canalesElegidos = 2, anchoVentana = stimuliDuration, bw = 2., order = 6, axis = 0)
                 print(f"Comando a enviar {movements[listaEstims.index(frecClasificada)]}. Frecuencia {frecClasificada}")
                 arduino.systemControl[2] = b"1"#movements[listaEstims.index(int(frecClasificada))]#movements[3]
                 esadoRobot = arduino.sendMessage(arduino.systemControl)

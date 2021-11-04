@@ -18,7 +18,7 @@ import pickle
 class CNNClassifier():
     
     def __init__(self, modelFile, weightFile, frecStimulus, nchannels,nsamples,ntrials,
-                 PRE_PROCES_PARAMS, FFT_PARAMS, classiName = ""):
+                 PRE_PROCES_PARAMS, FFT_PARAMS, classiName = "", path = "models"):
         """
         Some important variables configuration and initialization in order to implement a CNN 
         model for CLASSIFICATION.
@@ -30,15 +30,19 @@ class CNNClassifier():
             - FFT_PARAMS: The params used in order to compute the FFT
             - CNN_PARAMS: The params used for the CNN model.
         """
-        
+
+        actualFolder = os.getcwd()#directorio donde estamos actualmente
+        os.chdir(path)
+
         # load model from JSON file
-        with open(f"models/cnn/{modelFile}.json", "r") as json_file:
+        with open(f"{modelFile}.json", "r") as json_file:
             model = json_file.read()
-        
             self.model = model_from_json(model)
             
-        self.model.load_weights(f"models/cnn/{weightFile}.h5")
+        self.model.load_weights(f"{weightFile}.h5")
         self.model.make_predict_function()
+
+        os.chdir(actualFolder)
         
         self.frecStimulus = frecStimulus
         self.nclases = len(frecStimulus)
@@ -52,7 +56,7 @@ class CNNClassifier():
         self.PRE_PROCES_PARAMS = PRE_PROCES_PARAMS
         self.FFT_PARAMS = FFT_PARAMS
 
-    def loadTrainingSignalPSD(self, filename = "", path = "models/cnn/"):
+    def loadTrainingSignalPSD(self, filename = "", path = "models"):
 
         actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
         os.chdir(path)
@@ -171,26 +175,10 @@ def main():
     filesRun2 = ["S3_R2_S2_E6","S3-R2-S1-E7", "S3-R2-S1-E8","S3-R2-S1-E9"]
     run2 = fa.loadData(path = path, filenames = filesRun2)
 
-    #Filtering de EEG
-    PRE_PROCES_PARAMS = {
-                    'lfrec': 4.,
-                    'hfrec': 38.,
-                    'order': 8,
-                    'sampling_rate': fm,
-                    'bandStop': 50.,
-                    'window': window,
-                    'shiftLen':window
-                    }
-
-    resolution = np.round(fm/samplePoints, 4)
-
-    FFT_PARAMS = {
-                    'resolution': resolution,#0.2930,
-                    'start_frequency': 4.0,
-                    'end_frequency': 38.0,
-                    'sampling_rate': fm
-                    }
-
+    #Abrimos archivos
+    modelName = "cnntesting"
+    modelFile = f"{modelName}.h5" #nombre del modelo
+    PRE_PROCES_PARAMS, FFT_PARAMS = fa.loadPArams(modelName = modelName, path = os.path.join(actualFolder,"models"))
 
     def joinData(allData, stimuli, channels, samples, trials):
         joinedData = np.zeros((stimuli, channels, samples, trials))
@@ -212,17 +200,18 @@ def main():
 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     
-    path = os.path.join(actualFolder,"models\\cnn")
+    path = os.path.join(actualFolder,"models")
 
     # Cargamos modelo previamente entrenado
     modefile = "cnntesting"
+    path = os.path.join(actualFolder,"models")
     cnn = CNNClassifier(modelFile = modefile,
                     weightFile = "bestWeightss_cnntesting",
                     frecStimulus = frecStimulus.tolist(),
                     nchannels = 1,nsamples = nsamples,ntrials = ntrials,
                     PRE_PROCES_PARAMS = PRE_PROCES_PARAMS,
                     FFT_PARAMS = FFT_PARAMS,
-                    classiName = f"CNN_Classifier")
+                    classiName = f"CNN_Classifier", path = path)
 
     cnn.loadTrainingSignalPSD(filename = "cnntesting_signalPSD.txt", path = path) #cargamos el PSD de mis datos de entrenamiento
 

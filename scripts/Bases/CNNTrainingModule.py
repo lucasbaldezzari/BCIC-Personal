@@ -240,7 +240,7 @@ class CNNTrainingModule():
 
         return trainingData.reshape(self.nclases*self.ntrials,self.nchannels,numFeatures,1), labels
 
-    def trainCNN(self, trainingData, labels, nFolds = 10, saveBestWeights = True):
+    def trainCNN(self, trainingData, labels, nFolds = 10, saveBestWeights = True, path = "models"):
         """
         Perform a CNN training using a cross validation method.
         
@@ -254,6 +254,9 @@ class CNNTrainingModule():
         Return:
             - Accuracy for the CNN model using the trainingData
         """
+
+        actualFolder = os.getcwd()#directorio donde estamos actualmente
+        os.chdir(path)
         
         kf = KFold(n_splits = nFolds, shuffle=True)
         kf.get_n_splits(trainingData)
@@ -292,17 +295,9 @@ class CNNTrainingModule():
                 # print(history.history.keys())
                 
                 if saveBestWeights:
-                    
-                    try:
-                        actualFolder = os.getcwd()
-                        os.makedirs("models/cnn")    
-                        print("Directory 'models' created ")
-                    except FileExistsError:
-                        print("")
-                        
                     if actualSscore[1] > score:
                         score = actualSscore[1]
-                        self.model.save_weights(f'models//cnn/bestWeightss_{self.modelName}.h5')
+                        self.model.save_weights(f'bestWeightss_{self.modelName}.h5')
                 
                 accu[fold, :] = actualSscore[1]*100
                 
@@ -310,9 +305,11 @@ class CNNTrainingModule():
                 
             print(f"Mean accuracy for overall folds for model {self.modelName}: {np.mean(accu)}")
             
+            os.chdir(actualFolder)
+
             return accu
 
-    def saveCNNModel(self):
+    def saveCNNModel(self, path, filename = ""):
         """
         Save the model created.
         
@@ -320,29 +317,18 @@ class CNNTrainingModule():
         """
         #https://www.tensorflow.org/api_docs/python/tf/keras/Model#save
         
-        if not self.model: #Check if themodel is empty
-            print("Empty model")
-            
-        else:
-            try:
-                actualFolder = os.getcwd()
-                os.makedirs("models/cnn")    
-                print("Directory 'models/cnn' created ")
-            except FileExistsError:
-                print("")
-                
-            self.model.save(f"models/cnn/{self.modelName}.h5")
-            modelInJson = self.model.to_json()
-            with open(f"models/cnn/{self.modelName}.json", "w") as jsonFile:
-                jsonFile.write(modelInJson)
+        actualFolder = os.getcwd()#directorio donde estamos actualmente
+        os.chdir(path)
 
-    def saveTrainingSignalPSD(self, signalPSD, filename = ""):
-        
         if not filename:
-            filename = self.modelName
-
-        np.savetxt(f'{filename}_signalPSD.txt', signalPSD, delimiter=',')
-        np.savetxt(f'{filename}_signalSampleFrec.txt', self.signalSampleFrec, delimiter=',')
+            modelName = self.modelName
+            filename = f"{self.modelName}.h5"
+            
+                
+        self.model.save(f"{self.modelName}.h5")
+        modelInJson = self.model.to_json()
+        with open(f"{self.modelName}.json", "w") as jsonFile:
+            jsonFile.write(modelInJson)
 
         #Guardamos los parámetros usados para entrenar el SVM
         file = open(f"{self.modelName}_preproces.json", "w")
@@ -352,6 +338,21 @@ class CNNTrainingModule():
         file = open(f"{self.modelName}_fft.json", "w")
         json.dump(self.FFT_PARAMS , file)
         file.close
+
+        os.chdir(actualFolder)
+
+    def saveTrainingSignalPSD(self, signalPSD, path, filename = ""):
+
+        actualFolder = os.getcwd()#directorio donde estamos actualmente
+        os.chdir(path)
+        
+        if not filename:
+            filename = self.modelName
+
+        np.savetxt(f'{filename}_signalPSD.txt', signalPSD, delimiter=',')
+        np.savetxt(f'{filename}_signalSampleFrec.txt', self.signalSampleFrec, delimiter=',')
+
+        os.chdir(actualFolder)
 
 def main():
         
@@ -463,14 +464,14 @@ def main():
       Fifth step: Trainn the CNN
     **********************************************************************
     """
-    
-    accu_CNN_using_MSF = cnn.trainCNN(trainingData, labels, nFolds = 5)
+    actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
+    path = os.path.join(actualFolder, "models")
+    accu_CNN_using_MSF = cnn.trainCNN(trainingData, labels, nFolds = 5, path = path)
     print(f"Maxima accu {accu_CNN_using_MSF.max()}")
 
     #Guardamos modelo
+    cnn.saveCNNModel(path, "models")
+    cnn.saveTrainingSignalPSD(signalPSD.mean(axis = 2), path = path, filename = "cnntesting")
 
-    cnn.saveCNNModel()
-    cnn.saveTrainingSignalPSD(signalPSD.mean(axis = 2), filename = "cnntesting")
-    
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()
