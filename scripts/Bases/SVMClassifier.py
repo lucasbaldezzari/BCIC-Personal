@@ -95,7 +95,7 @@ class SVMClassifier():
 
     def computWelchPSD(self, signalBanked, fm, ventana, anchoVentana, average = "median", axis = 1):
 
-        self.signalSampleFrec, self.signalPSD = welch(signalBanked, fs = fm, window = ventana, nperseg = anchoVentana, average='median',axis = axis)
+        self.signalSampleFrec, self.signalPSD = welch(signalBanked, fs = fm, window = ventana, nperseg = anchoVentana, average='median', axis = axis)
 
         return self.signalSampleFrec, self.signalPSD
 
@@ -146,7 +146,6 @@ class SVMClassifier():
             distanciaCentroides = np.sqrt((distPower)**2 + (distFrec)**2).mean()
             print("distancias centroides", distanciaCentroides)
             db.append((distSignal + self.trainPSDDist[clase]) / distanciaCentroides)
-
 
         print(db)
         indexFfeature = db.index(max(db))  

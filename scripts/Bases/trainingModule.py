@@ -54,6 +54,7 @@ def main():
               "synthetic": BoardIds.SYNTHETIC_BOARD.value}
     
     placa = placas["cyton"]  
+    electrodos = "pasivos"
     
     puerto = "COM14" #Chequear el puerto al cual se conectará la placa
     
@@ -107,19 +108,25 @@ def main():
     Doc: https://docs.openbci.com/Cyton/CytonSDK/#channel-setting-commands
     """
     configCanalesCyton = {
-        "canal1": "x1000110X", #ON|Ganancia 2x|Normal input|Remove from Bias|
-        "canal2": "x2000110X", #ON|Ganancia 2x|Normal input|Remove from Bias|
-        "canal3": "x3000110X", #ON|Ganancia 2x|Normal input|Remove from Bias|
-        "canal4": "x4000110X", #ON|Ganancia 2x|Normal input|Remove from Bias|
+        "canal1": "x1000111X", #ON|Ganancia 2x|Normal input|Connect from Bias|
+        "canal2": "x2000111X", #ON|Ganancia 2x|Normal input|Connect from Bias|
+        "canal3": "x3101000X", #Canal OFF
+        "canal4": "x4101000X", #Canal OFF
         "canal5": "x5101000X", #Canal OFF
         "canal6": "x6101000X", #Canal OFF
         "canal7": "x7101000X", #Canal OFF
         "canal8": "x8101000X", #Canal OFF
     }
 
-    if placa == BoardIds.CYTON_BOARD.value:
-        board_shim.config_board("x1020110Xx2020110Xx3101000Xx4101000Xx5101000Xx6101000Xx7101000Xx8101000X")
-        time.sleep(4)
+    if electrodos == "pasivos":
+        if placa == BoardIds.CYTON_BOARD.value:
+            board_shim.config_board("x1060110Xx2060110Xx3101000Xx4101000Xx5101000Xx6101000Xx7101000Xx8101000X")
+            time.sleep(4)
+
+    if electrodos == "activos":
+        if placa == BoardIds.CYTON_BOARD.value:
+            board_shim.config_board("x1030110Xx2030110Xx3101000Xx4101000Xx5101000Xx6101000Xx7101000Xx8101000X")
+            time.sleep(4)
 
     board_shim.start_stream(450000, args.streamer_params) #iniciamos OpenBCI. Ahora estamos recibiendo datos.
     time.sleep(4) #esperamos 4 segundos
@@ -154,7 +161,7 @@ def main():
     """
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
     #En este ejemplo esta conectada en el COM3
-    arduino = AC('COM6', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM16', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
     time.sleep(1) 
     
@@ -163,10 +170,10 @@ def main():
     #El siguiente diccionario se usa para guardar información relevante cómo así también los datos de EEG
     #registrados durante la sesión de entrenamiento.
     dictionary = {
-                'subject': 'lucasB_activos_14hz',
-                'date': '24/10/2021',
-                'generalInformation': 'Cyton. Se desactivan canales 3 al 8',
-                'stimFrec': "14",
+                'subject': 'tomy_pasivos_9hz_2',
+                'date': '5/11/2021',
+                'generalInformation': 'Cyton. Estimulos LED',
+                'stimFrec': "9",
                 'channels': [1,2,3,4], 
                  'dataShape': [stimuli, channels, samplePoints, trials],
                   'eeg': None
