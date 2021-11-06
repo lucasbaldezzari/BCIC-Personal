@@ -54,9 +54,9 @@ def main():
               "synthetic": BoardIds.SYNTHETIC_BOARD.value}
     
     placa = placas["cyton"]  
-    electrodos = "pasivos"
+    electrodos = "activos"
     
-    puerto = "COM14" #Chequear el puerto al cual se conectará la placa
+    puerto = "COM7" #Chequear el puerto al cual se conectará la placa
     
     parser = argparse.ArgumentParser()
     
@@ -108,8 +108,8 @@ def main():
     Doc: https://docs.openbci.com/Cyton/CytonSDK/#channel-setting-commands
     """
     configCanalesCyton = {
-        "canal1": "x1000111X", #ON|Ganancia 2x|Normal input|Connect from Bias|
-        "canal2": "x2000111X", #ON|Ganancia 2x|Normal input|Connect from Bias|
+        "canal1": "x1040110X", #ON|Ganancia 2x|Normal input|Connect from Bias|
+        "canal2": "x2040110X", #ON|Ganancia 2x|Normal input|Connect from Bias|
         "canal3": "x3101000X", #Canal OFF
         "canal4": "x4101000X", #Canal OFF
         "canal5": "x5101000X", #Canal OFF
@@ -124,19 +124,22 @@ def main():
             time.sleep(4)
 
     if electrodos == "activos":
-        if placa == BoardIds.CYTON_BOARD.value:
-            board_shim.config_board("x1030110Xx2030110Xx3101000Xx4101000Xx5101000Xx6101000Xx7101000Xx8101000X")
-            time.sleep(4)
+        # if placa == BoardIds.CYTON_BOARD.value:
+        #     board_shim.config_board("x1040110Xx2040110Xx3101000Xx4101000Xx5101000Xx6101000Xx7101000Xx8101000X")
+        #     time.sleep(4)
+        for config in configCanalesCyton:
+            board_shim.config_board(configCanalesCyton[config])
+            time.sleep(0.5)
 
     board_shim.start_stream(450000, args.streamer_params) #iniciamos OpenBCI. Ahora estamos recibiendo datos.
-    time.sleep(4) #esperamos 4 segundos
+    time.sleep(2) #esperamos 4 segundos
     
     data_thread = DT(board_shim, args.board_id) #genero un objeto DataThread para extraer datos de la OpenBCI
     time.sleep(1)
 
     """Defino variables para control de Trials"""
     
-    trials = 10 #cantidad de trials. Sirve para la sesión de entrenamiento.
+    trials = 5 #cantidad de trials. Sirve para la sesión de entrenamiento.
     #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
     trialDuration = 10 #secs
     stimuliDuration = 5 #secs
@@ -161,7 +164,7 @@ def main():
     """
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
     #En este ejemplo esta conectada en el COM3
-    arduino = AC('COM16', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM8', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
     time.sleep(1) 
     
@@ -170,9 +173,9 @@ def main():
     #El siguiente diccionario se usa para guardar información relevante cómo así también los datos de EEG
     #registrados durante la sesión de entrenamiento.
     dictionary = {
-                'subject': 'tomy_pasivos_9hz_2',
+                'subject': 'lucasB_leds_9hz_g8',
                 'date': '5/11/2021',
-                'generalInformation': 'Cyton. Estimulos LED',
+                'generalInformation': 'Cyton. Estimulos LED. Ganancia en 8',
                 'stimFrec': "9",
                 'channels': [1,2,3,4], 
                  'dataShape': [stimuli, channels, samplePoints, trials],
