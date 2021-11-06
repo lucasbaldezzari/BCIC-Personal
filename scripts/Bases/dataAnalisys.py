@@ -39,28 +39,28 @@ def computWelchPSD(signalBanked, fm, ventana, anchoVentana, average = "median", 
         anchoVentana = int(fm*anchoVentana) #fm * segundos
         ventana = ventana(anchoVentana)
 
-        signalSampleFrec, signalPSD = welch(signalBanked, fs = fm, window = ventana, nperseg = anchoVentana, average='median',axis = axis)
+        signalSampleFrec, signalPSD = welch(signalBanked, fs = fm, window = ventana, nperseg = anchoVentana, average='mean',axis = axis, scaling = "density")
 
         return signalSampleFrec, signalPSD
 
 actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
 path = os.path.join(actualFolder,"recordedEEG")
 
-trials = 5
+trials = 15
 fm = 250.
 duration = 5 #sec
 samplePoints = int(fm*duration)
 channels = 4
 
 subjects = [1]
-filenames = ["lucasB_leds_9hz_g8", "lucasB_leds_14hz_g8","lucasB_leds_17hz_g8"]
+filenames = ["lucasB_leds_14hz_g24_pasivos","lucasB_leds_17hz_g12_pasivos","lucasB_leds_20hz_g14_pasivos"]
 allData = fa.loadData(path = path, filenames = filenames)
 
-name = "lucasB_leds_9hz_g8" #nombre de los datos a analizar}
+name = "lucasB_leds_17hz_g12_pasivos" #nombre de los datos a analizar}
 stimuli = [7,14] #lista de estímulos
 estim = [17] #L7e pasamos un estímulo para que grafique una linea vertical
 
-eeg = allData[name]['eeg'][:,1:2,:,:]
+eeg = allData[name]['eeg'][:,:2,:,:]
 
 #Chequeamos información del registro eeg 1
 print(allData[name]["generalInformation"])
@@ -71,8 +71,8 @@ print(f"Forma de los datos {eeg.shape}")
 resolution = np.round(fm/eeg.shape[2], 4)
 
 PRE_PROCES_PARAMS = {
-                'lfrec': 7.,
-                'hfrec': 20.,
+                'lfrec': 12.,
+                'hfrec': 30.,
                 'order': 3,
                 'sampling_rate': fm,
                 'window': duration,
@@ -81,8 +81,8 @@ PRE_PROCES_PARAMS = {
 
 FFT_PARAMS = {
                 'resolution': resolution,
-                'start_frequency': 0.,
-                'end_frequency': 20.0,
+                'start_frequency': 12.,
+                'end_frequency': 30.0,
                 'sampling_rate': fm
                 }
 
@@ -106,7 +106,7 @@ MSF1 = computeMagnitudSpectrum(eegSegmented, FFT_PARAMS)
 ########################################################################
 
 canales = [1,2,3,4]
-trial = 5
+trial = 2
 
 title = f"Espectro - Trial número {trial} - sujeto {name}"
 fig, plots = plt.subplots(2, 2, figsize=(16, 14), gridspec_kw=dict(hspace=0.45, wspace=0.3))
@@ -132,8 +132,8 @@ plt.show()
 ## TODO
 ## Quedarme con los dos primeros canales. Promediar sobre los dos primeros canales. Aplicar banco de filtros. Aplicar Welch.
 ventana = windows.hamming
-anchoVentana = 2.5
-frecStimulus = np.array([9, 14, 17])
+anchoVentana = 1
+frecStimulus = np.array([14, 17, 20])
 nclases = len(frecStimulus)
 nsamples = int(duration*fm)
 
@@ -142,7 +142,7 @@ avgeeg = eegFiltered.mean(axis = 0)
 
 trial = 2
 
-databanked = applyFilterBank(avgeeg, frecStimulus, bw = 2, order = 4, axis = 0)
+databanked = applyFilterBank(avgeeg, frecStimulus, bw = 3, order = 4, axis = 0)
 
 # plt.plot(databanked[1])
 # plt.show()

@@ -107,26 +107,33 @@ def main():
 
     Doc: https://docs.openbci.com/Cyton/CytonSDK/#channel-setting-commands
     """
-    configCanalesCyton = {
-        "canal1": "x1040110X", #ON|Ganancia 2x|Normal input|Connect from Bias|
-        "canal2": "x2040110X", #ON|Ganancia 2x|Normal input|Connect from Bias|
-        "canal3": "x3101000X", #Canal OFF
-        "canal4": "x4101000X", #Canal OFF
-        "canal5": "x5101000X", #Canal OFF
-        "canal6": "x6101000X", #Canal OFF
-        "canal7": "x7101000X", #Canal OFF
-        "canal8": "x8101000X", #Canal OFF
-    }
 
     if electrodos == "pasivos":
-        if placa == BoardIds.CYTON_BOARD.value:
-            board_shim.config_board("x1060110Xx2060110Xx3101000Xx4101000Xx5101000Xx6101000Xx7101000Xx8101000X")
-            time.sleep(4)
+        configCanalesCyton = {
+            "canal1": "x1060110X", #ON|Ganancia 24x|Normal input|Connect from Bias|
+            "canal2": "x2060110X", #ON|Ganancia 24x|Normal input|Connect from Bias|
+            "canal3": "x3101000X", #Canal OFF
+            "canal4": "x4101000X", #Canal OFF
+            "canal5": "x5101000X", #Canal OFF
+            "canal6": "x6101000X", #Canal OFF
+            "canal7": "x7101000X", #Canal OFF
+            "canal8": "x8101000X", #Canal OFF
+        }
+        for config in configCanalesCyton:
+            board_shim.config_board(configCanalesCyton[config])
+            time.sleep(0.5)
 
     if electrodos == "activos":
-        # if placa == BoardIds.CYTON_BOARD.value:
-        #     board_shim.config_board("x1040110Xx2040110Xx3101000Xx4101000Xx5101000Xx6101000Xx7101000Xx8101000X")
-        #     time.sleep(4)
+        configCanalesCyton = {
+            "canal1": "x1040110X", #ON|Ganancia 8x|Normal input|Connect from Bias|
+            "canal2": "x2040110X", #ON|Ganancia 8x|Normal input|Connect from Bias|
+            "canal3": "x3101000X", #Canal OFF
+            "canal4": "x4101000X", #Canal OFF
+            "canal5": "x5101000X", #Canal OFF
+            "canal6": "x6101000X", #Canal OFF
+            "canal7": "x7101000X", #Canal OFF
+            "canal8": "x8101000X", #Canal OFF
+        }
         for config in configCanalesCyton:
             board_shim.config_board(configCanalesCyton[config])
             time.sleep(0.5)
@@ -173,10 +180,10 @@ def main():
     #El siguiente diccionario se usa para guardar información relevante cómo así también los datos de EEG
     #registrados durante la sesión de entrenamiento.
     dictionary = {
-                'subject': 'lucasB_leds_9hz_g8',
+                'subject': 'lucasB_leds_20hz_g14_pasivos',
                 'date': '5/11/2021',
                 'generalInformation': 'Cyton. Estimulos LED. Ganancia en 8',
-                'stimFrec': "9",
+                'stimFrec': "20",
                 'channels': [1,2,3,4], 
                  'dataShape': [stimuli, channels, samplePoints, trials],
                   'eeg': None
