@@ -53,10 +53,10 @@ def main():
               "ganglion": BoardIds.GANGLION_BOARD.value, #IMPORTANTE: frecuencia muestro 200Hz
               "synthetic": BoardIds.SYNTHETIC_BOARD.value}
     
-    placa = placas["cyton"]  
-    electrodos = "activos"
+    placa = placas["ganglion"]  
+    electrodos = "pasivos"
     
-    puerto = "COM7" #Chequear el puerto al cual se conectará la placa
+    puerto = "COM5" #Chequear el puerto al cual se conectará la placa
     
     parser = argparse.ArgumentParser()
     
@@ -108,35 +108,36 @@ def main():
     Doc: https://docs.openbci.com/Cyton/CytonSDK/#channel-setting-commands
     """
 
-    if electrodos == "pasivos":
-        configCanalesCyton = {
-            "canal1": "x1060110X", #ON|Ganancia 24x|Normal input|Connect from Bias|
-            "canal2": "x2060110X", #ON|Ganancia 24x|Normal input|Connect from Bias|
-            "canal3": "x3101000X", #Canal OFF
-            "canal4": "x4101000X", #Canal OFF
-            "canal5": "x5101000X", #Canal OFF
-            "canal6": "x6101000X", #Canal OFF
-            "canal7": "x7101000X", #Canal OFF
-            "canal8": "x8101000X", #Canal OFF
-        }
-        for config in configCanalesCyton:
-            board_shim.config_board(configCanalesCyton[config])
-            time.sleep(0.5)
+    if placa == BoardIds.CYTON_BOARD.value:
+        if electrodos == "pasivos":
+            configCanalesCyton = {
+                "canal1": "x1060110X", #ON|Ganancia 24x|Normal input|Connect from Bias|
+                "canal2": "x2060110X", #ON|Ganancia 24x|Normal input|Connect from Bias|
+                "canal3": "x3101000X", #Canal OFF
+                "canal4": "x4101000X", #Canal OFF
+                "canal5": "x5101000X", #Canal OFF
+                "canal6": "x6101000X", #Canal OFF
+                "canal7": "x7101000X", #Canal OFF
+                "canal8": "x8101000X", #Canal OFF
+            }
+            for config in configCanalesCyton:
+                board_shim.config_board(configCanalesCyton[config])
+                time.sleep(0.5)
 
-    if electrodos == "activos":
-        configCanalesCyton = {
-            "canal1": "x1040110X", #ON|Ganancia 8x|Normal input|Connect from Bias|
-            "canal2": "x2040110X", #ON|Ganancia 8x|Normal input|Connect from Bias|
-            "canal3": "x3101000X", #Canal OFF
-            "canal4": "x4101000X", #Canal OFF
-            "canal5": "x5101000X", #Canal OFF
-            "canal6": "x6101000X", #Canal OFF
-            "canal7": "x7101000X", #Canal OFF
-            "canal8": "x8101000X", #Canal OFF
-        }
-        for config in configCanalesCyton:
-            board_shim.config_board(configCanalesCyton[config])
-            time.sleep(0.5)
+        if electrodos == "activos":
+            configCanalesCyton = {
+                "canal1": "x1040110X", #ON|Ganancia 8x|Normal input|Connect from Bias|
+                "canal2": "x2040110X", #ON|Ganancia 8x|Normal input|Connect from Bias|
+                "canal3": "x3101000X", #Canal OFF
+                "canal4": "x4101000X", #Canal OFF
+                "canal5": "x5101000X", #Canal OFF
+                "canal6": "x6101000X", #Canal OFF
+                "canal7": "x7101000X", #Canal OFF
+                "canal8": "x8101000X", #Canal OFF
+            }
+            for config in configCanalesCyton:
+                board_shim.config_board(configCanalesCyton[config])
+                time.sleep(0.5)
 
     board_shim.start_stream(450000, args.streamer_params) #iniciamos OpenBCI. Ahora estamos recibiendo datos.
     time.sleep(2) #esperamos 4 segundos
@@ -148,8 +149,8 @@ def main():
     
     trials = 5 #cantidad de trials. Sirve para la sesión de entrenamiento.
     #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
-    trialDuration = 10 #secs
-    stimuliDuration = 5 #secs
+    trialDuration = 8 #secs
+    stimuliDuration = 3 #secs
 
     saveData = True
     
@@ -180,9 +181,9 @@ def main():
     #El siguiente diccionario se usa para guardar información relevante cómo así también los datos de EEG
     #registrados durante la sesión de entrenamiento.
     dictionary = {
-                'subject': 'lucasB_leds_20hz_g14_pasivos',
+                'subject': 'lucasB_leds_20hz_ganglion_pasivos_3seg',
                 'date': '5/11/2021',
-                'generalInformation': 'Cyton. Estimulos LED. Ganancia en 8',
+                'generalInformation': 'Ganglion. Estimulos LED. Ganancia en 8',
                 'stimFrec': "20",
                 'channels': [1,2,3,4], 
                  'dataShape': [stimuli, channels, samplePoints, trials],

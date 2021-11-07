@@ -53,10 +53,10 @@ samplePoints = int(fm*duration)
 channels = 4
 
 subjects = [1]
-filenames = ["lucasB_leds_14hz_g24_pasivos","lucasB_leds_17hz_g12_pasivos","lucasB_leds_20hz_g14_pasivos"]
+filenames = ["lucasB_leds_14hz_ganglion_pasivos_3seg","lucasB_leds_17hz_ganglion_pasivos_3seg","lucasB_leds_20hz_ganglion_pasivos_3seg"]
 allData = fa.loadData(path = path, filenames = filenames)
 
-name = "lucasB_leds_17hz_g12_pasivos" #nombre de los datos a analizar}
+name = "lucasB_leds_20hz_ganglion_pasivos_3seg" #nombre de los datos a analizar}
 stimuli = [7,14] #lista de estímulos
 estim = [17] #L7e pasamos un estímulo para que grafique una linea vertical
 
