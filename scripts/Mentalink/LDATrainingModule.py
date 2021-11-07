@@ -1,4 +1,4 @@
-"""SVMTrainingModule V2.0"""
+"""LDATrainingModule V1.0"""
 
 
 import os
@@ -7,7 +7,7 @@ import numpy.matlib as npm
 import json
 
 from sklearn.metrics import accuracy_score
-from sklearn.svm import SVC
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import precision_recall_fscore_support
@@ -19,17 +19,16 @@ import pickle
 
 import matplotlib.pyplot as plt
 
-from utils import filterEEG
 import fileAdmin as fa
+from utils import filterEEG
 
-
-class SVMTrainingModule():
+class LDATrainingModule():
 
     def __init__(self, rawDATA, PRE_PROCES_PARAMS, FFT_PARAMS, frecStimulus, nchannels,nsamples,ntrials,modelName = ""):
         """Variables de configuración
 
         Args:
-            - rawDATA(matrix[clases, samples, trials]): Señal de EEG
+            - rawDATA(matrix[clases x canales x samples x trials]): Señal de EEG
             - subject (string o int): Número de sujeto o nombre de sujeto
             - PRE_PROCES_PARAMS: Parámetros para preprocesar los datos de EEG
             - FFT_PARAMS: Parametros para computar la FFT
@@ -39,7 +38,7 @@ class SVMTrainingModule():
         self.rawDATA = rawDATA
 
         if not modelName:
-            self.modelName = f"SVMModel"
+            self.modelName = f"LDAModel"
 
         else:
             self.modelName = modelName
@@ -66,10 +65,10 @@ class SVMTrainingModule():
         self.METRICAS = {f'modelo_{self.modelName}': {'trn': {'Pr': None, 'Rc': None, 'Acc': None, 'F1':None},
                                                       'val': {'Pr': None, 'Rc': None, 'Acc': None, 'F1':None}}}
 
-    def createSVM(self, kernel = "rbf", gamma = "scale", C = 1, probability=False, randomSeed = None):
+    def createLDA(self, solver = "svd", shrinkage = None):
         """Se crea modelo"""
 
-        self.model = SVC(C = C, kernel = kernel, gamma = gamma, probability=probability, random_state = randomSeed)
+        self.model = LinearDiscriminantAnalysis(solver = solver, shrinkage = shrinkage)
 
         return self.model
 
@@ -93,16 +92,18 @@ class SVMTrainingModule():
             signalFilteredbyBank[clase] = filtfilt(b, a, eeg[clase], axis = 0) #filtramos
 
         self.dataBanked = signalFilteredbyBank
+
         return self.dataBanked
 
     def computWelchPSD(self, signalBanked, fm, ventana, anchoVentana, average = "median", axis = 1):
-        """Computa la transformada de Welch al EEG"""
+
         self.signalSampleFrec, self.signalPSD = welch(signalBanked, fs = fm, window = ventana, nperseg = anchoVentana, average='median',axis = axis)
+
         return self.signalSampleFrec, self.signalPSD
 
 
     def featuresExtraction(self, ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1):
-        """EXtracción de características a partir de datos de EEG sin procesar"""
+
         filteredEEG = filterEEG(self.rawDATA, self.PRE_PROCES_PARAMS["lfrec"],
                                 self.PRE_PROCES_PARAMS["hfrec"],
                                 self.PRE_PROCES_PARAMS["order"],
@@ -110,7 +111,7 @@ class SVMTrainingModule():
                                 self.PRE_PROCES_PARAMS["sampling_rate"],
                                 axis = axis)
 
-        dataBanked = self.applyFilterBank(filteredEEG, bw=bw, order = 4) #Aplicamos banco de filtro
+        dataBanked = self.applyFilterBank(filteredEEG, bw=bw, order = 4)
 
         anchoVentana = int(self.PRE_PROCES_PARAMS["sampling_rate"]*anchoVentana) #fm * segundos
         ventana = ventana(anchoVentana)
@@ -122,32 +123,8 @@ class SVMTrainingModule():
 
         return self.signalSampleFrec, self.signalPSD
 
-    #Transforming data for training
-    def getDataForTraining(self, features):
-        """Preparación del set de entrenamiento.
-
-        Argumentos:
-            - features: Parte Real del Espectro or Parte Real e Imaginaria del Espectro
-            con forma [número de características x canales x clases x trials x número de segmentos]
-            - clases: Lista con las clases para formar las labels
-
-        Retorna:
-            - trainingData: Set de datos de entrenamiento para alimentar el modelo SVM
-            Con forma [trials*clases x number of features]
-            - Labels: labels para entrenar el modelo a partir de las clases
-        """
-
-        numFeatures = features.shape[1]
-        trainingData = features.swapaxes(2,1).reshape(self.nclases*self.ntrials, numFeatures)
-
-        classLabels = np.arange(self.nclases)
-
-        labels = (npm.repmat(classLabels, self.ntrials, 1).T).ravel()
-
-        return trainingData, labels
-
-    def trainAndValidateSVM(self, clases, test_size = 0.2, randomSeed = None):
-        """Método para entrenar un modelo SVM.
+    def trainAndValidateLDA(self, clases, test_size = 0.2, randomSeed = None):
+        """Método para entrenar un modelo LDA.
 
         Argumentos:
             - clases (int): Lista con valores representando la cantidad de clases
@@ -189,6 +166,31 @@ class SVMTrainingModule():
 
         return self.METRICAS
 
+    #Transforming data for training
+    def getDataForTraining(self, features):
+        """Preparación del set de entrenamiento.
+
+        Argumentos:
+            - features: Parte Real del Espectro or Parte Real e Imaginaria del Espectro
+            con forma [número de características x canales x clases x trials x número de segmentos]
+            - clases: Lista con las clases para formar las labels
+
+        Retorna:
+            - trainingData: Set de datos de entrenamiento para alimentar el modelo LDA
+            Con forma [trials*clases x number of features]
+            - Labels: labels para entrenar el modelo a partir de las clases
+        """
+
+        numFeatures = features.shape[1]
+        trainingData = features.swapaxes(2,1).reshape(self.nclases*self.ntrials, numFeatures)
+
+        classLabels = np.arange(self.nclases)
+
+        labels = (npm.repmat(classLabels, self.ntrials, 1).T).ravel()
+
+        return trainingData, labels
+
+
     def saveTrainingSignalPSD(self, signalPSD, path, filename = ""):
 
         actualFolder = os.getcwd()#directorio donde estamos actualmente
@@ -201,7 +203,7 @@ class SVMTrainingModule():
         np.savetxt(f'{filename}_signalSampleFrec.txt', self.signalSampleFrec, delimiter=',')
 
         os.chdir(actualFolder)
-
+        
     def saveModel(self, path, filename = ""):
         """Método para guardar el modelo"""
 
@@ -230,6 +232,7 @@ class SVMTrainingModule():
 
         os.chdir(actualFolder)
 
+
 def main():
 
     """Empecemos"""
@@ -252,10 +255,9 @@ def main():
 
     #Filtering de EEG
     PRE_PROCES_PARAMS = {
-                    'fm': fm,
-                    'lfrec': 5.,
-                    'hfrec': 30.,
-                    'order': 6,
+                    'lfrec': 4.,
+                    'hfrec': 38.,
+                    'order': 8,
                     'sampling_rate': fm,
                     'bandStop': 50.,
                     'window': window,
@@ -266,8 +268,8 @@ def main():
 
     FFT_PARAMS = {
                     'resolution': resolution,#0.2930,
-                    'start_frequency': 5.0,
-                    'end_frequency': 30.0,
+                    'start_frequency': 4.0,
+                    'end_frequency': 38.0,
                     'sampling_rate': fm
                     }
 
@@ -289,119 +291,31 @@ def main():
     nsamples = trainSet.shape[1]
     ntrials = trainSet.shape[2]
 
-    #Creo objeto SVMTrainingModule
-    svm = SVMTrainingModule(trainSet, PRE_PROCES_PARAMS, FFT_PARAMS, frecStimulus=frecStimulus,
-    nchannels = 1, nsamples = nsamples, ntrials = ntrials, modelName = "test")
+    lda = LDATrainingModule(trainSet, PRE_PROCES_PARAMS, FFT_PARAMS, frecStimulus=frecStimulus,
+    nchannels = 1, nsamples = nsamples, ntrials = ntrials, modelName = "LDAtest")
     
-    seed = np.random.randint(500) #iniciamos una semilla
-
-    #Creamos modelo SVM
-    modelo = svm.createSVM(kernel = "rbf", gamma = 0.05, C = 24, probability = True, randomSeed = seed)
-
-    anchoVentana = int(fm*5) #fm * segundos
-    ventana = windows.hamming #Usamos ventana Hamming
-
-    sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = 5, bw = 2.0, order = 6, axis = 1)
-
-    metricas = svm.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2, randomSeed = seed)
-    print(metricas)
-
-    ######################################################################
-    ################## Buscando el mejor clasificador ####################
-    ######################################################################
-
-    hiperParams = {"kernels": ["linear", "rbf"],
-        "gammaValues": [1e-2, 1e-1, 1, 1e+1, 1e+2, "scale", "auto"],
-        "CValues": [8e-1,9e-1, 1, 1e2, 1e3]
-        }
-
-    clasificadoresSVM = {"linear": list(),
-                    "rbf": list()
-        }
-
-    rbfResults = np.zeros((len(hiperParams["gammaValues"]), len(hiperParams["CValues"])))
-    linearResults = list()
-
     seed = np.random.randint(100)
 
-    for i, kernel in enumerate(hiperParams["kernels"]):
+    modelo = lda.createLDA(solver = "eigen", shrinkage = "auto")
+    lda.model
 
-        if kernel != "linear":
-            for j, gamma in enumerate(hiperParams["gammaValues"]):
+    anchoVentana = int(fm*5) #fm * segundos
+    ventana = windows.hamming
 
-                for k, C in enumerate(hiperParams["CValues"]):
-                    #Instanciamos el modelo para los hipermarametros
+    sampleFrec, signalPSD  = lda.featuresExtraction(ventana = ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1)
 
-                    svm = SVMTrainingModule(trainSet, PRE_PROCES_PARAMS, FFT_PARAMS, frecStimulus=frecStimulus,
-                            nchannels = 1, nsamples = nsamples, ntrials = ntrials, modelName = "testSVMv2")
+    trainingData, labels = lda.getDataForTraining(signalPSD)
 
-                    modelo = svm.createSVM(kernel = kernel, gamma = gamma, C = C, probability = True, randomSeed = seed)
-
-                    sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = 5, bw = 2.0, order = 6, axis = 1)
-
-                    metricas = svm.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2, randomSeed = seed) #entrenamos el modelo y obtenemos las métricas
-                    accu = metricas["modelo_testSVMv2"]["val"]["Acc"]
-                    rbfResults[j,k] = accu
-
-                    clasificadoresSVM[kernel].append((C, gamma, svm, accu))
-        else:
-            for k, C in enumerate(hiperParams["CValues"]):
-
-                svm = SVMTrainingModule(trainSet, PRE_PROCES_PARAMS, FFT_PARAMS, frecStimulus=frecStimulus,
-                        nchannels = 1, nsamples = nsamples, ntrials = ntrials, modelName = "testSVMv2")
-
-                modelo = svm.createSVM(kernel = kernel, C = C, probability = True, randomSeed = seed)
-
-                sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = 5, bw = 2.0, order = 6, axis = 1)
-
-                metricas = svm.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2, randomSeed = seed)
-
-                accu = metricas["modelo_testSVMv2"]["val"]["Acc"]
-
-                linearResults.append(accu)
-                #predecimos con los datos en Xoptim
-
-                clasificadoresSVM[kernel].append((C, svm, accu))
-
-    plt.figure(figsize=(15,10))
-    plt.imshow(rbfResults)
-    plt.xlabel("Valor de C")
-    plt.xticks(np.arange(len(hiperParams["CValues"])), hiperParams["CValues"])
-    plt.ylabel("Valor de Gamma")
-    plt.yticks(np.arange(len(hiperParams["gammaValues"])), hiperParams["gammaValues"])
-    plt.colorbar()
-
-    for i in range(rbfResults.shape[0]):
-        for j in range(rbfResults.shape[1]):
-            plt.text(j, i, "{:.2f}".format(rbfResults[i, j]), va='center', ha='center')
-    plt.show()
-
-    plt.plot([str(C) for C in hiperParams["CValues"]], np.asarray(linearResults)*100)
-    plt.title("Accuracy para predicciones usando kernel 'linear'")
-    plt.xlabel("Valor de C")
-    plt.ylabel("Accuracy (%)")
-    plt.show()
-
-    #Selecciono dos clasificadores SVM
-    modeloSVM1 = clasificadoresSVM["linear"][3][1]
+    metricas = lda.trainAndValidateLDA(clases = np.arange(0,len(frecStimulus)), test_size = 0.2, randomSeed = seed)
+    print("**** METRICAS ****")
+    print(metricas)
+    
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join(actualFolder,"models")
-    modeloSVM1.saveModel(path, filename = "SVM_test_linear")
-    modeloSVM1.saveTrainingSignalPSD(signalPSD.mean(axis = 2), path = path, filename = "SVM_test_linear")
+    lda.saveModel(path)
+    lda.saveTrainingSignalPSD(signalPSD.mean(axis = 2), path = path, filename = "LDA_WM_testing")
     os.chdir(actualFolder)
 
-    gamma = "scale"
-    C = 100
-
-    for values in clasificadoresSVM["rbf"]:
-        if values[1] == gamma and values[0] == C:
-            modeloSVM2 = values[2] #modelo 2 es un SVM con kernel = rbf
-
-    actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-    path = os.path.join(actualFolder, "models")
-    modeloSVM2.saveModel(path, filename = "SVM_test_rbf")
-    modeloSVM2.saveTrainingSignalPSD(signalPSD.mean(axis = 2), path = path, filename = "SVM_test_rbf")
-    os.chdir(actualFolder)
-
-# if __name__ == "__main__":
-#     main()
+    
+if __name__ == "__main__":
+    main()

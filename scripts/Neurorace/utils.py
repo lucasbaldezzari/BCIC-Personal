@@ -21,9 +21,6 @@ import math
 
 import os
 
-from scipy.fftpack import fft, fftfreq
-import scipy.fftpack
-
 from scipy.signal import butter, filtfilt, iirnotch
     
 def plotEEG(signal, sujeto = 1, trial = 1, blanco = 1,
@@ -75,19 +72,19 @@ def plotEEG(signal, sujeto = 1, trial = 1, blanco = 1,
     if not title:
         title = f"Señal de EEG de sujeto {sujeto}"
     
-    fig.suptitle(title, fontsize=18)
+    fig.suptitle(title, fontsize=11)
     
     axes = axes.reshape(-1)
         
     for canal in range(channelsNums):
         if rmvOffset:
             # signalAvg = np.average(signal[target][canal-1].T[trial-1][:len(t)])
-            signalAvg = np.average(signal[blanco - 1, canal - 1, :len(t), trial - 1])
-        signalScale = (signal[blanco - 1, canal - 1, :len(t), trial - 1] - signalAvg)*scaling 
+            signalAvg = np.average(signal[blanco - 1, canal, :len(t), trial - 1])
+        signalScale = (signal[blanco - 1, canal, :len(t), trial - 1] - signalAvg)*scaling 
         axes[canal].plot(t, signalScale, color = "#e37165")
-        axes[canal].set_xlabel('Tiempo [seg]', fontsize=14) 
-        axes[canal].set_ylabel('Amplitud [uV]', fontsize=14)
-        axes[canal].set_title(f'Sujeto {sujeto} - Blanco {blanco} - Canal {canal + 1}', fontsize=22)
+        axes[canal].set_xlabel('Tiempo [seg]', fontsize=11) 
+        axes[canal].set_ylabel('Amplitud [uV]', fontsize=11)
+        axes[canal].set_title(f'Sujeto {sujeto} - Blanco {blanco} - Canal {canal + 1}', fontsize=11)
         axes[canal].yaxis.grid(True)
 
     if save:
@@ -100,7 +97,7 @@ def plotEEG(signal, sujeto = 1, trial = 1, blanco = 1,
     plt.show()
 
 
-def pasaBanda(signal, lfrec, hfrec, order, fm = 250.0, plot = False):
+def pasaBanda(signal, lfrec, hfrec, order, fm = 250.0, plot = False, axis = 2):
     '''
     Filtra la señal entre las frecuencias de corte lfrec (inferior) y hfrec (superior).
     Filtro del tipo "pasa banda"
@@ -123,11 +120,11 @@ def pasaBanda(signal, lfrec, hfrec, order, fm = 250.0, plot = False):
     low = lfrec / nyquist
     high = hfrec / nyquist
     b, a = butter(order, [low, high], btype='band') #obtengo los parámetros del filtro
-    signalFiltered = filtfilt(b, a, signal, axis = 2) #generamos filtro con los parámetros obtenidos
+    signalFiltered = filtfilt(b, a, signal, axis = axis) #generamos filtro con los parámetros obtenidos
     
     return signalFiltered
 
-def notch(signal, bandStop, fm = 250.0):
+def notch(signal, bandStop, fm = 250.0, axis = 2):
     '''
     Filtra la señal entre las frecuencias de corte lfrec (inferior) y hfrec (superior).
     Filtro del tipo "pasa banda"
@@ -147,12 +144,12 @@ def notch(signal, bandStop, fm = 250.0):
     '''
     
     b, a = iirnotch(bandStop, 30, fm) #obtengo los parámetros del filtro
-    signalFiltered = filtfilt(b, a, signal, axis = 2) #generamos filtro con los parámetros obtenidos
+    signalFiltered = filtfilt(b, a, signal, axis = axis) #generamos filtro con los parámetros obtenidos
     
     return signalFiltered
 
     
-def filterEEG(signal, lfrec, hfrec, orden, bandStop, fm = 250.0):
+def filterEEG(signal, lfrec, hfrec, orden, bandStop, fm = 250.0, axis = 2):
     '''
     Toma una señal de EEG y la filtra entre las frecuencias de corte lfrec (inferior) y hfrec (superior).
 
@@ -167,12 +164,10 @@ def filterEEG(signal, lfrec, hfrec, orden, bandStop, fm = 250.0):
         - retorna la señal filtrada de la forma (numpy.ndarray)[númeroClases, númeroCanales, númeroMuestras, númeroTrials]
     '''
     
-    signalFiltered = notch(signal, bandStop = 50.0, fm = fm)
-    signalFiltered = pasaBanda(signal, lfrec, hfrec, orden, fm)
+    signalFiltered = notch(signal, bandStop = 50.0, fm = fm, axis = axis)
+    signalFiltered = pasaBanda(signal, lfrec, hfrec, orden, fm, axis = axis)
                 
     return signalFiltered
-    # return signalFiltered
-
 
 def ventaneo(data, duration, solapamiento):
     '''
@@ -422,8 +417,13 @@ def barPlotSubjects(medias, varianzas,
             
         os.chdir(pathACtual)
 
-# def transformDataToGetFeatures(eeg):
-#     rawEEG = eeg.reshape(1,eeg.shape[0],eeg.shape[1],eeg.shape[2])
-#     # rawEEG = rawEEG.swapaxes(1,2).swapaxes(2,3)
-#     # dictionary["eeg"] = rawEEG
-#     # fa.classifyData(path = path,dictionary = dictionary, fileName = dictionary["subject"])
+def norm_mean_std(eeg):
+    mean = eeg.mean(axis=2, keepdims=True)
+    std_dev = eeg.mean(axis=2, keepdims=True)
+    return (eeg - mean)/std_dev
+
+# def norm_min_max(eeg):
+#     return (eeg - np.min(eeg)) / (np.max(eeg)-np.min(eeg))
+
+# def norm_linear(eeg):
+#     return eeg / np.max(eeg)

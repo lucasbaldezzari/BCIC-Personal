@@ -1,68 +1,57 @@
-"""
-Created on Fri Sep 10 17:46:17 2021
-
-@author: Lucas Baldezzari
-
-LogRegClassifier: Clase que permite usar un clasificador
-por Logistic Regression para clasificar SSVEPs a partir de datos de EEG
-
-Versión: 2.0
-************ VERSIÓN SCP-01-RevA ************
-"""
-
 import os
+
 import numpy as np
 import numpy.matlib as npm
+import matplotlib.pyplot as plt
+from sklearn.model_selection import KFold
+import fileAdmin as fa
 import pandas as pd
-import json
 
-import pickle
+from tensorflow.keras.models import model_from_json
 
 from scipy.signal import butter, filtfilt, windows
 from scipy.signal import welch
 
-import matplotlib.pyplot as plt
-
 from utils import filterEEG
-import fileAdmin as fa
+import pickle
 
-class LogRegClassifier():
-    def __init__(self, modelFile, frecStimulus,
-                    PRE_PROCES_PARAMS, FFT_PARAMS, nsamples, path = "models"):
+class CNNClassifier():
+    
+    def __init__(self, modelFile, weightFile, frecStimulus, nchannels,nsamples,ntrials,
+                 PRE_PROCES_PARAMS, FFT_PARAMS, classiName = "", path = "models"):
+        """
+        Some important variables configuration and initialization in order to implement a CNN 
+        model for CLASSIFICATION.
+        
+        Args:
+            - modelFile: File's name to load the pre trained model.
+            - weightFile: File's name to load the pre model's weights
+            - PRE_PROCES_PARAMS: The params used in order to pre process the raw EEG.
+            - FFT_PARAMS: The params used in order to compute the FFT
+            - CNN_PARAMS: The params used for the CNN model.
+        """
 
-        """Cosntructor de clase
-        Argumentos:
-            - modelFile: Nombre del archivo que contiene el modelo a cargar
-            - frecStimulus: Lista con las frecuencias a clasificar
-            - PRE_PROCES_PARAMS: Parámetros para preprocesar los datos de EEG
-            - FFT_PARAMS: Parametros para computar la FFT
-            -path: Carpeta donde esta guardado el modelo a cargar"""
-        
-        self.modelName = modelFile
-        
-        actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio featureVector
+        actualFolder = os.getcwd()#directorio donde estamos actualmente
         os.chdir(path)
-        
-        with open(self.modelName, 'rb') as file:
-            self.model = pickle.load(file)
+
+        # load model from JSON file
+        with open(f"{modelFile}.json", "r") as json_file:
+            model = json_file.read()
+            self.model = model_from_json(model)
             
+        self.model.load_weights(f"{weightFile}.h5")
+        self.model.make_predict_function()
+
         os.chdir(actualFolder)
         
         self.frecStimulus = frecStimulus
         self.nclases = len(frecStimulus)
-        self.nsamples = nsamples
+        self.nchannels = nchannels #ex nchannels
+        self.nsamples = nsamples #ex nsamples
+        self.ntrials = ntrials #ex ntrials
         
-        self.rawDATA = None
-        self.signalPSD = None
-        self.signalSampleFrec = None
-        self.signalPSDCentroid = None
-        self.featureVector = None
+        self.classiName = classiName #Classfier object name
         
-        self.traingSigPSD = None
-        self.trainSampleFrec = None
-        self.trainPSDCent = []
-        self.trainPSDDist = []
-
         #Setting variables for EEG processing.
         self.PRE_PROCES_PARAMS = PRE_PROCES_PARAMS
         self.FFT_PARAMS = FFT_PARAMS
@@ -98,7 +87,6 @@ class LogRegClassifier():
             signalFilteredbyBank[clase] = filtfilt(b, a, eeg) #filtramos
 
         self.dataBanked = signalFilteredbyBank.mean(axis = 0)
-
         return self.dataBanked
 
     def computWelchPSD(self, signalBanked, fm, ventana, anchoVentana, average = "median", axis = 1):
@@ -148,16 +136,23 @@ class LogRegClassifier():
 
         self.featureVector = self.pearsonFilter()
 
+        numFeatures = self.featureVector.shape[0]
+        self.featureVector = self.featureVector.reshape(1,1,numFeatures,1)
+
         return self.featureVector
 
     def getClassification(self, featureVector):
-        """Método para clasificar y obtener una frecuencia de estimulación a partir del EEG
-        Argumentos:
-            - rawEEG(matriz de flotantes [canales x samples]): Señal de EEG"""
-
-        predicted = self.model.predict(featureVector.reshape(1, -1))
+        """
+        Method used to classify new data.
         
-        return self.frecStimulus[predicted[0]]
+        Args:
+            - dataForClassification: Data for classification. The shape must be
+            []
+        """
+        self.preds = self.model.predict(featureVector)
+        
+        return self.frecStimulus[np.argmax(self.preds[0])]
+        # return np.argmax(self.preds[0]) #máximo índice
 
 
 def main():
@@ -180,6 +175,11 @@ def main():
     filesRun2 = ["S3_R2_S2_E6","S3-R2-S1-E7", "S3-R2-S1-E8","S3-R2-S1-E9"]
     run2 = fa.loadData(path = path, filenames = filesRun2)
 
+    #Abrimos archivos
+    modelName = "cnntesting"
+    modelFile = f"{modelName}.h5" #nombre del modelo
+    PRE_PROCES_PARAMS, FFT_PARAMS = fa.loadPArams(modelName = modelName, path = os.path.join(actualFolder,"models"))
+
     def joinData(allData, stimuli, channels, samples, trials):
         joinedData = np.zeros((stimuli, channels, samples, trials))
         for i, sujeto in enumerate(allData):
@@ -199,33 +199,44 @@ def main():
     ntrials = testSet.shape[2]
 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
+    
     path = os.path.join(actualFolder,"models")
 
-    #Abrimos archivos
-    modelName = "LogReg_WM_testing"
-    modelFile = f"{modelName}.pkl" #nombre del modelo
-    PRE_PROCES_PARAMS, FFT_PARAMS = fa.loadPArams(modelName = modelName, path = os.path.join(actualFolder,"models"))
+    # Cargamos modelo previamente entrenado
+    modefile = "cnntesting"
+    path = os.path.join(actualFolder,"models")
+    cnn = CNNClassifier(modelFile = modefile,
+                    weightFile = "bestWeightss_cnntesting",
+                    frecStimulus = frecStimulus.tolist(),
+                    nchannels = 1,nsamples = nsamples,ntrials = ntrials,
+                    PRE_PROCES_PARAMS = PRE_PROCES_PARAMS,
+                    FFT_PARAMS = FFT_PARAMS,
+                    classiName = f"CNN_Classifier", path = path)
 
-    logreg = LogRegClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, nsamples = nsamples, path = path) #cargamos clasificador entrenado
-    logreg.loadTrainingSignalPSD(filename = "LogReg_WM_testing_signalPSD.txt", path = path) #cargamos el PSD de mis datos de entrenamiento
+    cnn.loadTrainingSignalPSD(filename = "cnntesting_signalPSD.txt", path = path) #cargamos el PSD de mis datos de entrenamiento
 
-    clase = 4
+    anchoVentana = int(fm*5) #fm * segundos
+    ventana = windows.hamming
+
+    clase = 2
     trial = 6
 
     rawDATA = testSet[clase-1,:,trial-1]
 
-    featureVector = logreg.extractFeatures(rawDATA = rawDATA, ventana = windows.hamming, anchoVentana = 5, bw = 2.0, order = 4, axis = 0)
+    #extrameos características
+    featureVector  = cnn.extractFeatures(rawDATA = rawDATA, ventana = ventana, anchoVentana = 5, bw = 1.0, order = 4, axis = 0)
 
-    print("Freceuncia clasificada:", logreg.getClassification(featureVector = featureVector))
+    cnn.getClassification(featureVector = featureVector)
 
-    trials = 6
-    predicciones = np.zeros((len(frecStimulus),trials))
+    ### Realizamos clasificación sobre mis datos de testeo. Estos nunca fueron vistos por el clasificador ###
+    trials = 6 #cantidad de trials
+    predicciones = np.zeros((len(frecStimulus),trials)) #donde almacenaremos las predicciones
 
     for i, clase in enumerate(np.arange(len(frecStimulus))):
         for j, trial in enumerate(np.arange(trials)):
-            data = testSet[clase, :, trial]
-            featureVector = logreg.extractFeatures(rawDATA = data, ventana = windows.hamming, anchoVentana = 5, bw = 2.0, order = 4, axis = 0)
-            classification = logreg.getClassification(featureVector = featureVector)
+            rawDATA = testSet[clase, :, trial]
+            featureVector  = cnn.extractFeatures(rawDATA = rawDATA, ventana = ventana, anchoVentana = 5, bw = 1.0, order = 4, axis = 0)
+            classification = cnn.getClassification(featureVector = featureVector)
             if classification == frecStimulus[clase]:
                 predicciones[i,j] = 1
 
@@ -236,8 +247,11 @@ def main():
 
     predictions['promedio'] = predictions.mean(numeric_only=True, axis=1)
     
-    print(f"Predicciones usando el modelo Regresión Logística {modelFile}")
+    print(f"Predicciones usando el modelo SVM {modefile}")
     print(predictions)
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
+
+
+

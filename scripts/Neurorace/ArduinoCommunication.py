@@ -296,18 +296,18 @@ def main():
     #En el caso de querer ejecutar Trials de manera indeterminada,
     #debe hacerse trials = None (default)
     """
-    ard = ArduinoCommunication('COM6', trialDuration = 5, stimONTime = 3,
-                               timing = 100, ntrials = 3)
+    ard = ArduinoCommunication('COM6', trialDuration = 8, stimONTime = 4,
+                               timing = 100, ntrials = 1)
     time.sleep(1)
     ard.iniSesion()
 
     #Simulamos que enviamos el comando de movimiento número cuatro
-    ard.systemControl[2] = ard.movements[1] #comando número 4 (b'3')
+    ard.systemControl[2] = ard.movements[3] #comando número 4 (b'1') [b'0',b'1',b'2',b'3',b'4',b'5']
     
     while ard.generalControl() == b"1":
         pass
 
-    #ard.endSesion()   
+    ard.endSesion()   
     ard.close() #cerramos comunicación serie y liberamos puerto COM
     
     stopTime = time.time()#/1000
