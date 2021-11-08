@@ -106,7 +106,13 @@ def main():
     x (CHANNEL, POWER_DOWN, GAIN_SET, INPUT_TYPE_SET, BIAS_SET, SRB2_SET, SRB1_SET) X
 
     Doc: https://docs.openbci.com/Cyton/CytonSDK/#channel-setting-commands
+    Doc: https://docs.openbci.com/Ganglion/GanglionSDK/
     """
+
+    if placa == BoardIds.GANGLION_BOARD.value:
+        mensaje = board_shim.config_board("1,2,3,4") #apagamos los canales 3 y 4
+        time.sleep(1)
+        print("Respuesta Ganglion:", mensaje)
 
     if placa == BoardIds.CYTON_BOARD.value:
         if electrodos == "pasivos":
@@ -147,10 +153,10 @@ def main():
 
     """Defino variables para control de Trials"""
     
-    trials = 5 #cantidad de trials. Sirve para la sesión de entrenamiento.
+    trials = 1 #cantidad de trials. Sirve para la sesión de entrenamiento.
     #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
-    trialDuration = 8 #secs
-    stimuliDuration = 3 #secs
+    trialDuration = 6 #secs
+    stimuliDuration = 5 #secs
 
     saveData = True
     
@@ -172,7 +178,7 @@ def main():
     """
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
     #En este ejemplo esta conectada en el COM3
-    arduino = AC('COM8', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM16', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
     time.sleep(1) 
     
@@ -181,7 +187,7 @@ def main():
     #El siguiente diccionario se usa para guardar información relevante cómo así también los datos de EEG
     #registrados durante la sesión de entrenamiento.
     dictionary = {
-                'subject': 'lucasB_leds_20hz_ganglion_pasivos_3seg',
+                'subject': 'testing',
                 'date': '5/11/2021',
                 'generalInformation': 'Ganglion. Estimulos LED. Ganancia en 8',
                 'stimFrec': "20",
