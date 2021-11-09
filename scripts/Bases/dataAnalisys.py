@@ -47,20 +47,20 @@ actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener e
 path = os.path.join(actualFolder,"recordedEEG")
 
 trials = 15
-fm = 250.
+fm = 200.
 duration = 5 #sec
 samplePoints = int(fm*duration)
 channels = 4
 
 subjects = [1]
-filenames = ["lucasB_leds_14hz_g24_pasivos","lucasB_leds_17hz_g12_pasivos","lucasB_leds_20hz_g14_pasivos"]
+filenames = ["ganglion_activo_234off_9hz_2","ganglion_activo_34off_14hz","ganglion_activo_234off_17hz","ganglion_activo_234off_14hz_2"]
 allData = fa.loadData(path = path, filenames = filenames)
 
-name = "lucasB_leds_17hz_g12_pasivos" #nombre de los datos a analizar}
+name = "ganglion_activo_234off_9hz_2" #nombre de los datos a analizar}
 stimuli = [7,14] #lista de estímulos
-estim = [17] #L7e pasamos un estímulo para que grafique una linea vertical
+estim = [9] #L7e pasamos un estímulo para que grafique una linea vertical
 
-eeg = allData[name]['eeg'][:,:2,:,:]
+eeg = allData[name]['eeg'][:,:1,int(fm*1):,:]
 
 #Chequeamos información del registro eeg 1
 print(allData[name]["generalInformation"])
@@ -68,12 +68,25 @@ print(f"Forma de los datos {eeg.shape}")
 
 #Filtramos la señal de eeg para eeg 1
 
+plt.plot(eeg[0,0,:,0])
+plt.show()
+
+mean = eeg.mean(axis = 2)
+
+for clase in range(mean.shape[0]):
+        for canal in range(mean.shape[1]):
+                for trial in range(mean.shape[2]):
+                      eeg[clase, canal, :, trial] =   eeg[clase, canal, :, trial] - mean[clase, canal, trial]
+
+plt.plot(eeg[0,0,:,0])
+plt.show()
+
 resolution = np.round(fm/eeg.shape[2], 4)
 
 PRE_PROCES_PARAMS = {
-                'lfrec': 12.,
-                'hfrec': 30.,
-                'order': 3,
+                'lfrec': 7.,
+                'hfrec': 20.,
+                'order': 6,
                 'sampling_rate': fm,
                 'window': duration,
                 'shiftLen':duration
@@ -81,8 +94,8 @@ PRE_PROCES_PARAMS = {
 
 FFT_PARAMS = {
                 'resolution': resolution,
-                'start_frequency': 12.,
-                'end_frequency': 30.0,
+                'start_frequency': 0.,
+                'end_frequency': 20.0,
                 'sampling_rate': fm
                 }
 
@@ -99,50 +112,31 @@ eegSegmented = segmentingEEG(eegFiltered, PRE_PROCES_PARAMS["window"],
                              PRE_PROCES_PARAMS["sampling_rate"])
 
 MSF1 = computeMagnitudSpectrum(eegSegmented, FFT_PARAMS)
+C = computeComplexSpectrum(eegSegmented, FFT_PARAMS)
+
+fft_axis = np.arange(MSF1.shape[0]) * resolution
+plt.plot(fft_axis, MSF1[:,0,0,2,0])
+plt.show()
 
 
 ########################################################################
 #Graficamos espectro para los cuatro canales para un trial en particular
 ########################################################################
-
-canales = [1,2,3,4]
-trial = 2
-
-title = f"Espectro - Trial número {trial} - sujeto {name}"
-fig, plots = plt.subplots(2, 2, figsize=(16, 14), gridspec_kw=dict(hspace=0.45, wspace=0.3))
-plots = plots.reshape(-1)
-fig.suptitle(title, fontsize = 16)
-
-for canal in range(len(canales)):
-        fft_axis = np.arange(MSF1.shape[0]) * resolution
-        plots[canal].plot(fft_axis + FFT_PARAMS["start_frequency"],
-                                MSF1[:, canal, 0, trial - 1, 0] , color = "#403e7d")
-        plots[canal].set_xlabel('Frecuencia [Hz]')
-        plots[canal].set_ylabel('Amplitud [uV]')
-        plots[canal].set_title(f'Estímulo {estim[0]} Hz del sujeto canal {canal + 1}')
-        plots[canal].xaxis.grid(True)
-        plots[canal].axvline(x = estim[0], ymin = 0., ymax = max(fft_axis),
-                                label = "Frec. Estímulo",
-                                linestyle='--', color = "#e37165", alpha = 0.9)
-        plots[canal].legend()
-
-plt.show()
-
-
 ## TODO
 ## Quedarme con los dos primeros canales. Promediar sobre los dos primeros canales. Aplicar banco de filtros. Aplicar Welch.
+
 ventana = windows.hamming
 anchoVentana = 1
-frecStimulus = np.array([14, 17, 20])
+frecStimulus = np.array([8,9])
 nclases = len(frecStimulus)
 nsamples = int(duration*fm)
 
 eegFiltered = eegFiltered.reshape(eegFiltered.shape[1],eegFiltered.shape[2], eegFiltered.shape[3])
 avgeeg = eegFiltered.mean(axis = 0)
 
-trial = 2
+trial = 5
 
-databanked = applyFilterBank(avgeeg, frecStimulus, bw = 3, order = 4, axis = 0)
+databanked = applyFilterBank(avgeeg, frecStimulus, bw = 2, order = 4, axis = 0)
 
 # plt.plot(databanked[1])
 # plt.show()
@@ -151,7 +145,7 @@ signalSampleFrec, signalPSD = computWelchPSD(databanked, fm, ventana, anchoVenta
 
 plt.plot(signalSampleFrec, signalPSD.mean(axis = 2)[0])
 plt.plot(signalSampleFrec, signalPSD.mean(axis = 2)[1])
-plt.plot(signalSampleFrec, signalPSD.mean(axis = 2)[2])
+# plt.plot(signalSampleFrec, signalPSD.mean(axis = 2)[2])
 plt.show()
 
 # plt.plot(signalSampleFrec, signalPSD.mean(axis = 2).swapaxes(0,1))

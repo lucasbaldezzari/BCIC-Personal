@@ -99,7 +99,7 @@ def main():
     board_shim.prepare_session()
     time.sleep(1) #esperamos 2 segundos
 
-    #### CONFIGURAMOS LA PLACA CYTON ######
+    #### CONFIGURAMOS LA PLACA CYTON O GANGLION######
     """
     IMPORTANTE: No tocar estos parámetros.
     El string es:
@@ -110,9 +110,10 @@ def main():
     """
 
     if placa == BoardIds.GANGLION_BOARD.value:
-        mensaje = board_shim.config_board("1,2,3,4") #apagamos los canales 3 y 4
-        time.sleep(1)
-        print("Respuesta Ganglion:", mensaje)
+        canalesAdesactivar = ["2","3","4"]
+        for canal in canalesAdesactivar:
+            board_shim.config_board(canal) #apagamos los canales 3 y 4
+            time.sleep(1)
 
     if placa == BoardIds.CYTON_BOARD.value:
         if electrodos == "pasivos":
@@ -153,9 +154,9 @@ def main():
 
     """Defino variables para control de Trials"""
     
-    trials = 1 #cantidad de trials. Sirve para la sesión de entrenamiento.
+    trials = 5 #cantidad de trials. Sirve para la sesión de entrenamiento.
     #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
-    trialDuration = 6 #secs
+    trialDuration = 10 #secs
     stimuliDuration = 5 #secs
 
     saveData = True
@@ -178,7 +179,7 @@ def main():
     """
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
     #En este ejemplo esta conectada en el COM3
-    arduino = AC('COM16', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM8', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
     time.sleep(1) 
     
@@ -187,11 +188,11 @@ def main():
     #El siguiente diccionario se usa para guardar información relevante cómo así también los datos de EEG
     #registrados durante la sesión de entrenamiento.
     dictionary = {
-                'subject': 'testing',
-                'date': '5/11/2021',
-                'generalInformation': 'Ganglion. Estimulos LED. Ganancia en 8',
-                'stimFrec': "20",
-                'channels': [1,2,3,4], 
+                'subject': 'ganglion_activo_234off_9hz_2',
+                'date': '9/11/2021',
+                'generalInformation': 'Ganglion. Estimulos LED.',
+                'stimFrec': "9",
+                'channels': [1], 
                  'dataShape': [stimuli, channels, samplePoints, trials],
                   'eeg': None
                     }
