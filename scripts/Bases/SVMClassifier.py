@@ -2,6 +2,7 @@
 
 
 import os
+from types import new_class
 import numpy as np
 import numpy.matlib as npm
 import pandas as pd
@@ -219,8 +220,15 @@ def main():
 
     testSet = np.mean(testSet, axis = 1) #promedio sobre los canales. Forma datos ahora [clases, samples, trials]
 
+    nclases = testSet.shape[0]
     nsamples = testSet.shape[1]
     ntrials = testSet.shape[2]
+
+    mean = testSet.mean(axis = 1)
+
+    for clase in range(nclases):
+            for trial in range(ntrials):
+                testSet[clase, :, trial] =   testSet[clase, :, trial] - mean[clase, trial]
 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join(actualFolder,"models")
@@ -266,6 +274,6 @@ def main():
     print(f"Predicciones usando el modelo SVM {modelFile}")
     print(predictions)
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()
 

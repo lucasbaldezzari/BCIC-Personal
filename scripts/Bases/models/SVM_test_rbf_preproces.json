@@ -1,1 +1,1 @@
-{"lfrec": 5.0, "hfrec": 30.0, "order": 6, "sampling_rate": 200.0, "bandStop": 50.0, "window": 5, "shiftLen": 5}
+{"fm": 200.0, "lfrec": 5.0, "hfrec": 30.0, "order": 6, "sampling_rate": 200.0, "bandStop": 50.0, "window": 5, "shiftLen": 5}

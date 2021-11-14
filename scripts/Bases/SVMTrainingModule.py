@@ -6,11 +6,15 @@ import numpy as np
 import numpy.matlib as npm
 import json
 
+from sklearn.preprocessing import StandardScaler
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+
 from sklearn.metrics import accuracy_score
 from sklearn.svm import SVC
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import precision_recall_fscore_support
+
 
 from scipy.signal import butter, filtfilt, windows
 from scipy.signal import welch
@@ -57,6 +61,8 @@ class SVMTrainingModule():
 
         self.signalPSD = None #PSD de mis datos
         self.signalSampleFrec = None
+
+        # self.lda = LinearDiscriminantAnalysis(n_components = self.nclases - 1)
 
         self.MSF = np.array([]) #Magnitud Spectrum Features
 
@@ -146,7 +152,7 @@ class SVMTrainingModule():
 
         return trainingData, labels
 
-    def trainAndValidateSVM(self, clases, test_size = 0.2, randomSeed = None):
+    def trainAndValidateSVM(self, clases, test_size = 0.2, randomSeed = None, applyLDA = False):
         """Método para entrenar un modelo SVM.
 
         Argumentos:
@@ -159,7 +165,12 @@ class SVMTrainingModule():
 
         X_trn, X_val, y_trn, y_val = train_test_split(self.trainingData, self.labels, test_size = test_size, shuffle = True, random_state = randomSeed)
 
-        self.model.fit(X_trn,y_trn)
+        # if applyLDA == True:
+        #     self.lda.fit(X_trn, y_trn)
+        #     X_trn = self.lda.transform(X_trn)
+        #     X_val = self.lda.transform(X_val)
+
+        self.model.fit(X_trn, y_trn)
 
         y_pred = self.model.predict(X_trn)
 
@@ -218,6 +229,11 @@ class SVMTrainingModule():
 
         with open(filename, 'wb') as file:
             pickle.dump(self.model, file)
+
+        # #Guardamos el modelo LDA en el caso de haber usado LDA
+        # if self.PRE_PROCES_PARAMS["lda"] == True:
+        #     with open(f"lda_for_{filename}", 'wb') as file:
+        #         pickle.dump(self.lda, file)
 
         #Guardamos los parámetros usados para entrenar el SVM
         file = open(f"{modelName}_preproces.json", "w")
@@ -282,12 +298,23 @@ def main():
     run2JoinedData = joinData(run2, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
 
     trainSet = np.concatenate((run1JoinedData[:,:,:,:12], run2JoinedData[:,:,:,:12]), axis = 3)
-    trainSet = trainSet[:,:2,:,:] #nos quedamos con los primeros dos canales
+    trainSet = trainSet[:,:1,:,:] #nos quedamos con los primeros dos canales
 
     trainSet = np.mean(trainSet, axis = 1) #promedio sobre los canales. Forma datos ahora [clases, samples, trials]
 
+    #Aplicamos StandarScaler
+    # for clase in range(clases):
+    #     trainSet[clase] = StandardScaler().fit_transform(trainSet[clase]).reshape(samples, trials)
+
+    nclases = trainSet.shape[0]
     nsamples = trainSet.shape[1]
     ntrials = trainSet.shape[2]
+
+    #Restamos la media de la señal
+    mean = trainSet.mean(axis = 1)
+    for clase in range(nclases):
+            for trial in range(ntrials):
+                trainSet[clase, :, trial] =   trainSet[clase, :, trial] - mean[clase, trial]
 
     #Creo objeto SVMTrainingModule
     svm = SVMTrainingModule(trainSet, PRE_PROCES_PARAMS, FFT_PARAMS, frecStimulus=frecStimulus,
@@ -403,5 +430,5 @@ def main():
     modeloSVM2.saveTrainingSignalPSD(signalPSD.mean(axis = 2), path = path, filename = "SVM_test_rbf")
     os.chdir(actualFolder)
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()
