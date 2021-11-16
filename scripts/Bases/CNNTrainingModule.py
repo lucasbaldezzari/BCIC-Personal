@@ -426,8 +426,15 @@ def main():
     **********************************************************************
     """
 
+    nclases = trainSet.shape[0]
     nsamples = trainSet.shape[1]
     ntrials = trainSet.shape[2]
+
+    #Restamos la media de la señal
+    mean = trainSet.mean(axis = 1)
+    for clase in range(nclases):
+            for trial in range(ntrials):
+                trainSet[clase, :, trial] =   trainSet[clase, :, trial] - mean[clase, trial]
 
     #Make a CNNTrainingModule object in order to use the data's Magnitude Features
     cnn = CNNTrainingModule(trainSet, PRE_PROCES_PARAMS = PRE_PROCES_PARAMS, FFT_PARAMS = FFT_PARAMS, CNN_PARAMS = CNN_PARAMS,
