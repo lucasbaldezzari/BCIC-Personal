@@ -31,7 +31,7 @@ import time
 import logging
 import numpy as np
 
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 # import pyqtgraph as pg
 # from pyqtgraph.Qt import QtGui, QtCore
@@ -85,11 +85,10 @@ def cargarClasificador(modelo, modelName, signalPSDName,frecStimulus, nsamples, 
 
     return clasificador
 
-def clasificar(rawEEG, modelo, clasificador, canalesElegidos = 2, anchoVentana = 5, bw = 2., order = 6, axis = 0):
+def clasificar(rawEEG, modelo, clasificador, anchoVentana = 5, bw = 2., order = 6, axis = 0):
 
     #### TO DO: Agregar los clasificadores que faltan. ###
     
-    rawEEG = rawEEG[:canalesElegidos,:]
     rawEEG = np.mean(rawEEG, axis = 0)
 
     if modelo == "SVM":
@@ -117,9 +116,13 @@ def main():
               "ganglion": BoardIds.GANGLION_BOARD, #IMPORTANTE: frecuencia muestro 200Hz
               "synthetic": BoardIds.SYNTHETIC_BOARD}
     
-    placa = placas["ganglion"]
+    placa = placas["synthetic"]
+    electrodos = "pasivos"
 
-    trials = 3 #None implica que se ejecutaran trials de manera indeterminada
+    cantCanalesAUsar = 2 #Cantidad de canales a utilizar
+    canalesAUsar = [1,1] #Seleccionamos canal uno y dos. NOTA: Si quisieramos elegir el canal 2 solamente debemos hacer [2,2] o [1,1] para elegir el canal 1
+
+    trials = 2 #None implica que se ejecutaran trials de manera indeterminada
     trialDuration = 10 #secs #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
     stimuliDuration = 5 #secs
 
@@ -139,19 +142,19 @@ def main():
     ##########################################################################################"""
 
     #### Cargamos clasificador SVM ###
-    # modelName = "SVM_test_linear" #Nombre archivo que contiene el modelo SVM
-    # signalPSDName = "SVM_test_linear_signalPSD.txt"
-    # modeloClasificador = "SVM"
-    # clasificador = cargarClasificador(modelo = modeloClasificador, modelName = modelName, signalPSDName = signalPSDName,
-    #                                 frecStimulus = frecStimulus, nsamples = nsamples, path = path)
-
-    ## Cargamos clasificador CNN ###
-    modeloClasificador = "CNN"
-    modelName = "cnntesting"
-    modelFile = f"{modelName}.h5" #nombre del modelo
-    signalPSDName = "cnntesting_signalPSD.txt"
+    modelName = "SVM_test_linear" #Nombre archivo que contiene el modelo SVM
+    signalPSDName = "SVM_test_linear_signalPSD.txt"
+    modeloClasificador = "SVM"
     clasificador = cargarClasificador(modelo = modeloClasificador, modelName = modelName, signalPSDName = signalPSDName,
                                     frecStimulus = frecStimulus, nsamples = nsamples, path = path)
+
+    ## Cargamos clasificador CNN ###
+    # modeloClasificador = "CNN"
+    # modelName = "cnntesting"
+    # modelFile = f"{modelName}.h5" #nombre del modelo
+    # signalPSDName = "cnntesting_signalPSD.txt"
+    # clasificador = cargarClasificador(modelo = modeloClasificador, modelName = modelName, signalPSDName = signalPSDName,
+    #                                 frecStimulus = frecStimulus, nsamples = nsamples, path = path)
 
     """ ##########################################################################################
     PASO 3: INICIO DE CARGA DE PARÁMETROS PARA PLACA OPENBCI
@@ -205,19 +208,54 @@ def main():
     
     board_shim = BoardShim(args.board_id, params) #genero un objeto para control de placas de Brainflow
     board_shim.prepare_session()
-    time.sleep(2) #esperamos 2 segundos
+    time.sleep(1) #esperamos 2 segundos
 
+    #### CONFIGURAMOS LA PLACA CYTON O GANGLION######
     """
     IMPORTANTE: No tocar estos parámetros.
     El string es:
     x (CHANNEL, POWER_DOWN, GAIN_SET, INPUT_TYPE_SET, BIAS_SET, SRB2_SET, SRB1_SET) X
 
     Doc: https://docs.openbci.com/Cyton/CytonSDK/#channel-setting-commands
+    Doc: https://docs.openbci.com/Ganglion/GanglionSDK/
     """
 
+    if placa == BoardIds.GANGLION_BOARD.value:
+        canalesAdesactivar = ["2","3","4"]
+        for canal in canalesAdesactivar:
+            board_shim.config_board(canal) #apagamos los canales 3 y 4
+            time.sleep(1)
+
     if placa == BoardIds.CYTON_BOARD.value:
-        board_shim.config_board("x1020110Xx2020110Xx3101000Xx4101000Xx5101000Xx6101000Xx7101000Xx8101000X")
-        time.sleep(4)
+        if electrodos == "pasivos":
+            configCanalesCyton = {
+                "canal1": "x1060110X", #ON|Ganancia 24x|Normal input|Connect from Bias|
+                "canal2": "x2060110X", #ON|Ganancia 24x|Normal input|Connect from Bias|
+                "canal3": "x3101000X", #Canal OFF
+                "canal4": "x4101000X", #Canal OFF
+                "canal5": "x5101000X", #Canal OFF
+                "canal6": "x6101000X", #Canal OFF
+                "canal7": "x7101000X", #Canal OFF
+                "canal8": "x8101000X", #Canal OFF
+            }
+            for config in configCanalesCyton:
+                board_shim.config_board(configCanalesCyton[config])
+                time.sleep(0.5)
+
+        if electrodos == "activos":
+            configCanalesCyton = {
+                "canal1": "x1040110X", #ON|Ganancia 8x|Normal input|Connect from Bias|
+                "canal2": "x2040110X", #ON|Ganancia 8x|Normal input|Connect from Bias|
+                "canal3": "x3101000X", #Canal OFF
+                "canal4": "x4101000X", #Canal OFF
+                "canal5": "x5101000X", #Canal OFF
+                "canal6": "x6101000X", #Canal OFF
+                "canal7": "x7101000X", #Canal OFF
+                "canal8": "x8101000X", #Canal OFF
+            }
+            for config in configCanalesCyton:
+                board_shim.config_board(configCanalesCyton[config])
+                time.sleep(0.5)
 
     """ ##########################################################################################
     PASO 4: Iniciamos la recepción de dataos desde la placa OpenBCI
@@ -242,7 +280,7 @@ def main():
     ##########################################################################################"""
 
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
-    arduino = AC('COM7', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM9', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
 
     time.sleep(1) 
@@ -251,15 +289,19 @@ def main():
 
     try:
         while arduino.generalControl() == b"1":
+
             if classifyData and arduino.systemControl[1] == b"0":
                 rawEEG = data_thread.getData(stimuliDuration)
-                frecClasificada = clasificar(rawEEG, modeloClasificador, clasificador, canalesElegidos = 2, anchoVentana = stimuliDuration, bw = 2., order = 6, axis = 0)
+                rawEEG = rawEEG[canalesAUsar[0]-1:canalesAUsar[1], :]
+                rawEEG = rawEEG - rawEEG.mean(axis = 1, keepdims=True)
+                print(rawEEG.shape)
+                frecClasificada = clasificar(rawEEG, modeloClasificador, clasificador, anchoVentana = stimuliDuration, bw = 2., order = 6, axis = 0)
                 print(f"Comando a enviar {movements[listaEstims.index(frecClasificada)]}. Frecuencia {frecClasificada}")
                 arduino.systemControl[2] = b"1"#movements[listaEstims.index(int(frecClasificada))]#movements[3]
                 esadoRobot = arduino.sendMessage(arduino.systemControl)
                 classifyData = False
+
             elif classifyData == False and arduino.systemControl[1] == b"1":
-                # arduino.systemControl[2] = movements[3]
                 classifyData = True
         
     except BaseException as e:
@@ -271,6 +313,6 @@ def main():
             board_shim.release_session()
             
         arduino.close() #cierro comunicación serie para liberar puerto COM
-        
+
 if __name__ == "__main__":
         main()
