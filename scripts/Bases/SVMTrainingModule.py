@@ -302,19 +302,11 @@ def main():
 
     trainSet = np.mean(trainSet, axis = 1) #promedio sobre los canales. Forma datos ahora [clases, samples, trials]
 
-    #Aplicamos StandarScaler
-    # for clase in range(clases):
-    #     trainSet[clase] = StandardScaler().fit_transform(trainSet[clase]).reshape(samples, trials)
-
-    nclases = trainSet.shape[0]
     nsamples = trainSet.shape[1]
     ntrials = trainSet.shape[2]
 
     #Restamos la media de la señal
-    mean = trainSet.mean(axis = 1)
-    for clase in range(nclases):
-            for trial in range(ntrials):
-                trainSet[clase, :, trial] =   trainSet[clase, :, trial] - mean[clase, trial]
+    trainSet = trainSet - trainSet.mean(axis = 1, keepdims=True)
 
     #Creo objeto SVMTrainingModule
     svm = SVMTrainingModule(trainSet, PRE_PROCES_PARAMS, FFT_PARAMS, frecStimulus=frecStimulus,

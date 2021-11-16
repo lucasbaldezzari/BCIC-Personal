@@ -288,15 +288,11 @@ def main():
 
     trainSet = np.mean(trainSet, axis = 1) #promedio sobre los canales. Forma datos ahora [clases, samples, trials]
 
-    nclases = trainSet.shape[0]
     nsamples = trainSet.shape[1]
     ntrials = trainSet.shape[2]
 
     #Restamos la media de la señal
-    mean = trainSet.mean(axis = 1)
-    for clase in range(nclases):
-            for trial in range(ntrials):
-                trainSet[clase, :, trial] =   trainSet[clase, :, trial] - mean[clase, trial]
+    trainSet = trainSet - trainSet.mean(axis = 1, keepdims=True)
 
     lda = LDATrainingModule(trainSet, PRE_PROCES_PARAMS, FFT_PARAMS, frecStimulus=frecStimulus,
     nchannels = 1, nsamples = nsamples, ntrials = ntrials, modelName = "LDAtest")
