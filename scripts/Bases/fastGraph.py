@@ -8,7 +8,6 @@ from utils import plotSpectrum, plotOneSpectrum, plotEEG
 from utils import norm_mean_std
 
 from scipy.signal import windows
-
 from scipy.signal import welch
 
 import matplotlib.pyplot as plt
