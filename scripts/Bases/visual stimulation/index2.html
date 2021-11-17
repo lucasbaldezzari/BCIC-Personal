@@ -51,7 +51,6 @@ var izquierda  = x.slice(4,5);
            else{
                state = true;
            }
-
            // Adelante
            if(adelante == 0){
             box = document.getElementsByClassName('TopArray')[0];
@@ -146,15 +145,6 @@ setInterval(la,10);
             animation-duration: 0.090909090909091s;
             -webkit-animation-duration: 0.090909090909091s;
         }
-    .DownArray{
-      height:250px;
-      width:250px;
-      left: 760px;
-      top: 650px;
-      /* 13 Hz*/
-      animation-duration: 0.076923076923077s;
-            -webkit-animation-duration: 0.076923076923077s;
-    }
 .RightArrayinRestTime{
     height:250px;
     width:250px;
@@ -170,24 +160,26 @@ setInterval(la,10);
     /* 7 Hz*/
 }
 .TopArrayinRestTime{
-    height:250px;
+    height:250%;
     width:250px;
     left: 750px;  
     /* 11 Hz*/
-}
-.DownArrayinRestTime{
-    height:250px;
-    width:250px;
-    left: 760px;
-    top: 650px;
-    /* 13 Hz*/
 }
     .video{
       height:500px;
       width:500px;
       position: absolute;
-      top: 250px;
+      top: 3000px;
             left: 630px;
+    }
+    img{
+      margin: 0 auto;
+      max-height: 100%;
+      max-width: 100%;
+    }
+    .Images{
+      background-color: white;
+      background-image: ;
     }
 @-moz-keyframes parpadeo{  
   0% { opacity: 1.0; }
@@ -216,7 +208,7 @@ setInterval(la,10);
 #videoElement {
   width: 500px;
   height: 375px;
-  background-color: #635552;
+  background-color: #666;
 }
 body{
   background: #635552;
@@ -241,7 +233,7 @@ body{
     <div id="demo"></div>
 <script>
   
-/*var video = document.querySelector("#videoElement");
+var video = document.querySelector("#videoElement");
 
 if (navigator.mediaDevices.getUserMedia) {
   navigator.mediaDevices.getUserMedia({ video: true })
@@ -251,7 +243,7 @@ if (navigator.mediaDevices.getUserMedia) {
     .catch(function (err0r) {
       console.log("Something went wrong!");
     });
-}*/
+}
 </script>
 </div>
 </body>

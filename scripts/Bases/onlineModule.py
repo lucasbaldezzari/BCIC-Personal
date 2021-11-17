@@ -117,9 +117,9 @@ def main():
     electrodos = "pasivos"
 
     cantCanalesAUsar = 2 #Cantidad de canales a utilizar
-    canalesAUsar = [1,2] #Seleccionamos canal uno y dos. NOTA: Si quisieramos elegir el canal 2 solamente debemos hacer [2,2] o [1,1] para elegir el canal 1
+    canalesAUsar = [1,1] #Seleccionamos canal uno y dos. NOTA: Si quisieramos elegir el canal 2 solamente debemos hacer [2,2] o [1,1] para elegir el canal 1
 
-    trials = 1 #None implica que se ejecutaran trials de manera indeterminada
+    trials = 20 #None implica que se ejecutaran trials de manera indeterminada
     trialDuration = 10 #secs #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
     stimuliDuration = 5 #secs
 

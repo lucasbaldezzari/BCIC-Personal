@@ -127,7 +127,7 @@ ISR(TIMER2_COMPA_vect)//Rutina interrupción Timer2
   if(1) //para simular que tenemos un mensaje por bluetooth
  //if (BT.available()) //Si tenemos un mensaje por bluetooth lo leemos
  {
-   mensajeBT = 0b00000011; //simulamos un obstaculo adelante y a la izquierda
+   mensajeBT = 0b00000000; //simulamos detección de obstáculos
    //mensajeBT = BT.read();
    checkBTMessage(mensajeBT);
  }
@@ -208,7 +208,6 @@ void checkSerialMessage(char val)
 
 void checkBTMessage(char val)
 {
-  if ((val >> 0) & 0b00000001 == 1) digitalWrite(LEDTesteo, 1);
   //Actualizmaos el estado interno del robot
   if ((val >> 0) & 0b00000001 == 1) robotStatus[FORWARD_INDEX] = OBSTACULO_DETECTADO;
   else robotStatus[FORWARD_INDEX] = SIN_OBSTACULO;

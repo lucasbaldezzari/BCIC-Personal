@@ -147,13 +147,13 @@ class ArduinoCommunication:
         estadoRobot = self.sendMessage(self.systemControl)
         print("Estado inicial del ROBOT:", estadoRobot)
         
-        #Actualizamos archivo de estados
-        # estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
-        #             int(estadoRobot[0]),
-        #             int(estadoRobot[1]),
-        #             int(estadoRobot[2])]
+         #### Actualizamos archivo de estados #####
+        estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
+                    int(estadoRobot[0]),
+                    int(estadoRobot[1]),
+                    int(estadoRobot[2])]
 
-        estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2]]
+        # estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2]]
 
         completeName = os.path.join(self.stateFilePath,self.stateFile)
         file = open(completeName, "w")
@@ -181,12 +181,12 @@ class ArduinoCommunication:
         
         estadoRobot = self.sendMessage(self.systemControl)
 
-        #Actualizamos archivo de estados
-        # estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
-        #             int(estadoRobot[0]),
-        #             int(estadoRobot[1]),
-        #             int(estadoRobot[2])]
-        estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2]]
+        #### Actualizamos archivo de estados #####
+        estados = [0,0,
+                    0,
+                    0,
+                    0]
+        # estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2]]
 
         completeName = os.path.join(self.stateFilePath,self.stateFile)
         file = open(completeName, "w")
@@ -215,12 +215,13 @@ class ArduinoCommunication:
             self.systemControl[1] = b"0" #apagamos estímulos
             estadoRobot = self.sendMessage(self.systemControl)
             print("Estado ROBOT:", estadoRobot)
-            #Actualizamos archivo de estados
-            # estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
-            #             int(estadoRobot[0]),
-            #             int(estadoRobot[1]),
-            #             int(estadoRobot[2])]
-            estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2]]
+
+            #### Actualizamos archivo de estados #####
+            estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
+                        int(estadoRobot[0]),
+                        int(estadoRobot[1]),
+                        int(estadoRobot[2])]
+            # estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2]]
 
             completeName = os.path.join(self.stateFilePath,self.stateFile)
             file = open(completeName, "w")
@@ -236,12 +237,12 @@ class ArduinoCommunication:
             print("Estado ROBOT:", estadoRobot)
 
             #Actualizamos archivo de estados
-            # estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
-            #             int(estadoRobot[0]),
-            #             int(estadoRobot[1]),
-            #             int(estadoRobot[2])]
+            estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
+                        int(estadoRobot[0]),
+                        int(estadoRobot[1]),
+                        int(estadoRobot[2])]
 
-            estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2]]
+            # estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2]]
 
             completeName = os.path.join(self.stateFilePath,self.stateFile)
             file = open(completeName, "w")
@@ -296,8 +297,8 @@ def main():
     #En el caso de querer ejecutar Trials de manera indeterminada,
     #debe hacerse trials = None (default)
     """
-    ard = ArduinoCommunication('COM8', trialDuration = 8, stimONTime = 7,
-                               timing = 100, ntrials = 10)
+    ard = ArduinoCommunication('COM16', trialDuration = 3, stimONTime = 2,
+                               timing = 100, ntrials = 3)
     time.sleep(1)
     ard.iniSesion()
 
