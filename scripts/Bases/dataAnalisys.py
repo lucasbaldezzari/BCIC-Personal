@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+	# -*- coding: utf-8 -*-
 """
 Created on Wed Jul 28 16:05:39 2021
 @author: Lucas
@@ -44,7 +44,7 @@ def computWelchPSD(signalBanked, fm, ventana, anchoVentana, average = "median", 
         return signalSampleFrec, signalPSD
 
 actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-path = os.path.join(actualFolder,"recordedEEG")
+path = os.path.join(actualFolder,"recordedEEG\WM\ses1")
 
 trials = 15
 fm = 200.
@@ -53,38 +53,27 @@ samplePoints = int(fm*duration)
 channels = 4
 
 subjects = [1]
-filenames = ["ganglion_activo_234off_9hz_2","ganglion_activo_34off_14hz","ganglion_activo_234off_17hz","ganglion_activo_234off_14hz_2"]
+filenames = ["S3_R1_S2_E6", "S3-R1-S1-E7"]
 allData = fa.loadData(path = path, filenames = filenames)
 
-name = "ganglion_activo_234off_9hz_2" #nombre de los datos a analizar}
-stimuli = [7,14] #lista de estímulos
-estim = [9] #L7e pasamos un estímulo para que grafique una linea vertical
+name = "S3_R1_S2_E6" #nombre de los datos a analizar}
+stimuli = [7,9] #lista de estímulos
+estim = [7] #L7e pasamos un estímulo para que grafique una linea vertical
 
-eeg = allData[name]['eeg'][:,:1,int(fm*1):,:]
+eeg = allData[name]['eeg'][:,:1,:,:]
 
 #Chequeamos información del registro eeg 1
 print(allData[name]["generalInformation"])
 print(f"Forma de los datos {eeg.shape}")
 
 #Filtramos la señal de eeg para eeg 1
+eeg = eeg - eeg.mean(axis = 2, keepdims=True)
 
-plt.plot(eeg[0,0,:,0])
-plt.show()
-
-mean = eeg.mean(axis = 2)
-
-for clase in range(mean.shape[0]):
-        for canal in range(mean.shape[1]):
-                for trial in range(mean.shape[2]):
-                      eeg[clase, canal, :, trial] =   eeg[clase, canal, :, trial] - mean[clase, canal, trial]
-
-plt.plot(eeg[0,0,:,0])
-plt.show()
 
 resolution = np.round(fm/eeg.shape[2], 4)
 
 PRE_PROCES_PARAMS = {
-                'lfrec': 7.,
+                'lfrec': 4.,
                 'hfrec': 20.,
                 'order': 6,
                 'sampling_rate': fm,
@@ -99,24 +88,79 @@ FFT_PARAMS = {
                 'sampling_rate': fm
                 }
 
-eegFiltered = filterEEG(eeg, PRE_PROCES_PARAMS["lfrec"],
-                        PRE_PROCES_PARAMS["hfrec"],
-                        PRE_PROCES_PARAMS["order"],
-                        PRE_PROCES_PARAMS["sampling_rate"])
+window = 5 #sec
+ti = 0.5 #en segundos
+tf = 0.5 #en segundos
+descarteInicial = int(fm*ti) #en segundos
+descarteFinal = int(window*fm)-int(tf*fm) #en segundos
 
-##Computamos el espectro de frecuencias
+eeg = eeg[:,:, descarteInicial:descarteFinal, :]
 
-#eeg data segmentation
-eegSegmented = segmentingEEG(eegFiltered, PRE_PROCES_PARAMS["window"],
-                             PRE_PROCES_PARAMS["shiftLen"],
-                             PRE_PROCES_PARAMS["sampling_rate"])
+anchoVentana = int((window - ti - tf)*fm) #fm * segundos
 
-MSF1 = computeMagnitudSpectrum(eegSegmented, FFT_PARAMS)
-C = computeComplexSpectrum(eegSegmented, FFT_PARAMS)
+ventana1 = windows.hamming(anchoVentana, sym= True)
+ventana2 = windows.chebwin(anchoVentana, at = 60, sym= True)
+ventana3 = windows.blackman(anchoVentana, sym= True)
 
-fft_axis = np.arange(MSF1.shape[0]) * resolution
-plt.plot(fft_axis, MSF1[:,0,0,2,0])
+ventanas = {
+                'ventana1': ventana1,
+                'ventana2': ventana2,
+                'ventana3': ventana3
+                }
+
+eegVentaneados = {'eeg1':eeg, 'eeg2': eeg, 'eeg3': eeg}
+
+nclases = eeg.shape[0]
+nchannels = eeg.shape[1]
+ntrials = eeg.shape[3]
+
+for clase in range(nclases):
+        for canal in range(nchannels):
+                for trial in range(ntrials):
+                        eegVentaneados['eeg1'][clase, canal, :, trial] = eeg[clase, canal, :, trial]*ventanas['ventana1']
+                        eegVentaneados['eeg2'][clase, canal, :, trial] = eeg[clase, canal, :, trial]*ventanas['ventana2']
+                        eegVentaneados['eeg3'][clase, canal, :, trial] = eeg[clase, canal, :, trial]*ventanas['ventana3']
+
+# eegFiltered = filterEEG(eeg, PRE_PROCES_PARAMS["lfrec"],
+#                         PRE_PROCES_PARAMS["hfrec"],
+#                         PRE_PROCES_PARAMS["order"],
+#                         PRE_PROCES_PARAMS["sampling_rate"])
+
+# plt.plot(eegFiltered[0,0,:,0])
+# plt.show()
+
+for eegVentaneado in eegVentaneados:
+        eegVentaneados[eegVentaneado] = filterEEG(eegVentaneados[eegVentaneado], PRE_PROCES_PARAMS["lfrec"],
+                                PRE_PROCES_PARAMS["hfrec"],
+                                PRE_PROCES_PARAMS["order"],
+                                PRE_PROCES_PARAMS["sampling_rate"])
+
+title = "Señales de EEG ventaneadas"
+listaVentanas = ["Hamming", "Chebwin", "blackman"]
+fig, plots = plt.subplots(1, 3, figsize=(12, 6), gridspec_kw=dict(hspace=0.45, wspace=0.3))
+fig.suptitle(title, fontsize = 12)
+t = np.arange(0,anchoVentana/fm,1/fm)
+trial = 5
+for i, eegVentaneado in enumerate(eegVentaneados):
+        print(eegVentaneado)
+        plots[i].plot(t, eegVentaneados[eegVentaneado][0,0,:,trial-1], label = listaVentanas[i], color = "#403e7d")
+        plots[i].set_ylabel('Amplitud [uV]')
+        plots[i].set_xlabel('tiempo [seg]')
+        plots[i].xaxis.grid(True)
+        plots[i].legend()
 plt.show()
+
+# #eeg data segmentation
+# eegSegmented = segmentingEEG(eegFiltered, PRE_PROCES_PARAMS["window"],
+#                              PRE_PROCES_PARAMS["shiftLen"],
+#                              PRE_PROCES_PARAMS["sampling_rate"])
+
+# MSF1 = computeMagnitudSpectrum(eegSegmented, FFT_PARAMS)
+# C = computeComplexSpectrum(eegSegmented, FFT_PARAMS)
+
+# fft_axis = np.arange(MSF1.shape[0]) * resolution
+# plt.plot(fft_axis, MSF1[:,0,0,:5,0])
+# plt.show()
 
 
 ########################################################################
