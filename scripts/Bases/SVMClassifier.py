@@ -84,7 +84,7 @@ class SVMClassifier():
             - order: orden del filtro. Default = 4"""
 
         nyquist = 0.5 * self.FFT_PARAMS["sampling_rate"]
-        signalFilteredbyBank = np.zeros((self.nclases,self.nsamples))
+        signalFilteredbyBank = np.zeros((self.nclases, self.nsamples))
         for clase, frecuencia in enumerate(self.frecStimulus):   
             low = (frecuencia-bw/2)/nyquist
             high = (frecuencia+bw/2)/nyquist
@@ -216,15 +216,8 @@ def main():
     run2JoinedData = joinData(run2, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
 
     testSet = np.concatenate((run1JoinedData[:,:,:,12:], run2JoinedData[:,:,:,12:]), axis = 3) #últimos 3 tríals para testeo
-    testSet = testSet[:,:2,:,:] #nos quedamos con los primeros dos canales
 
-    testSet = np.mean(testSet, axis = 1) #promedio sobre los canales. Forma datos ahora [clases, samples, trials]
-
-    nsamples = testSet.shape[1]
-
-    #Restamos la media de la señal
-    testSet = testSet - testSet.mean(axis = 1, keepdims=True)
-
+    #### definimos archivos para cargar modelo posteriormente #### 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join(actualFolder,"models")
 
@@ -233,17 +226,31 @@ def main():
     modelFile = f"{modelName}.pkl" #nombre del modelo
     PRE_PROCES_PARAMS, FFT_PARAMS = fa.loadPArams(modelName = modelName, path = os.path.join(actualFolder,"models"))
 
+    descarteInicial = int(fm*PRE_PROCES_PARAMS['ti']) #en segundos
+    descarteFinal = int(window*fm)-int(fm*PRE_PROCES_PARAMS['tf']) #en segundos
+    
+    testSet = testSet[:,:2, descarteInicial:descarteFinal ,:] #nos quedamos con los primeros dos canales y descartamos muestras iniciales y algunas finales
+
+    testSet = np.mean(testSet, axis = 1) #promedio sobre los canales. Forma datos ahora [clases, samples, trials]
+
+    nsamples = testSet.shape[1]
+
+    #Restamos la media de la señal
+    testSet = testSet - testSet.mean(axis = 1, keepdims=True)
+
     svm = SVMClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, nsamples = nsamples, path = path) #cargamos clasificador entrenado
     svm.loadTrainingSignalPSD(filename = "SVM_test_linear_signalPSD.txt", path = path) #cargamos el PSD de mis datos de entrenamiento
 
     trainingSignalPSD = svm.trainingSignalPSD
 
-    clase = 1
+    clase = 2
     trial = 4
 
     rawDATA = testSet[clase-1,:,trial-1]
 
-    featureVector = svm.extractFeatures(rawDATA = rawDATA, ventana = windows.hamming, anchoVentana = 5, bw = 2.0, order = 4, axis = 0)
+    anchoVentana = (window - PRE_PROCES_PARAMS['ti'] - PRE_PROCES_PARAMS['tf']) #fm * segundos
+
+    featureVector = svm.extractFeatures(rawDATA = rawDATA, ventana = windows.hamming, anchoVentana = anchoVentana, bw = 2.0, order = 4, axis = 0)
 
     print("Freceuncia clasificada:", svm.getClassification(featureVector = featureVector))
 
@@ -254,7 +261,7 @@ def main():
     for i, clase in enumerate(np.arange(len(frecStimulus))):
         for j, trial in enumerate(np.arange(trials)):
             data = testSet[clase, :, trial]
-            featureVector = svm.extractFeatures(rawDATA = data, ventana = windows.hamming, anchoVentana = 5, bw = 2.0, order = 6, axis = 0)
+            featureVector = svm.extractFeatures(rawDATA = data, ventana = windows.hamming, anchoVentana = anchoVentana, bw = 2.0, order = 6, axis = 0)
             classification = svm.getClassification(featureVector = featureVector)
             if classification == frecStimulus[clase]:
                 predicciones[i,j] = 1
@@ -269,6 +276,6 @@ def main():
     print(f"Predicciones usando el modelo SVM {modelFile}")
     print(predictions)
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
 

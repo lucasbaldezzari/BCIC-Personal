@@ -175,11 +175,6 @@ def main():
     filesRun2 = ["S3_R2_S2_E6","S3-R2-S1-E7", "S3-R2-S1-E8","S3-R2-S1-E9"]
     run2 = fa.loadData(path = path, filenames = filesRun2)
 
-    #Abrimos archivos
-    modelName = "cnntesting"
-    modelFile = f"{modelName}.h5" #nombre del modelo
-    PRE_PROCES_PARAMS, FFT_PARAMS = fa.loadPArams(modelName = modelName, path = os.path.join(actualFolder,"models"))
-
     def joinData(allData, stimuli, channels, samples, trials):
         joinedData = np.zeros((stimuli, channels, samples, trials))
         for i, sujeto in enumerate(allData):
@@ -191,7 +186,17 @@ def main():
     run2JoinedData = joinData(run2, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
 
     testSet = np.concatenate((run1JoinedData[:,:,:,12:], run2JoinedData[:,:,:,12:]), axis = 3) #últimos 3 tríals para testeo
-    testSet = testSet[:,:2,:,:] #nos quedamos con los primeros dos canales
+
+    #### definimos archivos para cargar modelo posteriormente #### 
+    #Abrimos archivos
+    modelName = "cnntesting"
+    modelFile = f"{modelName}.h5" #nombre del modelo
+    PRE_PROCES_PARAMS, FFT_PARAMS = fa.loadPArams(modelName = modelName, path = os.path.join(actualFolder,"models"))
+
+    descarteInicial = int(fm*PRE_PROCES_PARAMS['ti']) #en segundos
+    descarteFinal = int(window*fm)-int(fm*PRE_PROCES_PARAMS['tf']) #en segundos
+    
+    testSet = testSet[:,:2, descarteInicial:descarteFinal ,:] #nos quedamos con los primeros dos canales y descartamos muestras iniciales y algunas finales
 
     testSet = np.mean(testSet, axis = 1) #promedio sobre los canales. Forma datos ahora [clases, samples, trials]
 
@@ -202,7 +207,6 @@ def main():
     testSet = testSet - testSet.mean(axis = 1, keepdims=True)
 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-    
     path = os.path.join(actualFolder,"models")
 
     # Cargamos modelo previamente entrenado
@@ -218,7 +222,7 @@ def main():
 
     cnn.loadTrainingSignalPSD(filename = "cnntesting_signalPSD.txt", path = path) #cargamos el PSD de mis datos de entrenamiento
 
-    anchoVentana = int(fm*5) #fm * segundos
+    anchoVentana = (window - PRE_PROCES_PARAMS['ti'] - PRE_PROCES_PARAMS['tf']) #fm * segundos
     ventana = windows.hamming
 
     clase = 2
@@ -227,7 +231,7 @@ def main():
     rawDATA = testSet[clase-1,:,trial-1]
 
     #extrameos características
-    featureVector  = cnn.extractFeatures(rawDATA = rawDATA, ventana = ventana, anchoVentana = 5, bw = 1.0, order = 4, axis = 0)
+    featureVector  = cnn.extractFeatures(rawDATA = rawDATA, ventana = ventana, anchoVentana = anchoVentana, bw = 1.0, order = 4, axis = 0)
 
     cnn.getClassification(featureVector = featureVector)
 
@@ -238,7 +242,7 @@ def main():
     for i, clase in enumerate(np.arange(len(frecStimulus))):
         for j, trial in enumerate(np.arange(trials)):
             rawDATA = testSet[clase, :, trial]
-            featureVector  = cnn.extractFeatures(rawDATA = rawDATA, ventana = ventana, anchoVentana = 5, bw = 1.0, order = 4, axis = 0)
+            featureVector  = cnn.extractFeatures(rawDATA = rawDATA, ventana = ventana, anchoVentana = anchoVentana, bw = 1.0, order = 4, axis = 0)
             classification = cnn.getClassification(featureVector = featureVector)
             if classification == frecStimulus[clase]:
                 predicciones[i,j] = 1
@@ -253,8 +257,8 @@ def main():
     print(f"Predicciones usando el modelo SVM {modefile}")
     print(predictions)
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
 
 
 

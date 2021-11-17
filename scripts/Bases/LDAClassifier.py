@@ -181,15 +181,8 @@ def main():
     run2JoinedData = joinData(run2, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
 
     testSet = np.concatenate((run1JoinedData[:,:,:,12:], run2JoinedData[:,:,:,12:]), axis = 3) #últimos 3 tríals para testeo
-    testSet = testSet[:,:2,:,:] #nos quedamos con los primeros dos canales
-
-    testSet = np.mean(testSet, axis = 1) #promedio sobre los canales. Forma datos ahora [clases, samples, trials]
-
-    nsamples = testSet.shape[1]
-
-    #Restamos la media de la señal
-    testSet = testSet - testSet.mean(axis = 1, keepdims=True)
-
+    
+    #### definimos archivos para cargar modelo posteriormente #### 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join(actualFolder,"models")
 
@@ -197,6 +190,18 @@ def main():
     modelName = "LDAtest"
     modelFile = f"{modelName}.pkl" #nombre del modelo
     PRE_PROCES_PARAMS, FFT_PARAMS = fa.loadPArams(modelName = modelName, path = os.path.join(actualFolder,"models"))
+
+    descarteInicial = int(fm*PRE_PROCES_PARAMS['ti']) #en segundos
+    descarteFinal = int(window*fm)-int(fm*PRE_PROCES_PARAMS['tf']) #en segundos
+    
+    testSet = testSet[:,:2, descarteInicial:descarteFinal ,:] #nos quedamos con los primeros dos canales y descartamos muestras iniciales y algunas finales
+
+    testSet = np.mean(testSet, axis = 1) #promedio sobre los canales. Forma datos ahora [clases, samples, trials]
+
+    nsamples = testSet.shape[1]
+
+    #Restamos la media de la señal
+    testSet = testSet - testSet.mean(axis = 1, keepdims=True)
 
     lda = LDAClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, nsamples = nsamples, path = path) #cargamos clasificador entrenado
     lda.loadTrainingSignalPSD(filename = "LDA_WM_testing_signalPSD.txt", path = path) #cargamos el PSD de mis datos de entrenamiento
@@ -206,7 +211,9 @@ def main():
 
     rawDATA = testSet[clase-1,:,trial-1]
 
-    featureVector = lda.extractFeatures(rawDATA = rawDATA, ventana = windows.hamming, anchoVentana = 5, bw = 2.0, order = 4, axis = 0)
+    anchoVentana = (window - PRE_PROCES_PARAMS['ti'] - PRE_PROCES_PARAMS['tf']) #fm * segundos
+
+    featureVector = lda.extractFeatures(rawDATA = rawDATA, ventana = windows.hamming, anchoVentana = anchoVentana, bw = 2.0, order = 4, axis = 0)
     print("Freceuncia clasificada:", lda.getClassification(featureVector = featureVector))
 
     ### Realizamos clasificación sobre mis datos de testeo. Estos nunca fueron vistos por el clasificador ###
@@ -216,7 +223,7 @@ def main():
     for i, clase in enumerate(np.arange(len(frecStimulus))):
         for j, trial in enumerate(np.arange(trials)):
             data = testSet[clase, :, trial]
-            featureVector = lda.extractFeatures(rawDATA = data, ventana = windows.hamming, anchoVentana = 5, bw = 2.0, order = 4, axis = 0)
+            featureVector = lda.extractFeatures(rawDATA = data, ventana = windows.hamming, anchoVentana = anchoVentana, bw = 2.0, order = 4, axis = 0)
             classification = lda.getClassification(featureVector = featureVector)
             if classification == frecStimulus[clase]:
                 predicciones[i,j] = 1

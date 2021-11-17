@@ -261,6 +261,12 @@ def main():
     samplePoints = int(fm*window)
     channels = 4
 
+    #Seteamos parámetros para 
+    ti = 0.5 #en segundos
+    tf = 0.5 #en segundos
+    descarteInicial = int(fm*ti) #en segundos
+    descarteFinal = int(window*fm)-int(tf*fm) #en segundos
+
     filesRun1 = ["S3_R1_S2_E6","S3-R1-S1-E7", "S3-R1-S1-E8","S3-R1-S1-E9"]
     run1 = fa.loadData(path = path, filenames = filesRun1)
     filesRun2 = ["S3_R2_S2_E6","S3-R2-S1-E7", "S3-R2-S1-E8","S3-R2-S1-E9"]
@@ -275,7 +281,8 @@ def main():
                     'sampling_rate': fm,
                     'bandStop': 50.,
                     'window': window,
-                    'shiftLen':window
+                    'shiftLen':window,
+                    'ti': ti, 'tf':tf
                     }
 
     resolution = np.round(fm/samplePoints, 4)
@@ -298,7 +305,7 @@ def main():
     run2JoinedData = joinData(run2, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
 
     trainSet = np.concatenate((run1JoinedData[:,:,:,:12], run2JoinedData[:,:,:,:12]), axis = 3)
-    trainSet = trainSet[:,:1,:,:] #nos quedamos con los primeros dos canales
+    trainSet = trainSet[:,:2, descarteInicial:descarteFinal,:] #nos quedamos con los primeros dos canales y descartamos muestras iniciales y algunas finales
 
     trainSet = np.mean(trainSet, axis = 1) #promedio sobre los canales. Forma datos ahora [clases, samples, trials]
 
@@ -317,10 +324,10 @@ def main():
     #Creamos modelo SVM
     modelo = svm.createSVM(kernel = "rbf", gamma = 0.05, C = 24, probability = True, randomSeed = seed)
 
-    anchoVentana = int(fm*5) #fm * segundos
+    anchoVentana = (window - ti - tf) #fm * segundos
     ventana = windows.hamming #Usamos ventana Hamming
 
-    sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = 5, bw = 2.0, order = 6, axis = 1)
+    sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = anchoVentana, bw = 2.0, order = 6, axis = 1)
 
     metricas = svm.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2, randomSeed = seed)
     print(metricas)
@@ -356,7 +363,7 @@ def main():
 
                     modelo = svm.createSVM(kernel = kernel, gamma = gamma, C = C, probability = True, randomSeed = seed)
 
-                    sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = 5, bw = 2.0, order = 6, axis = 1)
+                    sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = anchoVentana, bw = 2.0, order = 6, axis = 1)
 
                     metricas = svm.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2, randomSeed = seed) #entrenamos el modelo y obtenemos las métricas
                     accu = metricas["modelo_testSVMv2"]["val"]["Acc"]
@@ -371,7 +378,7 @@ def main():
 
                 modelo = svm.createSVM(kernel = kernel, C = C, probability = True, randomSeed = seed)
 
-                sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = 5, bw = 2.0, order = 6, axis = 1)
+                sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = anchoVentana, bw = 2.0, order = 6, axis = 1)
 
                 metricas = svm.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2, randomSeed = seed)
 
@@ -422,5 +429,5 @@ def main():
     modeloSVM2.saveTrainingSignalPSD(signalPSD.mean(axis = 2), path = path, filename = "SVM_test_rbf")
     os.chdir(actualFolder)
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
