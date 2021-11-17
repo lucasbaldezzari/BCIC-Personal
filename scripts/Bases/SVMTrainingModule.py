@@ -429,5 +429,5 @@ def main():
     modeloSVM2.saveTrainingSignalPSD(signalPSD.mean(axis = 2), path = path, filename = "SVM_test_rbf")
     os.chdir(actualFolder)
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()

@@ -276,6 +276,6 @@ def main():
     print(f"Predicciones usando el modelo SVM {modelFile}")
     print(predictions)
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()
 
