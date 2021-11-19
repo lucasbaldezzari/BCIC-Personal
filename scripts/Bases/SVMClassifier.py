@@ -72,7 +72,7 @@ class SVMClassifier():
         
         os.chdir(actualFolder)
 
-    def applyFilterBank(self, eeg, bw = 2.0, order = 4):
+    def applyFilterBank(self, eeg, bw = 2.0, order = 4, calc1stArmonic = False):
         """Aplicamos banco de filtro a nuestros datos.
         Se recomienda aplicar un notch en los 50Hz y un pasabanda en las frecuencias deseadas antes
         de applyFilterBank()
@@ -84,18 +84,35 @@ class SVMClassifier():
             - order: orden del filtro. Default = 4"""
 
         nyquist = 0.5 * self.FFT_PARAMS["sampling_rate"]
-        signalFilteredbyBank = np.zeros((self.nclases, self.nsamples))
+        # signalFilteredbyBank = np.zeros((self.nclases, self.nsamples))
+        fcBanck = np.zeros((self.nclases,self.nsamples))
+
         for clase, frecuencia in enumerate(self.frecStimulus):   
             low = (frecuencia-bw/2)/nyquist
             high = (frecuencia+bw/2)/nyquist
             b, a = butter(order, [low, high], btype='band') #obtengo los parámetros del filtro
-            signalFilteredbyBank[clase] = filtfilt(b, a, eeg) #filtramos
+            fcBanck[clase] = filtfilt(b, a, eeg) #filtramos
 
-        self.dataBanked = signalFilteredbyBank.mean(axis = 0)
+        if calc1stArmonic == True:
+            firstArmonicBanck = np.zeros((self.nclases,self.nsamples))
+            armonics = self.frecStimulus*2
+            for clase, armonic in enumerate(armonics):   
+                low = (armonic-bw/2)/nyquist
+                high = (armonic+bw/2)/nyquist
+                b, a = butter(order, [low, high], btype='band') #obtengo los parámetros del filtro
+                firstArmonicBanck[clase] = filtfilt(b, a, eeg) #filtramos
+
+            aux = np.array((fcBanck, firstArmonicBanck))
+            signalFilteredbyBank = np.sum(aux, axis = 0)
+
+        else:
+            signalFilteredbyBank = fcBanck
+
+        self.dataBanked = signalFilteredbyBank#.mean(axis = 0)
         return self.dataBanked
 
     def computWelchPSD(self, signalBanked, fm, ventana, anchoVentana, average = "median", axis = 1):
-
+        print("signalBanked en welch", signalBanked.shape)
         self.signalSampleFrec, self.signalPSD = welch(signalBanked, fs = fm, window = ventana, nperseg = anchoVentana, average='median', axis = axis)
 
         return self.signalSampleFrec, self.signalPSD
@@ -118,7 +135,7 @@ class SVMClassifier():
 
         indexFfeature = r_pearson.index(max(r_pearson))  
 
-        return self.trainingSignalPSD[indexFfeature]
+        return self.signalPSD[indexFfeature]
 
     def computetrainPSDCent(self):
         
@@ -153,7 +170,7 @@ class SVMClassifier():
 
         return self.traingSigPSD[indexFfeature]
 
-    def extractFeatures(self, rawDATA, ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1):
+    def featuresExtraction(self, rawDATA, ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1, calc1stArmonic = False):
 
         filteredEEG = filterEEG(rawDATA, self.PRE_PROCES_PARAMS["lfrec"],
                                 self.PRE_PROCES_PARAMS["hfrec"],
@@ -162,7 +179,7 @@ class SVMClassifier():
                                 self.PRE_PROCES_PARAMS["sampling_rate"],
                                 axis = axis)
 
-        dataBanked = self.applyFilterBank(filteredEEG, bw=bw, order = 4)
+        dataBanked = self.applyFilterBank(filteredEEG, bw=bw, order = 4, calc1stArmonic = calc1stArmonic)
 
         anchoVentana = int(self.PRE_PROCES_PARAMS["sampling_rate"]*anchoVentana) #fm * segundos
         ventana = ventana(anchoVentana)
@@ -170,7 +187,7 @@ class SVMClassifier():
         self.signalSampleFrec, self.signalPSD = self.computWelchPSD(dataBanked,
                                                 fm = self.PRE_PROCES_PARAMS["sampling_rate"],
                                                 ventana = ventana, anchoVentana = anchoVentana,
-                                                average = "median", axis = axis)
+                                                average = "median", axis = 1)
 
         self.featureVector = self.pearsonFilter()
 
@@ -193,6 +210,7 @@ def main():
     path = os.path.join(actualFolder,"recordedEEG\WM\ses1")
 
     frecStimulus = np.array([6, 7, 8, 9])
+    calc1stArmonic = True
 
     trials = 15
     fm = 200.
@@ -244,13 +262,15 @@ def main():
     trainingSignalPSD = svm.trainingSignalPSD
 
     clase = 2
-    trial = 4
+    trial = 5
 
     rawDATA = testSet[clase-1,:,trial-1]
 
     anchoVentana = (window - PRE_PROCES_PARAMS['ti'] - PRE_PROCES_PARAMS['tf']) #fm * segundos
 
-    featureVector = svm.extractFeatures(rawDATA = rawDATA, ventana = windows.hamming, anchoVentana = anchoVentana, bw = 2.0, order = 4, axis = 0)
+    print("Ancho ventana", anchoVentana)
+
+    featureVector = svm.featuresExtraction(rawDATA = rawDATA, ventana = windows.hamming, anchoVentana = anchoVentana, bw = 2.0, order = 4, axis = 0, calc1stArmonic = calc1stArmonic)
 
     print("Freceuncia clasificada:", svm.getClassification(featureVector = featureVector))
 
@@ -261,7 +281,7 @@ def main():
     for i, clase in enumerate(np.arange(len(frecStimulus))):
         for j, trial in enumerate(np.arange(trials)):
             data = testSet[clase, :, trial]
-            featureVector = svm.extractFeatures(rawDATA = data, ventana = windows.hamming, anchoVentana = anchoVentana, bw = 2.0, order = 6, axis = 0)
+            featureVector = svm.featuresExtraction(rawDATA = data, ventana = windows.hamming, anchoVentana = anchoVentana, bw = 2.0, order = 6, axis = 0, calc1stArmonic = calc1stArmonic)
             classification = svm.getClassification(featureVector = featureVector)
             if classification == frecStimulus[clase]:
                 predicciones[i,j] = 1

@@ -79,7 +79,7 @@ class SVMTrainingModule():
 
         return self.model
 
-    def applyFilterBank(self, eeg, bw = 2.0, order = 4):
+    def applyFilterBank(self, eeg, bw = 2.0, order = 4, axis = 0, calc1stArmonic = False):
         """Aplicamos banco de filtro a nuestros datos.
         Se recomienda aplicar un notch en los 50Hz y un pasabanda en las frecuencias deseadas antes
         de applyFilterBank()
@@ -91,12 +91,30 @@ class SVMTrainingModule():
             - order: orden del filtro. Default = 4"""
 
         nyquist = 0.5 * self.FFT_PARAMS["sampling_rate"]
-        signalFilteredbyBank = np.zeros((self.nclases,self.nsamples,self.ntrials))
+        #signalFilteredbyBank = np.zeros((self.nclases,self.nsamples,self.ntrials))
+        fcBanck = np.zeros((self.nclases,self.nsamples,self.ntrials))
+        firstArmonicBanck = np.zeros((self.nclases,self.nsamples,self.ntrials))
+
         for clase, frecuencia in enumerate(self.frecStimulus):   
             low = (frecuencia-bw/2)/nyquist
             high = (frecuencia+bw/2)/nyquist
             b, a = butter(order, [low, high], btype='band') #obtengo los parámetros del filtro
-            signalFilteredbyBank[clase] = filtfilt(b, a, eeg[clase], axis = 0) #filtramos
+            fcBanck[clase] = filtfilt(b, a, eeg[clase], axis = axis) #filtramos
+
+        if calc1stArmonic == True:
+            firstArmonicBanck = np.zeros((self.nclases,self.nsamples,self.ntrials))
+            armonics = self.frecStimulus*2
+            for clase, armonic in enumerate(armonics):   
+                low = (armonic-bw/2)/nyquist
+                high = (armonic+bw/2)/nyquist
+                b, a = butter(order, [low, high], btype='band') #obtengo los parámetros del filtro
+                firstArmonicBanck[clase] = filtfilt(b, a, eeg[clase], axis = axis) #filtramos
+
+            aux = np.array((fcBanck, firstArmonicBanck))
+            signalFilteredbyBank = np.sum(aux, axis = 0)
+
+        else:
+            signalFilteredbyBank = fcBanck
 
         self.dataBanked = signalFilteredbyBank
         return self.dataBanked
@@ -107,8 +125,9 @@ class SVMTrainingModule():
         return self.signalSampleFrec, self.signalPSD
 
 
-    def featuresExtraction(self, ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1):
+    def featuresExtraction(self, ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1, calc1stArmonic = False):
         """EXtracción de características a partir de datos de EEG sin procesar"""
+
         filteredEEG = filterEEG(self.rawDATA, self.PRE_PROCES_PARAMS["lfrec"],
                                 self.PRE_PROCES_PARAMS["hfrec"],
                                 self.PRE_PROCES_PARAMS["order"],
@@ -116,7 +135,7 @@ class SVMTrainingModule():
                                 self.PRE_PROCES_PARAMS["sampling_rate"],
                                 axis = axis)
 
-        dataBanked = self.applyFilterBank(filteredEEG, bw=bw, order = 4) #Aplicamos banco de filtro
+        dataBanked = self.applyFilterBank(filteredEEG, bw=bw, order = 4, calc1stArmonic = calc1stArmonic) #Aplicamos banco de filtro
 
         anchoVentana = int(self.PRE_PROCES_PARAMS["sampling_rate"]*anchoVentana) #fm * segundos
         ventana = ventana(anchoVentana)
@@ -164,11 +183,6 @@ class SVMTrainingModule():
         self.trainingData, self.labels = self.getDataForTraining(self.signalPSD)
 
         X_trn, X_val, y_trn, y_val = train_test_split(self.trainingData, self.labels, test_size = test_size, shuffle = True, random_state = randomSeed)
-
-        # if applyLDA == True:
-        #     self.lda.fit(X_trn, y_trn)
-        #     X_trn = self.lda.transform(X_trn)
-        #     X_val = self.lda.transform(X_val)
 
         self.model.fit(X_trn, y_trn)
 
@@ -254,6 +268,7 @@ def main():
     path = os.path.join(actualFolder,"recordedEEG\WM\ses1")
 
     frecStimulus = np.array([6, 7, 8, 9])
+    calc1stArmonic = True
 
     trials = 15
     fm = 200.
@@ -282,7 +297,8 @@ def main():
                     'bandStop': 50.,
                     'window': window,
                     'shiftLen':window,
-                    'ti': ti, 'tf':tf
+                    'ti': ti, 'tf':tf,
+                    'calc1stArmonic': calc1stArmonic
                     }
 
     resolution = np.round(fm/samplePoints, 4)
@@ -327,7 +343,7 @@ def main():
     anchoVentana = (window - ti - tf) #fm * segundos
     ventana = windows.hamming #Usamos ventana Hamming
 
-    sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = anchoVentana, bw = 2.0, order = 6, axis = 1)
+    sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = anchoVentana, bw = 2.0, order = 6, axis = 1, calc1stArmonic = calc1stArmonic)
 
     metricas = svm.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2, randomSeed = seed)
     print(metricas)
@@ -363,7 +379,7 @@ def main():
 
                     modelo = svm.createSVM(kernel = kernel, gamma = gamma, C = C, probability = True, randomSeed = seed)
 
-                    sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = anchoVentana, bw = 2.0, order = 6, axis = 1)
+                    sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = anchoVentana, bw = 2.0, order = 6, axis = 1, calc1stArmonic = calc1stArmonic)
 
                     metricas = svm.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2, randomSeed = seed) #entrenamos el modelo y obtenemos las métricas
                     accu = metricas["modelo_testSVMv2"]["val"]["Acc"]
@@ -378,7 +394,7 @@ def main():
 
                 modelo = svm.createSVM(kernel = kernel, C = C, probability = True, randomSeed = seed)
 
-                sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = anchoVentana, bw = 2.0, order = 6, axis = 1)
+                sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = anchoVentana, bw = 2.0, order = 6, axis = 1, calc1stArmonic = calc1stArmonic)
 
                 metricas = svm.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2, randomSeed = seed)
 
