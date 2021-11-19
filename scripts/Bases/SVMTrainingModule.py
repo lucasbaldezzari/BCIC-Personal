@@ -119,13 +119,56 @@ class SVMTrainingModule():
         self.dataBanked = signalFilteredbyBank
         return self.dataBanked
 
+    def applyFilterBankv2(self, eeg, bw = 2.0, order = 4, axis = 0, calc1stArmonic = False):
+        """Aplica banco de filtros en las frecuencias de estimulación.
+        
+        Devuelve el espectro promedio de las señales banqueadas.
+        """
+
+        nyquist = 0.5 * self.FFT_PARAMS["sampling_rate"]
+        #signalFilteredbyBank = np.zeros((self.nclases,self.nsamples,self.ntrials))
+        fcBanck = np.zeros((self.nclases,self.nsamples,self.ntrials))
+        firstArmonicBanck = np.zeros((self.nclases,self.nsamples,self.ntrials))
+
+        for clase in range(self.nclases):
+            for trial in range(self.ntrials):
+                banks = np.zeros((self.nclases,self.nsamples))
+                for i, frecuencia in enumerate(self.frecStimulus):   
+                    low = (frecuencia-bw/2)/nyquist
+                    high = (frecuencia+bw/2)/nyquist
+                    b, a = butter(order, [low, high], btype='band') #obtengo los parámetros del filtro
+                    banks[i] = filtfilt(b, a, eeg[clase, :, trial]) #filtramos
+                fcBanck[clase, : , trial] = banks.mean(axis = 0)
+
+        if calc1stArmonic == True:
+            firstArmonicBanck = np.zeros((self.nclases,self.nsamples,self.ntrials))
+            armonics = self.frecStimulus*2
+            for clase in range(self.nclases):
+                for trial in range(self.ntrials):
+                    banks = np.zeros((self.nclases,self.nsamples))
+                    for i, armonic in enumerate(armonics):   
+                        low = (armonic-bw/2)/nyquist
+                        high = (armonic+bw/2)/nyquist
+                        b, a = butter(order, [low, high], btype='band') #obtengo los parámetros del filtro
+                        banks[i] = filtfilt(b, a, eeg[clase, :, trial]) #filtramos
+                    firstArmonicBanck[clase, : , trial] = banks.mean(axis = 0)
+
+            aux = np.array((fcBanck, firstArmonicBanck))
+            signalFilteredbyBank = np.sum(aux, axis = 0) #devuelvo datos con frecuencia central y los primeros armónicos
+
+        else:
+            signalFilteredbyBank = fcBanck #sin armónicos
+
+        self.dataBanked = signalFilteredbyBank
+        return self.dataBanked
+
     def computWelchPSD(self, signalBanked, fm, ventana, anchoVentana, average = "median", axis = 1):
         """Computa la transformada de Welch al EEG"""
         self.signalSampleFrec, self.signalPSD = welch(signalBanked, fs = fm, window = ventana, nperseg = anchoVentana, average='median',axis = axis)
         return self.signalSampleFrec, self.signalPSD
 
 
-    def featuresExtraction(self, ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1, calc1stArmonic = False):
+    def featuresExtraction(self, ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1, calc1stArmonic = False, filterBank = "v1"):
         """EXtracción de características a partir de datos de EEG sin procesar"""
 
         filteredEEG = filterEEG(self.rawDATA, self.PRE_PROCES_PARAMS["lfrec"],
@@ -135,7 +178,11 @@ class SVMTrainingModule():
                                 self.PRE_PROCES_PARAMS["sampling_rate"],
                                 axis = axis)
 
-        dataBanked = self.applyFilterBank(filteredEEG, bw=bw, order = 4, calc1stArmonic = calc1stArmonic) #Aplicamos banco de filtro
+        if filterBank == "v1":
+            dataBanked = self.applyFilterBank(filteredEEG, bw=bw, order = 4, calc1stArmonic = calc1stArmonic) #Aplicamos banco de filtro
+
+        if filterBank == "v2":
+            dataBanked = self.applyFilterBankv2(filteredEEG, bw=bw, order = 4, calc1stArmonic = calc1stArmonic) #Aplicamos banco de filtro
 
         anchoVentana = int(self.PRE_PROCES_PARAMS["sampling_rate"]*anchoVentana) #fm * segundos
         ventana = ventana(anchoVentana)
@@ -268,7 +315,8 @@ def main():
     path = os.path.join(actualFolder,"recordedEEG\WM\ses1")
 
     frecStimulus = np.array([6, 7, 8, 9])
-    calc1stArmonic = True
+    calc1stArmonic = False
+    filterBankVersion = "v2"
 
     trials = 15
     fm = 200.
@@ -298,7 +346,8 @@ def main():
                     'window': window,
                     'shiftLen':window,
                     'ti': ti, 'tf':tf,
-                    'calc1stArmonic': calc1stArmonic
+                    'calc1stArmonic': calc1stArmonic,
+                    'filterBank': filterBankVersion
                     }
 
     resolution = np.round(fm/samplePoints, 4)
@@ -343,7 +392,8 @@ def main():
     anchoVentana = (window - ti - tf) #fm * segundos
     ventana = windows.hamming #Usamos ventana Hamming
 
-    sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = anchoVentana, bw = 2.0, order = 6, axis = 1, calc1stArmonic = calc1stArmonic)
+    sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = anchoVentana, bw = 2.0, order = 6, axis = 1,
+                            calc1stArmonic = calc1stArmonic, filterBank = filterBankVersion)
 
     metricas = svm.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2, randomSeed = seed)
     print(metricas)
@@ -379,7 +429,8 @@ def main():
 
                     modelo = svm.createSVM(kernel = kernel, gamma = gamma, C = C, probability = True, randomSeed = seed)
 
-                    sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = anchoVentana, bw = 2.0, order = 6, axis = 1, calc1stArmonic = calc1stArmonic)
+                    sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = anchoVentana, bw = 2.0, order = 6, axis = 1,
+                                            calc1stArmonic = calc1stArmonic, filterBank = filterBankVersion)
 
                     metricas = svm.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2, randomSeed = seed) #entrenamos el modelo y obtenemos las métricas
                     accu = metricas["modelo_testSVMv2"]["val"]["Acc"]
@@ -394,7 +445,8 @@ def main():
 
                 modelo = svm.createSVM(kernel = kernel, C = C, probability = True, randomSeed = seed)
 
-                sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = anchoVentana, bw = 2.0, order = 6, axis = 1, calc1stArmonic = calc1stArmonic)
+                sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = anchoVentana, bw = 2.0, order = 6, axis = 1,
+                                            calc1stArmonic = calc1stArmonic, filterBank = filterBankVersion)
 
                 metricas = svm.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2, randomSeed = seed)
 
@@ -432,7 +484,7 @@ def main():
     modeloSVM1.saveTrainingSignalPSD(signalPSD.mean(axis = 2), path = path, filename = "SVM_test_linear")
     os.chdir(actualFolder)
 
-    gamma = "scale"
+    gamma = "auto"
     C = 100
 
     for values in clasificadoresSVM["rbf"]:
