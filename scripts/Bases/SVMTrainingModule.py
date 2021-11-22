@@ -314,9 +314,9 @@ def main():
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join(actualFolder,"recordedEEG\WM\ses1")
 
-    frecStimulus = np.array([6, 7, 8, 9])
+    frecStimulus = np.array([6, 7, 8])
     calc1stArmonic = False
-    filterBankVersion = "v2"
+    filterBankVersion = "v1"
 
     trials = 15
     fm = 200.
@@ -330,9 +330,9 @@ def main():
     descarteInicial = int(fm*ti) #en segundos
     descarteFinal = int(window*fm)-int(tf*fm) #en segundos
 
-    filesRun1 = ["S3_R1_S2_E6","S3-R1-S1-E7", "S3-R1-S1-E8","S3-R1-S1-E9"]
+    filesRun1 = ["S3_R1_S2_E6","S3-R1-S1-E7", "S3-R1-S1-E8"]
     run1 = fa.loadData(path = path, filenames = filesRun1)
-    filesRun2 = ["S3_R2_S2_E6","S3-R2-S1-E7", "S3-R2-S1-E8","S3-R2-S1-E9"]
+    filesRun2 = ["S3_R2_S2_E6","S3-R2-S1-E7", "S3-R2-S1-E8"]
     run2 = fa.loadData(path = path, filenames = filesRun2)
 
     #Filtering de EEG

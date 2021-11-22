@@ -17,6 +17,7 @@ from utils import filterEEG
 
 from scipy.signal import butter, filtfilt, windows
 from scipy.signal import welch
+from scipy.special import softmax
 
 import fileAdmin as fa
 
@@ -61,6 +62,26 @@ class SVMClassifier():
         #Setting variables for EEG processing.
         self.PRE_PROCES_PARAMS = PRE_PROCES_PARAMS
         self.FFT_PARAMS = FFT_PARAMS
+
+        #Tabla probabTableilidades movimientos
+        self.probabTable = { '100':np.array([0, 1.1, 1.1]),
+                        '010':np.array([1.2, 0, 1]),
+                        '000':np.array([1.2, 1.1, 1.1]),
+                        '001':np.array([1.2, 1.1, 0]),
+                        '110':np.array([0, 0, 1]),
+                        '101':np.array([0, 1, 0]),
+                        '011':np.array([1.2, 0, 0])}
+
+        self.pesosTable = { '100':np.array([0, 1, 1]),
+                            '010':np.array([1, 0, 1]),
+                            '000':np.array([1, 1, 1]),
+                            '001':np.array([1, 1, 0]),
+                            '110':np.array([0, 0, 1]),
+                            '101':np.array([0, 1, 0]),
+                            '011':np.array([1, 0, 0])}
+        
+
+        self.obstacles = '000' #empezamos con ningún obstaculo detectado
 
     def loadTrainingSignalPSD(self, filename = "", path = "models"):
 
@@ -133,42 +154,16 @@ class SVMClassifier():
             r_i = covarianza/np.sqrt(covarianza[0][0]*covarianza[1][1])
             r_pearson.append(r_i[0][1])
 
+        if self.obstacles in self.probabTable:
+            probabTableVector = softmax(self.probabTable[self.obstacles])*self.pesosTable[self.obstacles]
+        else:
+            probabTableVector = softmax(self.probabTable['000'])*self.pesosTable['000']
+
+        r_pearson = list(r_pearson*probabTableVector)
+
         indexFfeature = r_pearson.index(max(r_pearson))  
 
         return self.trainingSignalPSD[indexFfeature]
-
-    def computetrainPSDCent(self):
-        
-        trainPSDCent = []
-        trainPSDDist = []
-        for clase, frecuencia in enumerate(self.frecStimulus):
-            powerCenter = sum(self.traingSigPSD[clase])/len(self.traingSigPSD[clase])
-            frecCenter = sum(self.trainSampleFrec)/len(self.trainSampleFrec)
-            trainPSDCent.append([powerCenter, frecCenter])
-            trainPSDDist.append(np.sqrt((self.traingSigPSD[clase]-powerCenter)**2 + (self.trainSampleFrec-frecCenter)**2).mean())
-
-        self.trainPSDCent = np.asarray(trainPSDCent)
-        self.trainPSDDist = np.asarray(trainPSDDist)
-
-    def bouldinFilter(self, signalPSD, sampleFrec):
-        """Lo utilizamos para extraer nuestro vector de características utilizando el método de Davies Bouldin"""
-
-        centroideSignal = [sum(signalPSD)/len(signalPSD), sum(sampleFrec)/len(sampleFrec)]
-        distSignal = np.sqrt((signalPSD-centroideSignal[0])**2 + (sampleFrec-centroideSignal[1])**2).mean()
-        print("Distancia signal", distSignal)
-        db = []
-
-        for clase, frecuencia in enumerate(self.frecStimulus):
-            distPower = centroideSignal[0] - self.trainPSDCent[clase][0]
-            distFrec = centroideSignal[1] - self.trainPSDCent[clase][1]
-            distanciaCentroides = np.sqrt((distPower)**2 + (distFrec)**2).mean()
-            print("distancias centroides", distanciaCentroides)
-            db.append((distSignal + self.trainPSDDist[clase]) / distanciaCentroides)
-
-        print(db)
-        indexFfeature = db.index(max(db))  
-
-        return self.traingSigPSD[indexFfeature]
 
     def featuresExtraction(self, rawDATA, ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1,
                             calc1stArmonic = False, usePearson = True):
@@ -216,9 +211,9 @@ def main():
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join(actualFolder,"recordedEEG\WM\ses1")
 
-    frecStimulus = np.array([6, 7, 8, 9])
+    frecStimulus = np.array([6, 7, 8])
     calc1stArmonic = False
-    usePearson = False
+    usePearson = True
 
     trials = 15
     fm = 200.
@@ -226,9 +221,9 @@ def main():
     samplePoints = int(fm*window)
     channels = 4
 
-    filesRun1 = ["S3_R1_S2_E6","S3-R1-S1-E7", "S3-R1-S1-E8","S3-R1-S1-E9"]
+    filesRun1 = ["S3_R1_S2_E6","S3-R1-S1-E7", "S3-R1-S1-E8"]
     run1 = fa.loadData(path = path, filenames = filesRun1)
-    filesRun2 = ["S3_R2_S2_E6","S3-R2-S1-E7", "S3-R2-S1-E8","S3-R2-S1-E9"]
+    filesRun2 = ["S3_R2_S2_E6","S3-R2-S1-E7", "S3-R2-S1-E8"]
     run2 = fa.loadData(path = path, filenames = filesRun2)
 
     def joinData(allData, stimuli, channels, samples, trials):
@@ -269,7 +264,7 @@ def main():
 
     trainingSignalPSD = svm.trainingSignalPSD
 
-    clase = 3
+    clase = 2
     trial = 6
 
     rawDATA = testSet[clase-1,:,trial-1]

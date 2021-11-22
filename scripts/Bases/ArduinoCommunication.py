@@ -112,6 +112,13 @@ class ArduinoCommunication:
         ----------
         message (byte):
             Byte que se desa enviar por puerto serie.
+
+        Cada vez que se envía un byte con write, se recibe un byte desde Arduino.
+
+        El orden de los byte es:
+        - Byte1: obstaculo adelante (1-Obstaculo /0-sin obstaculo)
+        - Byte2: obstaculo izquierda (1-Obstaculo /0-sin obstaculo)
+        - Byte3: obstaculo derecha (1-Obstaculo /0-sin obstaculo)
         """
         self.dev.write(byte)#.encode('ascii')) #enviamos byte por el puerto serie
         respuesta = self.dev.readline().decode('ascii').strip() #recibimos una respuesta desde Arduino
@@ -297,7 +304,7 @@ def main():
     #En el caso de querer ejecutar Trials de manera indeterminada,
     #debe hacerse trials = None (default)
     """
-    ard = ArduinoCommunication('COM16', trialDuration = 3, stimONTime = 2,
+    ard = ArduinoCommunication('COM6', trialDuration = 3, stimONTime = 2,
                                timing = 100, ntrials = 3)
     time.sleep(1)
     ard.iniSesion()

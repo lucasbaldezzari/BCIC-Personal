@@ -150,8 +150,8 @@ void giveAnOrder()
     acum = 0;
     if ( ((Dt >> 2) & mascaraComando) == 1) Adelante();
     else if ( ((Dt >> 2) & mascaraComando) == 2) Izquierda();
-    else if ( ((Dt >> 2) & mascaraComando) == 3) Retroceso();
-    else if ( ((Dt >> 2) & mascaraComando) == 4 ) Derecha();
+    else if ( ((Dt >> 2) & mascaraComando) == 3) Derecha();
+    else if ( ((Dt >> 2) & mascaraComando) == 4 ) Retroceso();
     else    {
       Stop();
     }

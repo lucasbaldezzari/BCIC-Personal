@@ -126,13 +126,19 @@ def main():
     classifyData = True #True en caso de querer clasificar la señal de EEG
     fm = BoardShim.get_sampling_rate(placa)    
     window = stimuliDuration #segundos
-    #nsamples = int(fm*window)
+
+    equipo = "mentalink"
+
+    if equipo == "mentalink":
+        frecStimulus = np.array([(6, 7, 8)]) #7:adelante, 10:izquierda, 14:derecha, 17:atrás
+        listaEstims = frecStimulus.tolist()
+        movements = [b'1', b'2', b'3']
 
     equipo = "neurorace"
     if equipo == "neurorace":
-        frecStimulus = np.array([7, 9, 11, 13])
+        frecStimulus = np.array([(11, 7, 9)]) #11:adelante, 7:izquierda, 9:derecha, 13:atrás
         listaEstims = frecStimulus.tolist()
-        movements = [b'2',b'4',b'1',b'3',b'0']#izquierda, derecha, adelante, retroceso
+        movements = [b'1', b'2', b'3']
 
     """ ##########################################################################################
     PASO 2: Cargamos datos necesarios para el clasificador y cargamos clasificador
