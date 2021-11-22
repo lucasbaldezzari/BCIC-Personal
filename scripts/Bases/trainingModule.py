@@ -41,11 +41,56 @@ from DataThread import DataThread as DT
 import fileAdmin as fa
 
 def main():
+
+    """ ######################################################
+    PASO 1: Cargamos datos generales de la sesión
+    ######################################################"""
+
+    """Defino variables para control de Trials"""
     
-    """INICIO DE CARGA DE PARÁMETROS PARA PLACA OPENBCI"""
-    """Primeramente seteamos los datos necesarios para configurar la OpenBCI"""
-    #First we need to load the Board using BrainFlow
-   
+    trialsAPromediar = 1
+    contadorTrials = 0
+    cantidadTrials = 1 #cantidad de trials. Sirve para la sesión de entrenamiento.
+    trials = cantidadTrials * trialsAPromediar
+    #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
+    trialDuration = 10 #secs
+    stimuliDuration = 5 #secs
+
+    saveData = True
+    
+    EEGdata = []
+    EEGTrialsAveraged = []
+
+    path = "recordedEEG" #directorio donde se almacenan los registros de EEG.
+
+    """Datos del sujeto, la sesión y la corrida"""
+    subject = "testing"
+    date = '9/11/2021'
+    generalInformation = 'Placa sintética.'
+    stimFrec =  "9"
+    channelsRecorded = [1,2]
+
+
+    """ ##########################################################################################
+    PASO 2: Iniciamos comunicación con Arduino
+    ##########################################################################################"""
+    #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
+    arduino = AC('COM6', trialDuration = trialDuration, stimONTime = stimuliDuration,
+             timing = 100, ntrials = trials)
+    time.sleep(1) 
+    
+    #El siguiente diccionario se usa para guardar información relevante cómo así también los datos de EEG
+    #registrados durante la sesión de entrenamiento.
+
+    arduino.iniSesion() #Inicio sesión en el Arduino.
+    time.sleep(1) 
+    arduino.systemControl[2] = arduino.movements[3] #comando número 3 (b'2') [b'0',b'1',b'2',b'3',b'4',b'5']
+
+    """ ##########################################################################################
+    PASO 3: INICIO DE CARGA DE PARÁMETROS PARA PLACA OPENBCI
+    Primeramente seteamos los datos necesarios para configurar la OpenBCI
+    ##########################################################################################"""
+
     BoardShim.enable_dev_board_logger()
     logging.basicConfig(level=logging.DEBUG)
     
@@ -53,7 +98,7 @@ def main():
               "ganglion": BoardIds.GANGLION_BOARD.value, #IMPORTANTE: frecuencia muestro 200Hz
               "synthetic": BoardIds.SYNTHETIC_BOARD.value}
     
-    placa = placas["ganglion"]  
+    placa = placas["synthetic"]  
     electrodos = "pasivos"
     
     puerto = "COM5" #Chequear el puerto al cual se conectará la placa
@@ -92,8 +137,6 @@ def main():
     params.ip_protocol = args.ip_protocol
     params.timeout = args.timeout
     params.file = args.file
-    
-    """FIN DE CARGA DE PARÁMETROS PARA PLACA OPENBCI"""
     
     board_shim = BoardShim(args.board_id, params) #genero un objeto para control de placas de Brainflow
     board_shim.prepare_session()
@@ -152,21 +195,14 @@ def main():
     data_thread = DT(board_shim, args.board_id) #genero un objeto DataThread para extraer datos de la OpenBCI
     time.sleep(1)
 
-    """Defino variables para control de Trials"""
-    
-    trials = 5 #cantidad de trials. Sirve para la sesión de entrenamiento.
-    #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
-    trialDuration = 10 #secs
-    stimuliDuration = 5 #secs
-
-    saveData = True
-    
-    EEGdata = []
     fm = BoardShim.get_sampling_rate(args.board_id)
     # channels = 8
     channels = len(BoardShim.get_eeg_channels(args.board_id))
     samplePoints = int(fm*stimuliDuration)
     stimuli = 1 #one stimulus
+
+    """FIN DE CARGA DE PARÁMETROS PARA PLACA OPENBCI"""
+    
     
     """Inicio comunicación con Arduino instanciando un objeto AC (ArduinoCommunication)
     en el COM3, con un timing de 100ms
@@ -177,35 +213,28 @@ def main():
     - En el caso de querer comunicar la PC y el Arduino por un tiempo indeterminado debe hacerse
     ntrials = None (default)
     """
-    #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
-    #En este ejemplo esta conectada en el COM3
-    arduino = AC('COM8', trialDuration = trialDuration, stimONTime = stimuliDuration,
-             timing = 100, ntrials = trials)
-    time.sleep(1) 
-    
-    path = "recordedEEG" #directorio donde se almacenan los registros de EEG.
-    
-    #El siguiente diccionario se usa para guardar información relevante cómo así también los datos de EEG
-    #registrados durante la sesión de entrenamiento.
-    dictionary = {
-                'subject': 'ganglion_activo_234off_9hz_2',
-                'date': '9/11/2021',
-                'generalInformation': 'Ganglion. Estimulos LED.',
-                'stimFrec': "9",
-                'channels': [1], 
+
+    datosSession = {
+                'subject': subject,
+                'date': date,
+                'generalInformation': generalInformation,
+                'stimFrec': stimFrec,
+                'channelsRecorded': channelsRecorded, 
                  'dataShape': [stimuli, channels, samplePoints, trials],
                   'eeg': None
                     }
 
-    arduino.iniSesion() #Inicio sesión en el Arduino.
-    # graph = Graph(board_shim)
-    time.sleep(1) 
-    arduino.systemControl[2] = arduino.movements[3] #comando número 4 (b'3') [b'0',b'1',b'2',b'3',b'4',b'5']
     try:
         while arduino.generalControl() == b"1":
             if saveData and arduino.systemControl[1] == b"0":
+                contadorTrials +=1
                 currentData = data_thread.getData(stimuliDuration, channels = channels)
-                EEGdata.append(currentData)
+                EEGTrialsAveraged.append(currentData)
+                if contadorTrials == trialsAPromediar:
+                    array = np.asarray(EEGTrialsAveraged)
+                    EEGdata.append(np.asarray(EEGTrialsAveraged).mean(axis = 0))
+                    EEGTrialsAveraged = []
+                    contadorTrials = 0
                 saveData = False
             elif saveData == False and arduino.systemControl[1] == b"1":
                 saveData = True
@@ -224,8 +253,10 @@ def main():
         EEGdata = np.asarray(EEGdata)
         rawEEG = EEGdata.reshape(1,EEGdata.shape[0],EEGdata.shape[1],EEGdata.shape[2])
         rawEEG = rawEEG.swapaxes(1,2).swapaxes(2,3)
-        dictionary["eeg"] = rawEEG
-        fa.saveData(path = path,dictionary = dictionary, fileName = dictionary["subject"])
+        datosSession["eeg"] = rawEEG
+        fa.saveData(path = path, dictionary = datosSession, fileName = datosSession["subject"])
+
+
 if __name__ == "__main__":
         main()
         

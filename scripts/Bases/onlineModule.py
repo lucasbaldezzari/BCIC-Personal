@@ -113,13 +113,16 @@ def main():
               "ganglion": BoardIds.GANGLION_BOARD, #IMPORTANTE: frecuencia muestro 200Hz
               "synthetic": BoardIds.SYNTHETIC_BOARD}
     
-    placa = placas["ganglion"]
+    placa = placas["synthetic"]
     electrodos = "pasivos"
 
     cantCanalesAUsar = 2 #Cantidad de canales a utilizar
-    canalesAUsar = [1,1] #Seleccionamos canal uno y dos. NOTA: Si quisieramos elegir el canal 2 solamente debemos hacer [2,2] o [1,1] para elegir el canal 1
+    canalesAUsar = [1,2] #Seleccionamos canal uno y dos. NOTA: Si quisieramos elegir el canal 2 solamente debemos hacer [2,2] o [1,1] para elegir el canal 1
 
-    trials = 20 #None implica que se ejecutaran trials de manera indeterminada
+    trialsAPromediar = 2
+    contadorTrials = 0
+    cantidadTrials = 1 #cantidad de trials. Sirve para la sesión de entrenamiento.
+    trials = cantidadTrials * trialsAPromediar
     trialDuration = 10 #secs #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
     stimuliDuration = 5 #secs
 
@@ -306,25 +309,34 @@ def main():
     ##########################################################################################"""
 
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
-    arduino = AC('COM16', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM6', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
 
     time.sleep(1) 
     arduino.iniSesion() #Inicio sesión en el Arduino.
     time.sleep(1) 
 
+    EEGTrialsAveraged = []
     try:
         while arduino.generalControl() == b"1":
 
             if classifyData and arduino.systemControl[1] == b"0":
-                rawEEG = data_thread.getData(stimuliDuration)
-                rawEEG = rawEEG[canalesAUsar[0]-1:canalesAUsar[1], descarteInicial:descarteFinal]
-                rawEEG = rawEEG - rawEEG.mean(axis = 1, keepdims=True) #resto media la media a la señal
-                frecClasificada = clasificar(rawEEG, modeloClasificador, clasificador, anchoVentana = anchoVentana, bw = 2., order = 6, axis = 0)
-                print(f"Comando a enviar {movements[listaEstims.index(frecClasificada)]}. Frecuencia {frecClasificada}")
-                arduino.systemControl[2] = b"1"#movements[listaEstims.index(int(frecClasificada))]#movements[3]
-                esadoRobot = arduino.sendMessage(arduino.systemControl)
-                classifyData = False
+                contadorTrials += 1
+                currentData = data_thread.getData(stimuliDuration)
+                EEGTrialsAveraged.append(currentData)
+                if contadorTrials == trialsAPromediar:
+                    rawEEG = np.asarray(EEGTrialsAveraged).mean(axis = 0)
+                    rawEEG = rawEEG[canalesAUsar[0]-1:canalesAUsar[1], descarteInicial:descarteFinal]
+                    rawEEG = rawEEG - rawEEG.mean(axis = 1, keepdims=True) #resto media la media a la señal
+                    frecClasificada = clasificar(rawEEG, modeloClasificador, clasificador, anchoVentana = anchoVentana, bw = 2., order = 6, axis = 0)
+                    print(f"Comando a enviar {movements[listaEstims.index(frecClasificada)]}. Frecuencia {frecClasificada}")
+                    arduino.systemControl[2] = b"1"#movements[listaEstims.index(int(frecClasificada))]#movements[3]
+
+                    esadoRobot = arduino.sendMessage(arduino.systemControl) #Enviamos mensaje a Arduino con el comando clasificado
+                    
+                    classifyData = False
+                    contadorTrials = 0
+                    EEGTrialsAveraged = []
 
             elif classifyData == False and arduino.systemControl[1] == b"1":
                 classifyData = True
