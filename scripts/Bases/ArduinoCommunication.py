@@ -134,7 +134,7 @@ class ArduinoCommunication:
         for byte in message:
             incomingData.append(self.query(byte))
             
-        return incomingData[-1] #Retorno los últimos bytes recibidos
+        return incomingData[0] #Retorno los últimos bytes recibidos
 
     def close(self):
         """Cerramos comunicción serie"""
@@ -155,12 +155,12 @@ class ArduinoCommunication:
         print("Estado inicial del ROBOT:", estadoRobot)
         
          #### Actualizamos archivo de estados #####
-        estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
-                    int(estadoRobot[0]),
-                    int(estadoRobot[1]),
-                    int(estadoRobot[2])]
+        # estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
+        #             int(estadoRobot[0]),
+        #             int(estadoRobot[1]),
+        #             int(estadoRobot[2])]
 
-        # estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2]]
+        estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2]]
 
         completeName = os.path.join(self.stateFilePath,self.stateFile)
         file = open(completeName, "w")
@@ -224,11 +224,11 @@ class ArduinoCommunication:
             print("Estado ROBOT:", estadoRobot)
 
             #### Actualizamos archivo de estados #####
-            estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
-                        int(estadoRobot[0]),
-                        int(estadoRobot[1]),
-                        int(estadoRobot[2])]
-            # estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2]]
+            # estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
+            #             int(estadoRobot[0]),
+            #             int(estadoRobot[1]),
+            #             int(estadoRobot[2])]
+            estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2]]
 
             completeName = os.path.join(self.stateFilePath,self.stateFile)
             file = open(completeName, "w")
@@ -244,12 +244,12 @@ class ArduinoCommunication:
             print("Estado ROBOT:", estadoRobot)
 
             #Actualizamos archivo de estados
-            estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
-                        int(estadoRobot[0]),
-                        int(estadoRobot[1]),
-                        int(estadoRobot[2])]
+            # estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
+            #             int(estadoRobot[0]),
+            #             int(estadoRobot[1]),
+            #             int(estadoRobot[2])]
 
-            # estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2]]
+            estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2]]
 
             completeName = os.path.join(self.stateFilePath,self.stateFile)
             file = open(completeName, "w")
@@ -304,7 +304,7 @@ def main():
     #En el caso de querer ejecutar Trials de manera indeterminada,
     #debe hacerse trials = None (default)
     """
-    ard = ArduinoCommunication('COM6', trialDuration = 3, stimONTime = 2,
+    ard = ArduinoCommunication('COM10', trialDuration = 3, stimONTime = 2,
                                timing = 100, ntrials = 3)
     time.sleep(1)
     ard.iniSesion()
