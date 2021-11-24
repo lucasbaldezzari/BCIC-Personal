@@ -48,9 +48,9 @@ def main():
 
     """Defino variables para control de Trials"""
     
-    trialsAPromediar = 1
+    trialsAPromediar = 2
     contadorTrials = 0
-    cantidadTrials = 1 #cantidad de trials. Sirve para la sesión de entrenamiento.
+    cantidadTrials = 2 #cantidad de trials. Sirve para la sesión de entrenamiento.
     trials = cantidadTrials * trialsAPromediar
     #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
     trialDuration = 10 #secs
@@ -75,15 +75,13 @@ def main():
     PASO 2: Iniciamos comunicación con Arduino
     ##########################################################################################"""
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
-    arduino = AC('COM6', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM16', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
     time.sleep(1) 
     
     #El siguiente diccionario se usa para guardar información relevante cómo así también los datos de EEG
     #registrados durante la sesión de entrenamiento.
 
-    arduino.iniSesion() #Inicio sesión en el Arduino.
-    time.sleep(1) 
     arduino.systemControl[2] = arduino.movements[3] #comando número 3 (b'2') [b'0',b'1',b'2',b'3',b'4',b'5']
 
     """ ##########################################################################################
@@ -224,6 +222,9 @@ def main():
                   'eeg': None
                     }
 
+    arduino.iniSesion() #Inicio sesión en el Arduino.
+    time.sleep(1) 
+
     try:
         while arduino.generalControl() == b"1":
             if saveData and arduino.systemControl[1] == b"0":
@@ -231,7 +232,6 @@ def main():
                 currentData = data_thread.getData(stimuliDuration, channels = channels)
                 EEGTrialsAveraged.append(currentData)
                 if contadorTrials == trialsAPromediar:
-                    array = np.asarray(EEGTrialsAveraged)
                     EEGdata.append(np.asarray(EEGTrialsAveraged).mean(axis = 0))
                     EEGTrialsAveraged = []
                     contadorTrials = 0

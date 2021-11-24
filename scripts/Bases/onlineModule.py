@@ -58,7 +58,7 @@ def cargarClasificador(modelo, modelName, signalPSDName,frecStimulus, nsamples, 
 
         clasificador = SVMClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS,
                             nsamples = nsamples, path = path) #cargamos clasificador entrenado
-        
+
         clasificador.loadTrainingSignalPSD(filename = signalPSDName, path = path) #cargamos el PSD de mis datos de entrenamiento
 
     if modelo == "CNN":
@@ -87,13 +87,14 @@ def clasificar(rawEEG, modelo, clasificador, anchoVentana = 5, bw = 2., order = 
     rawEEG = np.mean(rawEEG, axis = 0) #promediamos sobre los canales
 
     if modelo == "SVM":
-        featureVector = clasificador.extractFeatures(rawDATA = rawEEG, ventana = windows.hamming,
-                        anchoVentana = anchoVentana, bw = bw, order = order, axis = axis)
+        featureVector = clasificador.featuresExtraction(rawDATA = rawEEG, ventana = windows.hamming,
+                        anchoVentana = anchoVentana, bw = bw, order = order, axis = axis, usePearson=True)
+
         comando = clasificador.getClassification(featureVector = featureVector)
 
     if modelo == "CNN":
-        featureVector = clasificador.extractFeatures(rawDATA = rawEEG, ventana = windows.hamming,
-                        anchoVentana = anchoVentana, bw = bw, order = order, axis = axis)
+        featureVector = clasificador.featuresExtraction(rawDATA = rawEEG, ventana = windows.hamming,
+                        anchoVentana = anchoVentana, bw = bw, order = order, axis = axis, usePearson=True)
         comando = clasificador.getClassification(featureVector = featureVector)
 
     return comando
@@ -113,7 +114,7 @@ def main():
               "ganglion": BoardIds.GANGLION_BOARD, #IMPORTANTE: frecuencia muestro 200Hz
               "synthetic": BoardIds.SYNTHETIC_BOARD}
     
-    placa = placas["synthetic"]
+    placa = placas["ganglion"]
     electrodos = "pasivos"
 
     cantCanalesAUsar = 2 #Cantidad de canales a utilizar
@@ -121,6 +122,7 @@ def main():
 
     trialsAPromediar = 2
     contadorTrials = 0
+    flagConTrials = True
     cantidadTrials = 1 #cantidad de trials. Sirve para la sesión de entrenamiento.
     trials = cantidadTrials * trialsAPromediar
     trialDuration = 10 #secs #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
@@ -133,14 +135,13 @@ def main():
     equipo = "mentalink"
 
     if equipo == "mentalink":
-        frecStimulus = np.array([(6, 7, 8)]) #7:adelante, 10:izquierda, 14:derecha, 17:atrás
-        listaEstims = frecStimulus.tolist()
+        frecStimulus = np.array([6, 7, 8])
+        listaEstims = frecStimulus.copy().tolist()
         movements = [b'1', b'2', b'3']
 
-    equipo = "neurorace"
     if equipo == "neurorace":
-        frecStimulus = np.array([(11, 7, 9)]) #11:adelante, 7:izquierda, 9:derecha, 13:atrás
-        listaEstims = frecStimulus.tolist()
+        frecStimulus = np.array([11, 7, 9]) #11:adelante, 7:izquierda, 9:derecha, 13:atrás
+        listaEstims = frecStimulus.copy().tolist()
         movements = [b'1', b'2', b'3']
 
     """ ##########################################################################################
@@ -309,7 +310,7 @@ def main():
     ##########################################################################################"""
 
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
-    arduino = AC('COM6', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM16', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
 
     time.sleep(1) 
@@ -317,6 +318,7 @@ def main():
     time.sleep(1) 
 
     EEGTrialsAveraged = []
+
     try:
         while arduino.generalControl() == b"1":
 
@@ -328,21 +330,26 @@ def main():
                     rawEEG = np.asarray(EEGTrialsAveraged).mean(axis = 0)
                     rawEEG = rawEEG[canalesAUsar[0]-1:canalesAUsar[1], descarteInicial:descarteFinal]
                     rawEEG = rawEEG - rawEEG.mean(axis = 1, keepdims=True) #resto media la media a la señal
-                    frecClasificada = clasificar(rawEEG, modeloClasificador, clasificador, anchoVentana = anchoVentana, bw = 2., order = 6, axis = 0)
+                    clasificador.obstacles = str(arduino.estadoRobot)
+                    print(f'Obstaculos en: {arduino.estadoRobot}')
+                    frecClasificada = clasificar(rawEEG, modeloClasificador, clasificador, anchoVentana = anchoVentana, bw = 2., order = 4, axis = 0)
                     print(f"Comando a enviar {movements[listaEstims.index(frecClasificada)]}. Frecuencia {frecClasificada}")
-                    arduino.systemControl[2] = b"1"#movements[listaEstims.index(int(frecClasificada))]#movements[3]
-
+                    arduino.systemControl[2] = movements[listaEstims.index(frecClasificada)]
                     esadoRobot = arduino.sendMessage(arduino.systemControl) #Enviamos mensaje a Arduino con el comando clasificado
-                    
-                    classifyData = False
                     contadorTrials = 0
                     EEGTrialsAveraged = []
+                classifyData = False
 
             elif classifyData == False and arduino.systemControl[1] == b"1":
                 classifyData = True
         
     except BaseException as e:
         logging.warning('Exception', exc_info=True)
+        arduino.close() #cierro comunicación serie para liberar puerto COM
+        if board_shim.is_prepared():
+            logging.info('Releasing session')
+            board_shim.release_session()
+
         
     finally:
         if board_shim.is_prepared():

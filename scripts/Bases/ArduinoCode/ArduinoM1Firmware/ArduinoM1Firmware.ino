@@ -45,7 +45,7 @@ char LEDTesteo = 13; //led de testeo
 int frecTimer = 5000; //en Hz. Frecuencia de interrupción del timer.
 
 //estímulo izquierdo
-char estimIzq = 2;
+char estimIzq = 13;
 bool estimIzqON = 0;//Esado que define si el LED se apgará o prenderá.
 int frecEstimIzq = 9;
 int acumEstimIzq = 0;
@@ -77,7 +77,7 @@ char movimiento = 0; //Robot en STOP
   Bluetooth
 ******************************************************************/
 SoftwareSerial BT(2, 3); //(RX||TX)
-byte mensajeBT = 0;
+char mensajeBT = 0;
 
 /******************************************************************
   //FUNCION SETUP
@@ -105,11 +105,12 @@ void serialEvent()
   {
     char val = (Serial.read()) - '0';
     checkSerialMessage(val); //chequeamos mensaje entrante
-    for (int index = 0; index < robotStatusBuff; index++) //enviamos estado
-    {
-      Serial.write(robotStatus[index]);
-    }
-    Serial.write("\n");
+    Serial.println(0b00000101);
+//    for (int index = 0; index < robotStatusBuff; index++) //enviamos estado
+//    {
+//      Serial.write(robotStatus[index]);
+//    }
+//    Serial.write("\n");
   }
 };
 
@@ -121,7 +122,7 @@ ISR(TIMER2_COMPA_vect)//Rutina interrupción Timer2
     //apago estímulos
     digitalWrite(estimIzq, 0);
     digitalWrite(estimDer, 0);
-    digitalWrite(LEDTesteo, 1);
+    //digitalWrite(LEDTesteo, 1);
   }
 
   if(1) //para simular que tenemos un mensaje por bluetooth
@@ -181,7 +182,7 @@ void checkSerialMessage(char val)
     case 0:
       if (incDataFromPC[bufferIndex] == 1) sessionState = SESSION_RUNNING;
       else sessionState = SESSION_STOP;
-      digitalWrite(LEDTesteo, 0);
+      //digitalWrite(LEDTesteo, 0);
       //else sessionState = STOP;
       break;
     case 1:
@@ -192,7 +193,7 @@ void checkSerialMessage(char val)
 
     case 2: //indica hacia donde se debe mover el vehículo
       byte comando = incDataFromPC[bufferIndex];
-      if (comando == 3) digitalWrite(LEDTesteo, 1);
+      //if (comando == 3) digitalWrite(LEDTesteo, 1);
       //Es mejor hacer sendCommand(incDataFromPC[bufferIndex])
       break;
   }

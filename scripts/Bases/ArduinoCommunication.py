@@ -66,6 +66,7 @@ class ArduinoCommunication:
         self.sessionStatus = b"1" #sesión en marcha
         self.stimuliStatus = b"0" #los estimulos empiezan apagados
         self.moveOrder = self.movements[0] #EL robot empieza en STOP
+        self.estadoRobot = 0
         # self.moveOrder = b'63' #El STOP de mentalink será self.moveOrder = b'63' (0b00111111)
         """
         self.moveOrder
@@ -134,7 +135,7 @@ class ArduinoCommunication:
         for byte in message:
             incomingData.append(self.query(byte))
             
-        return incomingData[0] #Retorno los últimos bytes recibidos
+        return incomingData[0]
 
     def close(self):
         """Cerramos comunicción serie"""
@@ -151,8 +152,8 @@ class ArduinoCommunication:
                              self.stimuliStatus,
                              self.moveOrder]
         
-        estadoRobot = self.sendMessage(self.systemControl)
-        print("Estado inicial del ROBOT:", estadoRobot)
+        self.estadoRobot = self.sendMessage(self.systemControl)
+        print("Estado inicial del ROBOT:", self.estadoRobot)
         
          #### Actualizamos archivo de estados #####
         # estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
@@ -186,7 +187,7 @@ class ArduinoCommunication:
                              self.stimuliStatus,
                              self.moveOrder]
         
-        estadoRobot = self.sendMessage(self.systemControl)
+        self.estadoRobot = self.sendMessage(self.systemControl)
 
         #### Actualizamos archivo de estados #####
         estados = [0,0,
@@ -202,7 +203,7 @@ class ArduinoCommunication:
             file.write(str(estado))
         file.close()
 
-        print("Estado final del ROBOT:", estadoRobot)
+        print("Estado final del ROBOT:", self.estadoRobot)
         print("Sesión Finalizada")
         print(f"Trial final {self.trial - 1}")
         
@@ -220,8 +221,8 @@ class ArduinoCommunication:
         if self.counter == self.stimONTime: #mandamos nuevo mensaje cuando comienza un trial
         
             self.systemControl[1] = b"0" #apagamos estímulos
-            estadoRobot = self.sendMessage(self.systemControl)
-            print("Estado ROBOT:", estadoRobot)
+            self.estadoRobot = self.sendMessage(self.systemControl)
+            # print("Estado ROBOT:", self.estadoRobot)
 
             #### Actualizamos archivo de estados #####
             # estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
@@ -240,8 +241,8 @@ class ArduinoCommunication:
         if self.counter == self.trialDuration: 
             
             self.systemControl[1] = b"1"
-            estadoRobot = self.sendMessage(self.systemControl)
-            print("Estado ROBOT:", estadoRobot)
+            self.estadoRobot = self.sendMessage(self.systemControl)
+            # print("Estado ROBOT:", self.estadoRobot)
 
             #Actualizamos archivo de estados
             # estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
@@ -304,7 +305,7 @@ def main():
     #En el caso de querer ejecutar Trials de manera indeterminada,
     #debe hacerse trials = None (default)
     """
-    ard = ArduinoCommunication('COM10', trialDuration = 3, stimONTime = 2,
+    ard = ArduinoCommunication('COM16', trialDuration = 3, stimONTime = 2,
                                timing = 100, ntrials = 3)
     time.sleep(1)
     ard.iniSesion()

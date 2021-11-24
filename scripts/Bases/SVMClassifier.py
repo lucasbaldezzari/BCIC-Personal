@@ -64,23 +64,22 @@ class SVMClassifier():
         self.FFT_PARAMS = FFT_PARAMS
 
         #Tabla probabTableilidades movimientos
-        self.probabTable = { '100':np.array([0, 1.1, 1.1]),
-                        '010':np.array([1.2, 0, 1]),
-                        '000':np.array([1.2, 1.1, 1.1]),
-                        '001':np.array([1.2, 1.1, 0]),
+        self.probabTable = { '4':np.array([0, 1.1, 1.1]),
+                        '2':np.array([1.2, 0, 1]),
+                        '0':np.array([1.2, 1.1, 1.1]),
+                        '1':np.array([1.2, 1.1, 0]),
                         '110':np.array([0, 0, 1]),
-                        '101':np.array([0, 1, 0]),
+                        '5':np.array([0, 1, 0]),
                         '011':np.array([1.2, 0, 0])}
 
-        self.pesosTable = { '100':np.array([0, 1, 1]),
-                            '010':np.array([1, 0, 1]),
-                            '000':np.array([1, 1, 1]),
-                            '001':np.array([1, 1, 0]),
-                            '110':np.array([0, 0, 1]),
-                            '101':np.array([0, 1, 0]),
-                            '011':np.array([1, 0, 0])}
+        self.pesosTable = { '4':np.array([0, 1, 1]),
+                            '2':np.array([1, 0, 1]),
+                            '0':np.array([1, 1, 1]),
+                            '1':np.array([1, 1, 0]),
+                            '6':np.array([0, 0, 1]),
+                            '5':np.array([0, 1, 0]),
+                            '3':np.array([1, 0, 0])}
         
-
         self.obstacles = '000' #empezamos con ningún obstaculo detectado
 
     def loadTrainingSignalPSD(self, filename = "", path = "models"):
@@ -264,7 +263,7 @@ def main():
 
     trainingSignalPSD = svm.trainingSignalPSD
 
-    clase = 2
+    clase = 1
     trial = 6
 
     rawDATA = testSet[clase-1,:,trial-1]
