@@ -156,7 +156,7 @@ class SVMClassifier():
         if self.obstacles in self.probabTable:
             probabTableVector = softmax(self.probabTable[self.obstacles])*self.pesosTable[self.obstacles]
         else:
-            probabTableVector = softmax(self.probabTable['000'])*self.pesosTable['000']
+            probabTableVector = softmax(self.probabTable['0'])*self.pesosTable['0']
 
         r_pearson = list(r_pearson*probabTableVector)
 

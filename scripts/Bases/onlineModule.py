@@ -123,9 +123,9 @@ def main():
     trialsAPromediar = 2
     contadorTrials = 0
     flagConTrials = True
-    cantidadTrials = 1 #cantidad de trials. Sirve para la sesión de entrenamiento.
+    cantidadTrials = 10 #cantidad de trials. Sirve para la sesión de entrenamiento.
     trials = cantidadTrials * trialsAPromediar
-    trialDuration = 10 #secs #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
+    trialDuration = 8 #secs #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
     stimuliDuration = 5 #secs
 
     classifyData = True #True en caso de querer clasificar la señal de EEG
@@ -137,7 +137,7 @@ def main():
     if equipo == "mentalink":
         frecStimulus = np.array([6, 7, 8])
         listaEstims = frecStimulus.copy().tolist()
-        movements = [b'1', b'2', b'3']
+        movements = [b'1', b'2', b'3'] #1 adelante, 2 atrás, 3 derecha, 4 atrás
 
     if equipo == "neurorace":
         frecStimulus = np.array([11, 7, 9]) #11:adelante, 7:izquierda, 9:derecha, 13:atrás
@@ -310,7 +310,7 @@ def main():
     ##########################################################################################"""
 
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
-    arduino = AC('COM16', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM10', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
 
     time.sleep(1) 
