@@ -123,7 +123,7 @@ def main():
     trialsAPromediar = 2
     contadorTrials = 0
     flagConTrials = True
-    cantidadTrials = 10 #cantidad de trials. Sirve para la sesión de entrenamiento.
+    cantidadTrials = 1 #cantidad de trials. Sirve para la sesión de entrenamiento.
     trials = cantidadTrials * trialsAPromediar
     trialDuration = 8 #secs #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
     stimuliDuration = 5 #secs
@@ -330,7 +330,8 @@ def main():
                     rawEEG = np.asarray(EEGTrialsAveraged).mean(axis = 0)
                     rawEEG = rawEEG[canalesAUsar[0]-1:canalesAUsar[1], descarteInicial:descarteFinal]
                     rawEEG = rawEEG - rawEEG.mean(axis = 1, keepdims=True) #resto media la media a la señal
-                    clasificador.obstacles = str(arduino.estadoRobot)
+                    print("tipo",type(arduino.estadoRobot),arduino.estadoRobot)
+                    clasificador.obstacles = arduino.estadoRobot
                     print(f'Obstaculos en: {arduino.estadoRobot}')
                     frecClasificada = clasificar(rawEEG, modeloClasificador, clasificador, anchoVentana = anchoVentana, bw = 2., order = 4, axis = 0)
                     print(f"Comando a enviar {movements[listaEstims.index(frecClasificada)]}. Frecuencia {frecClasificada}")
