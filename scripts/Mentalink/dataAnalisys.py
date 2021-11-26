@@ -1,9 +1,10 @@
-# -*- coding: utf-8 -*-
+	# -*- coding: utf-8 -*-
 """
 Created on Wed Jul 28 16:05:39 2021
 @author: Lucas
         VERSIÓN: SCT-01-RevA
 """
+
 import os
 import numpy as np
 
@@ -14,164 +15,404 @@ from utils import norm_mean_std
 
 import matplotlib.pyplot as plt
 
+from scipy.signal import butter, filtfilt, windows
+from scipy.signal import welch
+
+def applyFilterBank(eeg, frecStimulus, bw = 2.0, order = 4, axis = 1):
+
+        nyquist = 0.5 * fm
+        nclases = len(frecStimulus)
+        nsamples = eeg.shape[1]
+        ntrials = eeg.shape[2]
+        signalFilteredbyBank = np.zeros((nclases,nsamples,ntrials))
+
+        for clase, frecuencia in enumerate(frecStimulus):   
+                low = (frecuencia-bw/2)/nyquist
+                high = (frecuencia+bw/2)/nyquist
+                b, a = butter(order, [low, high], btype='band') #obtengo los parámetros del filtro
+                signalFilteredbyBank[clase] = filtfilt(b, a, eeg, axis = axis) #filtramos
+
+        return signalFilteredbyBank
+
+def computWelchPSD(signalBanked, fm, ventana, anchoVentana, average = "median", axis = 1):
+
+        # anchoVentana = int(fm*anchoVentana) #fm * segundos
+        # ventana = ventana(anchoVentana)
+
+        signalSampleFrec, signalPSD = welch(signalBanked, fs = fm, window = ventana, nperseg = anchoVentana, average='mean',axis = axis, scaling = "density")
+
+        return signalSampleFrec, signalPSD
+
 actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
 path = os.path.join(actualFolder,"recordedEEG\WM\ses1")
 
 trials = 15
 fm = 200.
-window = 5 #sec
-samplePoints = int(fm*window)
+duration = 5 #sec
+samplePoints = int(fm*duration)
 channels = 4
-stimuli = 1 #one stimulus
 
 subjects = [1]
-filenames = ["S3-R1-S1-E6","S3-R1-S1-E7","S3-R1-S1-E8","S3-R1-S1-E9","S3-R1-S1-E15","S3-R1-S1-E17"]
+filenames = ["S3_R1_S2_E6", "S3-R1-S1-E7", "S3-R1-S1-E9"]
 allData = fa.loadData(path = path, filenames = filenames)
 
-name = "S3-R1-S1-E17" #nombre de los datos a analizar}
-stimuli = [7,9,11,13] #lista de estímulos
-estim = [17] #L7e pasamos un estímulo para que grafique una linea vertical
+name = "S3-R1-S1-E9" #nombre de los datos a analizar}
+stimuli = [6,7,9] #lista de estímulos
+estim = [9] #L7e pasamos un estímulo para que grafique una linea vertical
 
-eeg = allData[name]['eeg'][:,:4,:,:] #utilizamos solo los dos primeros canales
-eeg = norm_mean_std(eeg) #normalizamos los datos
+eeg = allData[name]['eeg'][:,:1,:,:]
 
 #Chequeamos información del registro eeg 1
 print(allData[name]["generalInformation"])
 print(f"Forma de los datos {eeg.shape}")
 
 #Filtramos la señal de eeg para eeg 1
+eeg = eeg - eeg.mean(axis = 2, keepdims=True)
+
 
 resolution = np.round(fm/eeg.shape[2], 4)
 
 PRE_PROCES_PARAMS = {
-                'lfrec': 5.,
-                'hfrec': 28.,
-                'order': 8,
+                'lfrec': 4.,
+                'hfrec': 30.,
+                'order': 6,
                 'sampling_rate': fm,
-                'window': window,
-                'shiftLen':window
+                'window': duration,
+                'shiftLen':duration
                 }
 
 FFT_PARAMS = {
                 'resolution': resolution,
                 'start_frequency': 0.,
-                'end_frequency': 28.0,
+                'end_frequency': 30.0,
                 'sampling_rate': fm
                 }
 
-eegFiltered = filterEEG(eeg, PRE_PROCES_PARAMS["lfrec"],
-                        PRE_PROCES_PARAMS["hfrec"],
-                        PRE_PROCES_PARAMS["order"],
-                        PRE_PROCES_PARAMS["sampling_rate"])
+window = 5 #sec
+ti = 0.5 #en segundos
+tf = 0.5 #en segundos
+descarteInicial = int(fm*ti) #en segundos
+descarteFinal = int(window*fm)-int(tf*fm) #en segundos
 
-##Computamos el espectro de frecuencias
+eeg = eeg[:,:, descarteInicial:descarteFinal, :]
 
-#eeg data segmentation
-eegSegmented = segmentingEEG(eegFiltered, PRE_PROCES_PARAMS["window"],
-                             PRE_PROCES_PARAMS["shiftLen"],
-                             PRE_PROCES_PARAMS["sampling_rate"])
+anchoVentana = int((window - ti - tf)*fm) #fm * segundos
 
-MSF1 = computeMagnitudSpectrum(eegSegmented, FFT_PARAMS)
+ventana1 = windows.hamming(anchoVentana, sym= True)
+ventana2 = windows.chebwin(anchoVentana, at = 60, sym= True)
+ventana3 = windows.blackman(anchoVentana, sym= True)
+
+
+ventanas = {
+                'ventana1': ventana1,
+                'ventana2': ventana2,
+                'ventana3': ventana3
+                }
+
+### Graficamos ventanas
+title = "Señales de EEG ventaneadas"
+listaVentanas = ["Hamming", "Chebwin", "blackman"]
+fig, plots = plt.subplots(1, 3, figsize=(12, 6), gridspec_kw=dict(hspace=0.45, wspace=0.3))
+fig.suptitle(title, fontsize = 12)
+t = np.arange(0,anchoVentana/fm,1/fm)
+for i, ventana in enumerate(ventanas):
+        plots[i].plot(ventanas[ventana], label = listaVentanas[i], color = "#403e7d")
+        plots[i].set_ylabel('Amplitud [uV]')
+        plots[i].set_xlabel('tiempo [seg]')
+        plots[i].xaxis.grid(True)
+        plots[i].legend()
+plt.show()
+
+eegVentaneados = {'eeg1':eeg.copy(), 'eeg2': eeg.copy(), 'eeg3': eeg.copy()}
+
+nclases = eeg.shape[0]
+nchannels = eeg.shape[1]
+ntrials = eeg.shape[3]
+
+for clase in range(nclases):
+        for canal in range(nchannels):
+                for trial in range(ntrials):
+                        eegVentaneados['eeg1'][clase, canal, :, trial] = eeg[clase, canal, :, trial]*ventanas['ventana1']
+                        eegVentaneados['eeg2'][clase, canal, :, trial] = eeg[clase, canal, :, trial]*ventanas['ventana2']
+                        eegVentaneados['eeg3'][clase, canal, :, trial] = eeg[clase, canal, :, trial]*ventanas['ventana3']
+
+# eegFiltered = filterEEG(eeg, PRE_PROCES_PARAMS["lfrec"],
+#                         PRE_PROCES_PARAMS["hfrec"],
+#                         PRE_PROCES_PARAMS["order"],
+#                         PRE_PROCES_PARAMS["sampling_rate"])
+
+# plt.plot(eegFiltered[0,0,:,0])
+# plt.show()
+
+#Filtramos EEGs ventaneados
+for eegVentaneado in eegVentaneados:
+        eegVentaneados[eegVentaneado] = filterEEG(eegVentaneados[eegVentaneado], PRE_PROCES_PARAMS["lfrec"],
+                                        PRE_PROCES_PARAMS["hfrec"],
+                                        PRE_PROCES_PARAMS["order"],
+                                        PRE_PROCES_PARAMS["sampling_rate"])
+
+title = "Señales de EEG ventaneadas"
+listaVentanas = ["Hamming", "Chebwin", "blackman"]
+fig, plots = plt.subplots(1, 3, figsize=(12, 6), gridspec_kw=dict(hspace=0.45, wspace=0.3))
+fig.suptitle(title, fontsize = 12)
+t = np.arange(0,anchoVentana/fm,1/fm)
+trial = 6
+for i, eegVentaneado in enumerate(eegVentaneados):
+        print(eegVentaneado)
+        plots[i].plot(t, eegVentaneados[eegVentaneado][0,0,:,trial-1], label = listaVentanas[i], color = "#403e7d")
+        plots[i].set_ylabel('Amplitud [uV]')
+        plots[i].set_xlabel('tiempo [seg]')
+        plots[i].xaxis.grid(True)
+        plots[i].legend()
+plt.show()
+
+#Segmentamos EEGs ventaneados
+eegSegmented = {}
+
+for eegVentaneado in eegVentaneados:
+        eegSegmented[eegVentaneado] = segmentingEEG(eegVentaneados[eegVentaneado], PRE_PROCES_PARAMS["window"],
+                                        PRE_PROCES_PARAMS["shiftLen"],
+                                        PRE_PROCES_PARAMS["sampling_rate"])
+MSFs = {}
+
+for eegVentaneado in eegVentaneados:
+        MSFs[eegVentaneado] = computeMagnitudSpectrum(eegSegmented[eegVentaneado], FFT_PARAMS)
+
+# #eeg data segmentation
+# eegSegmented = segmentingEEG(eegFiltered, PRE_PROCES_PARAMS["window"],
+#                              PRE_PROCES_PARAMS["shiftLen"],
+#                              PRE_PROCES_PARAMS["sampling_rate"])
+
+# MSF1 = computeMagnitudSpectrum(eegSegmented, FFT_PARAMS)
+# C = computeComplexSpectrum(eegSegmented, FFT_PARAMS)
+
+# fft_axis = np.arange(MSF1.shape[0]) * resolution
+# plt.plot(fft_axis, MSF1[:,0,0,:5,0])
+# plt.show()
+
+title = "Espectro Fourier de señales de EEG ventaneadas"
+listaVentanas = ["Hamming", "Chebwin", "blackman"]
+fig, plots = plt.subplots(1, 3, figsize=(12, 6), gridspec_kw=dict(hspace=0.45, wspace=0.3))
+fig.suptitle(title, fontsize = 12)
+fft_axis = np.arange(MSFs['eeg1'].shape[0]) * resolution
+trial = 10
+for i, eegVentaneado in enumerate(eegVentaneados):
+        print(eegVentaneado)
+        plots[i].plot(fft_axis, MSFs[eegVentaneado][:,0,0,trial-1,0], label = listaVentanas[i], color = "#403e7d")
+        plots[i].set_ylabel('Amplitud [uV]')
+        plots[i].set_xlabel('Frecuencia [Hz]')
+        plots[i].xaxis.grid(True)
+        plots[i].legend()
+plt.show()
+
 
 ########################################################################
-#Graficamos espectro para los cuatro canales promediando los trials
+###                    Aplicamos Welch
 ########################################################################
 
-canales = [1,2,3,4]
+ventana1 = windows.hamming(anchoVentana, sym= True)
+ventana2 = windows.chebwin(anchoVentana, at = 60, sym= True)
+ventana3 = windows.blackman(anchoVentana, sym= True)
 
-title = f"Espectro - Trials promediados - sujeto {name}"
-fig, plots = plt.subplots(2, 2, figsize=(16, 14), gridspec_kw=dict(hspace=0.45, wspace=0.3))
-plots = plots.reshape(-1)
+signalSampleFrec1, signalPSD1 = computWelchPSD(eegVentaneados['eeg1'], fm, ventana1, anchoVentana, average = "median", axis = 2)
+signalSampleFrec2, signalPSD2 = computWelchPSD(eegVentaneados['eeg2'], fm, ventana2, anchoVentana, average = "median", axis = 2)
+signalSampleFrec3, signalPSD3 = computWelchPSD(eegVentaneados['eeg3'], fm, ventana3, anchoVentana, average = "median", axis = 2)
+
+samplesFrec = [signalSampleFrec1, signalSampleFrec2, signalSampleFrec3]
+signalPSDs = [signalPSD1, signalPSD2, signalPSD3]
+
+title = "Espectro Fourier de señales de EEG ventaneadas"
+listaVentanas = ["Hamming", "Chebwin", "blackman"]
+fig, plots = plt.subplots(1, 3, figsize=(12, 6), gridspec_kw=dict(hspace=0.45, wspace=0.3))
+fig.suptitle(title, fontsize = 12)
+fft_axis = np.arange(MSFs['eeg1'].shape[0]) * resolution
+trial = 5
+for i in range(len(signalPSDs)):
+        plots[i].plot(samplesFrec[i][:120], signalPSDs[i][0,0,:,trial-1][:120], label = listaVentanas[i], color = "#403e7d")
+        plots[i].set_ylabel('Amplitud [uV^2/Hz]')
+        plots[i].set_xlabel('Frecuencia [Hz]')
+        plots[i].xaxis.grid(True)
+        plots[i].legend()
+plt.show()
+
+
+########################################################################
+###             Aplicamos banco de filtros
+########################################################################
+
+frecStimulus = np.array([6,7,9])
+
+dataBanked = {}
+for eegVentaneado in eegVentaneados:
+        signal = eegVentaneados[eegVentaneado][0,:,:,:].copy()
+        dataBanked[eegVentaneado] = applyFilterBank(signal, frecStimulus, bw = 2, order = 4, axis = 1)
+
+title = "Señales de EEG ventaneadas y filtradas con el banco de filtros"
+listaVentanas = ["Hamming", "Chebwin", "blackman"]
+fig, plots = plt.subplots(len(ventanas), len(frecStimulus), figsize=(12, 6), gridspec_kw=dict(hspace=0.45, wspace=0.3))
+fig.suptitle(title, fontsize = 12)
+t = np.arange(0,anchoVentana/fm,1/fm)
+trial = 5
+for i, eeg in enumerate(dataBanked):
+        plots[i][0].plot(t, dataBanked[eeg][0,:,trial-1], label = f'fc{frecStimulus[0]}')
+        plots[i][1].plot(t, dataBanked[eeg][1,:,trial-1], label = f'fc{frecStimulus[1]}')
+        plots[i][2].plot(t, dataBanked[eeg][2,:,trial-1], label = f'fc{frecStimulus[2]}')
+        plots[i][0].set_ylabel('Amplitud [uV]')
+        plots[i][1].set_ylabel('Amplitud [uV]')
+        plots[i][2].set_ylabel('Amplitud [uV]')
+        plots[i][0].set_xlabel('tiempo [seg]')
+        plots[i][1].set_xlabel('tiempo [seg]')
+        plots[i][2].set_xlabel('tiempo [seg]')
+        plots[i][0].legend()
+        plots[i][1].legend()
+        plots[i][2].legend()
+plt.show()
+
+########################################################################
+###        Aplicamos Welch a las señales filtradas con el banco
+########################################################################
+
+signalSampleFrec1, signalPSD1 = computWelchPSD(dataBanked['eeg1'], fm, ventana1, anchoVentana, average = "median", axis = 1)
+signalSampleFrec2, signalPSD2 = computWelchPSD(dataBanked['eeg2'], fm, ventana2, anchoVentana, average = "median", axis = 1)
+signalSampleFrec3, signalPSD3 = computWelchPSD(dataBanked['eeg3'], fm, ventana3, anchoVentana, average = "median", axis = 1)
+
+samplesFrec = [signalSampleFrec1, signalSampleFrec2, signalSampleFrec3]
+signalPSDs = [signalPSD1, signalPSD2, signalPSD3]
+
+title = "Espectro con método Welch y señales banqueadas"
+listaVentanas = ["Hamming", "Chebwin", "blackman"]
+fig, plots = plt.subplots(1, len(frecStimulus), figsize=(12, 6), gridspec_kw=dict(hspace=0.45, wspace=0.3))
 fig.suptitle(title, fontsize = 16)
+t = np.arange(0,anchoVentana/fm,1/fm)
+trial = 10
+for i, signalPSD in enumerate(signalPSDs):
+        plots[i].plot(signalSampleFrec1[:120], signalPSD[0,:120,trial-1], label = f'fc{frecStimulus[0]}')
+        plots[i].plot(signalSampleFrec2[:120], signalPSD[1,:120,trial-1], label = f'fc{frecStimulus[1]}')
+        plots[i].plot(signalSampleFrec3[:120], signalPSD[2,:120,trial-1], label = f'fc{frecStimulus[2]}')
+        plots[i].set_title(f'Potencia para {listaVentanas[i]}')
+        plots[i].set_ylabel('Amplitud [uV^2/Hz]')
+        plots[i].set_xlabel('Frecuencia [Hz]')
+        plots[i].legend()
+plt.show()
 
-for canal in range(len(canales)):
-        fft_axis = np.arange(MSF1.shape[0]) * resolution
-        # plots[canal].plot(fft_axis + FFT_PARAMS["start_frequency"],
-        #                         np.mean(np.squeeze(MSF1[:, canal, :, :, :]),
-        #                                 axis=1), color = "#403e7d")
-        plots[canal].plot(fft_axis + FFT_PARAMS["start_frequency"],
-                                np.mean(MSF1, axis = 3).reshape(MSF1.shape[0], MSF1.shape[1])[:,canal]
-                                , color = "#403e7d")
-        plots[canal].set_xlabel('Frecuencia [Hz]')
-        plots[canal].set_ylabel('Amplitud [uV]')
-        plots[canal].set_title(f'Estímulo {estim[0]} Hz del sujeto canal {canal + 1}')
-        plots[canal].xaxis.grid(True)
-        plots[canal].axvline(x = estim[0], ymin = 0., ymax = max(fft_axis),
-                                label = "Frec. Estímulo",
-                                linestyle='--', color = "#e37165", alpha = 0.9)
-        plots[canal].legend()
+#### Espectros para todos los trials
+title = f"Espectro con método Welch y señales banqueadas en frecuencias centrales {frecStimulus}Hz - Estímulo {estim}Hz"
+listaVentanas = ["Hamming", "Chebwin", "blackman"]
+fig, plots = plt.subplots(trials, len(frecStimulus), gridspec_kw=dict(hspace=0.45, wspace=0.3))
+fig.suptitle(title, fontsize = 10)
+for trial in range(trials):
+        for i, signalPSD in enumerate(signalPSDs):
+                plots[trial][i].plot(signalSampleFrec1[:80], signalPSD[0,:80,trial], label = f'fc{frecStimulus[0]}')
+                plots[trial][i].plot(signalSampleFrec2[:80], signalPSD[1,:80,trial], label = f'fc{frecStimulus[1]}')
+                plots[trial][i].plot(signalSampleFrec3[:80], signalPSD[2,:80,trial], label = f'fc{frecStimulus[2]}')
+plt.show()
 
+#Aplicando banco de filtros para buscar harmónicos
+
+armonic = frecStimulus*2
+
+dataBanked2 = {}
+for eegVentaneado in eegVentaneados:
+        signal = eegVentaneados[eegVentaneado][0,:,:,:].copy()
+        dataBanked2[eegVentaneado] = applyFilterBank(signal, armonic, bw = 2, order = 4, axis = 1)
+
+title = "Señales de EEG ventaneadas y filtradas con el banco de filtros en los armónicos"
+listaVentanas = ["Hamming", "Chebwin", "blackman"]
+fig, plots = plt.subplots(len(ventanas), len(armonic), figsize=(12, 6), gridspec_kw=dict(hspace=0.45, wspace=0.3))
+fig.suptitle(title, fontsize = 12)
+t = np.arange(0,anchoVentana/fm,1/fm)
+trial = 5
+for i, eeg in enumerate(dataBanked):
+        plots[i][0].plot(t, dataBanked2[eeg][0,:,trial-1], label = f'fc{armonic[0]}')
+        plots[i][1].plot(t, dataBanked2[eeg][1,:,trial-1], label = f'fc{armonic[1]}')
+        plots[i][2].plot(t, dataBanked2[eeg][2,:,trial-1], label = f'fc{armonic[2]}')
+        plots[i][0].set_ylabel('Amplitud [uV]')
+        plots[i][1].set_ylabel('Amplitud [uV]')
+        plots[i][2].set_ylabel('Amplitud [uV]')
+        plots[i][0].set_xlabel('tiempo [seg]')
+        plots[i][1].set_xlabel('tiempo [seg]')
+        plots[i][2].set_xlabel('tiempo [seg]')
+        plots[i][0].legend()
+        plots[i][1].legend()
+        plots[i][2].legend()
 plt.show()
 
 ########################################################################
-#Graficamos espectro para los cuatro canales para un trial en particular
+###        Aplicamos Welch a las señales filtradas con el banco
 ########################################################################
 
-canales = [1,2,3,4]
-trial = 12
+signalSampleFrec1, signalPSD1armonic = computWelchPSD(dataBanked2['eeg1'], fm, ventana1, anchoVentana, average = "median", axis = 1)
+signalSampleFrec2, signalPSD2armonic = computWelchPSD(dataBanked2['eeg2'], fm, ventana2, anchoVentana, average = "median", axis = 1)
+signalSampleFrec3, signalPSD3armonic = computWelchPSD(dataBanked2['eeg3'], fm, ventana3, anchoVentana, average = "median", axis = 1)
 
-title = f"Espectro - Trial número {trial} - sujeto {name}"
-fig, plots = plt.subplots(2, 2, figsize=(16, 14), gridspec_kw=dict(hspace=0.45, wspace=0.3))
-plots = plots.reshape(-1)
+samplesFrec = [signalSampleFrec1, signalSampleFrec2, signalSampleFrec3]
+armonicSignalPSDs = [signalPSD1armonic, signalPSD2armonic, signalPSD3armonic]
+
+trial = 10
+title = f"Espectro con método Welch y señales banqueadas para trial {trial}"
+listaVentanas = ["Hamming", "Chebwin", "blackman"]
+fig, plots = plt.subplots(1, len(armonic), figsize=(12, 6), gridspec_kw=dict(hspace=0.45, wspace=0.3))
 fig.suptitle(title, fontsize = 16)
-
-for canal in range(len(canales)):
-        fft_axis = np.arange(MSF1.shape[0]) * resolution
-        plots[canal].plot(fft_axis + FFT_PARAMS["start_frequency"],
-                                MSF1[:, canal, 0, trial - 1, 0] , color = "#403e7d")
-        plots[canal].set_xlabel('Frecuencia [Hz]')
-        plots[canal].set_ylabel('Amplitud [uV]')
-        plots[canal].set_title(f'Estímulo {estim[0]} Hz del sujeto canal {canal + 1}')
-        plots[canal].xaxis.grid(True)
-        plots[canal].axvline(x = estim[0], ymin = 0., ymax = max(fft_axis),
-                                label = "Frec. Estímulo",
-                                linestyle='--', color = "#e37165", alpha = 0.9)
-        plots[canal].legend()
-
+t = np.arange(0,anchoVentana/fm,1/fm)
+for i, signalPSD in enumerate(signalPSDs):
+        plots[i].plot(signalSampleFrec1[:120], signalPSD3armonic[0,:120,trial-1], label = f'fc{armonic[0]}')
+        plots[i].plot(signalSampleFrec2[:120], signalPSD3armonic[1,:120,trial-1], label = f'fc{armonic[1]}')
+        plots[i].plot(signalSampleFrec3[:120], signalPSD3armonic[2,:120,trial-1], label = f'fc{armonic[2]}')
+        plots[i].set_title(f'Potencia para {listaVentanas[i]}')
+        plots[i].set_ylabel('Amplitud [uV^2/Hz]')
+        plots[i].set_xlabel('Frecuencia [Hz]')
+        plots[i].legend()
 plt.show()
 
-
-########################################################################
-#Graficamos espectro canales promediados y un trial
-########################################################################
-
-trial = 3
-
-title = f"Espectro canales promediados - Trial número {trial} - sujeto {name}"
-plt.title(title)
-plt.plot(fft_axis + FFT_PARAMS["start_frequency"],
-                                MSF1.mean(axis = 1)[:,0,trial-1,0], color = "#403e7d")
-plt.ylabel('Amplitud [uV]')
-plt.axvline(x = estim[0], ymin = 0., ymax = max(fft_axis),
-                        label = f"Frec. Estímulo {estim[0]}Hz",
-                        linestyle='--', color = "#e37165", alpha = 0.9)
-plt.legend()
+#### Espectros para todos los trials
+title = f"Espectro con método Welch y señales banqueadas en frecuencias centrales {frecStimulus}Hz - Estímulo {estim}Hz"
+listaVentanas = ["Hamming", "Chebwin", "blackman"]
+fig, plots = plt.subplots(trials, len(frecStimulus), gridspec_kw=dict(hspace=0.45, wspace=0.3))
+fig.suptitle(title, fontsize = 10)
+for trial in range(trials):
+        for i, signalPSD in enumerate(signalPSDs):
+                plots[trial][i].plot(signalSampleFrec1[:80], signalPSD3armonic[0,:80,trial], label = f'fc{frecStimulus[0]}')
+                plots[trial][i].plot(signalSampleFrec2[:80], signalPSD3armonic[1,:80,trial], label = f'fc{frecStimulus[1]}')
+                plots[trial][i].plot(signalSampleFrec3[:80], signalPSD3armonic[2,:80,trial], label = f'fc{frecStimulus[2]}')
 plt.show()
 
 ########################################################################
-#graficamos espectro para todos los trials y un canal
+###        Fusionando espectros
 ########################################################################
 
-canal = 2 #elegimos un canal
+completeSpectrum1 = np.sum((signalPSD1, signalPSD1armonic), axis = 1)
+test = np.array((signalPSD1, signalPSD1armonic))
 
-title = f"Espectro para cada trial - Canal {canal} - Estímulo {estim[0]}Hz - Sujeto {name}"
+spectrumFor12 = []
 
-filas = 3 #Tenemos 15 trials y dividimos el gráfico en 3 filas y 5 columnas
-columnas = 5
+for signalPSD in signalPSDs:
+        aux = np.array((signalPSD1, signalPSD1armonic))
+        spectrumFor12.append(np.sum(aux, axis = 0))
 
-fig, plots = plt.subplots(filas, columnas, figsize=(16, 14), gridspec_kw=dict(hspace=0.35, wspace=0.2))
-plots = plots.reshape(-1)
-fig.suptitle(title, fontsize = 14)
+trial = 10
+title = f"Espectros con frecuencia central y primer armónico para trial {trial}"
+listaVentanas = ["Hamming", "Chebwin", "blackman"]
+fig, plots = plt.subplots(1, len(spectrumFor12), figsize=(12, 6), gridspec_kw=dict(hspace=0.45, wspace=0.3))
+fig.suptitle(title, fontsize = 16)
+t = np.arange(0,anchoVentana/fm,1/fm)
+for i, signalPSD in enumerate(signalPSDs):
+        plots[i].plot(signalSampleFrec1[:120], spectrumFor12[0][0,:120,trial-1], label = f'fc{frecStimulus[0]}-fc{armonic[0]}')
+        plots[i].plot(signalSampleFrec2[:120], spectrumFor12[1][1,:120,trial-1], label = f'fc{frecStimulus[1]}-fc{armonic[0]}')
+        plots[i].plot(signalSampleFrec3[:120], spectrumFor12[2][2,:120,trial-1], label = f'fc{frecStimulus[2]}-fc{armonic[0]}')
+        plots[i].set_title(f'Potencia para {listaVentanas[i]}')
+        plots[i].set_ylabel('Amplitud [uV^2/Hz]')
+        plots[i].set_xlabel('Frecuencia [Hz]')
+        plots[i].legend()
+plt.show()
 
-for trial in range(MSF1.shape[3]):
-        fft_axis = np.arange(MSF1.shape[0]) * resolution
-        plots[trial].plot(fft_axis + FFT_PARAMS["start_frequency"],
-                                MSF1[:, canal-1, 0, trial, 0] , color = "#403e7d")
-        plots[trial].set_xlabel('Frecuencia [Hz]')
-        plots[trial].set_ylabel('Amplitud [uV]')
-        # plots[trial].set_title(f'Estímulo {estim[0]} Hz del sujeto canal {canal}')
-        plots[trial].xaxis.grid(True)
-        plots[trial].axvline(x = estim[0], ymin = 0., ymax = max(fft_axis),
-                                linestyle='--', color = "#e37165", alpha = 0.9)
-
+#### Espectros para todos los trials
+title = f"Espectros con frecuencia central y primer armónico para trial {trial} - Estímulo {estim}Hz"
+listaVentanas = ["Hamming", "Chebwin", "blackman"]
+fig, plots = plt.subplots(trials, len(frecStimulus), gridspec_kw=dict(hspace=0.45, wspace=0.3))
+fig.suptitle(title, fontsize = 10)
+for trial in range(trials):
+        for i, signalPSD in enumerate(signalPSDs):
+                plots[trial][i].plot(signalSampleFrec1[:80], spectrumFor12[0][0,:80,trial], label = f'fc{frecStimulus[0]}')
+                plots[trial][i].plot(signalSampleFrec2[:80], spectrumFor12[0][1,:80,trial], label = f'fc{frecStimulus[1]}')
+                plots[trial][i].plot(signalSampleFrec3[:80], spectrumFor12[0][2,:80,trial], label = f'fc{frecStimulus[2]}')
 plt.show()
