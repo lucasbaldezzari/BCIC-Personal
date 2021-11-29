@@ -48,13 +48,13 @@ def main():
 
     """Defino variables para control de Trials"""
     
-    trialsAPromediar = 2
+    trialsAPromediar = 3
     contadorTrials = 0
-    cantidadTrials = 2 #cantidad de trials. Sirve para la sesión de entrenamiento.
+    cantidadTrials = 5 #cantidad de trials. Sirve para la sesión de entrenamiento.
     trials = cantidadTrials * trialsAPromediar
     #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
-    trialDuration = 10 #secs
-    stimuliDuration = 5 #secs
+    trialDuration = 6 #secs
+    stimuliDuration = 4 #secs
 
     saveData = True
     
@@ -64,10 +64,10 @@ def main():
     path = "recordedEEG" #directorio donde se almacenan los registros de EEG.
 
     """Datos del sujeto, la sesión y la corrida"""
-    subject = "testing"
-    date = '9/11/2021'
-    generalInformation = 'Placa sintética.'
-    stimFrec =  "9"
+    subject = "LucasB_10Hz(20Hz)"
+    date = '28/11/2021'
+    generalInformation = f'Cyton. Probando con frec = 16 en arduino. Duración estímulos {stimuliDuration} y duración trial {trialDuration}'
+    stimFrec =  "10-20Ard"
     channelsRecorded = [1,2]
 
 
@@ -75,7 +75,7 @@ def main():
     PASO 2: Iniciamos comunicación con Arduino
     ##########################################################################################"""
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
-    arduino = AC('COM16', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM9', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
     time.sleep(1) 
     
@@ -96,10 +96,10 @@ def main():
               "ganglion": BoardIds.GANGLION_BOARD.value, #IMPORTANTE: frecuencia muestro 200Hz
               "synthetic": BoardIds.SYNTHETIC_BOARD.value}
     
-    placa = placas["synthetic"]  
-    electrodos = "pasivos"
+    placa = placas["cyton"]  
+    electrodos = "activos"
     
-    puerto = "COM5" #Chequear el puerto al cual se conectará la placa
+    puerto = "COM7" #Chequear el puerto al cual se conectará la placa
     
     parser = argparse.ArgumentParser()
     
@@ -217,8 +217,10 @@ def main():
                 'date': date,
                 'generalInformation': generalInformation,
                 'stimFrec': stimFrec,
+                'trialDuration': trialDuration,
+                'stimuliDuration': stimuliDuration,
                 'channelsRecorded': channelsRecorded, 
-                 'dataShape': [stimuli, channels, samplePoints, trials],
+                 'dataShape': [stimuli, channelsRecorded, samplePoints, trials],
                   'eeg': None
                     }
 
@@ -229,7 +231,8 @@ def main():
         while arduino.generalControl() == b"1":
             if saveData and arduino.systemControl[1] == b"0":
                 contadorTrials +=1
-                currentData = data_thread.getData(stimuliDuration, channels = channels)
+                currentData = data_thread.getData(stimuliDuration, channels = len(channelsRecorded))
+                print(currentData.shape)
                 EEGTrialsAveraged.append(currentData)
                 if contadorTrials == trialsAPromediar:
                     EEGdata.append(np.asarray(EEGTrialsAveraged).mean(axis = 0))
@@ -246,6 +249,7 @@ def main():
         if board_shim.is_prepared():
             logging.info('Releasing session')
             board_shim.release_session()
+            arduino.close()
             
         arduino.close() #cierro comunicación serie para liberar puerto COM
         
