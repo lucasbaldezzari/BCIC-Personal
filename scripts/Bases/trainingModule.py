@@ -64,10 +64,10 @@ def main():
     path = "recordedEEG" #directorio donde se almacenan los registros de EEG.
 
     """Datos del sujeto, la sesión y la corrida"""
-    subject = "LucasB_10Hz(20Hz)"
+    subject = "LucasB_8.5Hz_17Hz_4"
     date = '28/11/2021'
-    generalInformation = f'Cyton. Probando con frec = 16 en arduino. Duración estímulos {stimuliDuration} y duración trial {trialDuration}'
-    stimFrec =  "10-20Ard"
+    generalInformation = f'Cyton. Probando con frec = 26 en arduino. Duración estímulos {stimuliDuration} y duración trial {trialDuration}'
+    stimFrec =  "LucasB_8.5Hz_17Hz_4"
     channelsRecorded = [1,2]
 
 
@@ -75,7 +75,7 @@ def main():
     PASO 2: Iniciamos comunicación con Arduino
     ##########################################################################################"""
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
-    arduino = AC('COM9', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM15', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
     time.sleep(1) 
     
@@ -96,10 +96,10 @@ def main():
               "ganglion": BoardIds.GANGLION_BOARD.value, #IMPORTANTE: frecuencia muestro 200Hz
               "synthetic": BoardIds.SYNTHETIC_BOARD.value}
     
-    placa = placas["cyton"]  
-    electrodos = "activos"
+    placa = placas["ganglion"]  
+    electrodos = "pasivos"
     
-    puerto = "COM7" #Chequear el puerto al cual se conectará la placa
+    puerto = "COM5" #Chequear el puerto al cual se conectará la placa
     
     parser = argparse.ArgumentParser()
     
@@ -151,7 +151,7 @@ def main():
     """
 
     if placa == BoardIds.GANGLION_BOARD.value:
-        canalesAdesactivar = ["2","3","4"]
+        canalesAdesactivar = ["3","4"]
         for canal in canalesAdesactivar:
             board_shim.config_board(canal) #apagamos los canales 3 y 4
             time.sleep(1)
@@ -231,7 +231,7 @@ def main():
         while arduino.generalControl() == b"1":
             if saveData and arduino.systemControl[1] == b"0":
                 contadorTrials +=1
-                currentData = data_thread.getData(stimuliDuration, channels = len(channelsRecorded))
+                currentData = data_thread.getData(stimuliDuration, channels = channels)
                 print(currentData.shape)
                 EEGTrialsAveraged.append(currentData)
                 if contadorTrials == trialsAPromediar:
@@ -259,7 +259,6 @@ def main():
         rawEEG = rawEEG.swapaxes(1,2).swapaxes(2,3)
         datosSession["eeg"] = rawEEG
         fa.saveData(path = path, dictionary = datosSession, fileName = datosSession["subject"])
-
 
 if __name__ == "__main__":
         main()

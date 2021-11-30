@@ -238,7 +238,6 @@ class ArduinoCommunication:
             file.close()
 
             print(f"Fin trial {self.trial}")
-            print("")
             self.trial += 1 #incrementamos un trial
             self.counter = 0 #reiniciamos timer
             
@@ -283,7 +282,7 @@ def main():
     #En el caso de querer ejecutar Trials de manera indeterminada,
     #debe hacerse trials = None (default)
     """
-    ard = ArduinoCommunication('COM9', trialDuration = 10, stimONTime = 5,
+    ard = ArduinoCommunication('COM15', trialDuration = 3, stimONTime = 2,
                                timing = 100, ntrials = 2)
     time.sleep(1)
     ard.iniSesion()

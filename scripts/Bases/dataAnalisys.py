@@ -26,7 +26,7 @@ def applyFilterBank(eeg, frecStimulus, bw = 2.0, order = 4, axis = 1):
         ntrials = eeg.shape[2]
         signalFilteredbyBank = np.zeros((nclases,nsamples,ntrials))
 
-        for clase, frecuencia in enumerate(frecStimulus):   
+        for clase, frecuencia in enumerate(frecStimulus):
                 low = (frecuencia-bw/2)/nyquist
                 high = (frecuencia+bw/2)/nyquist
                 b, a = butter(order, [low, high], btype='band') #obtengo los parámetros del filtro
@@ -47,20 +47,24 @@ actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener e
 path = os.path.join(actualFolder,"recordedEEG")
 
 trials = 5
-fm = 250.
+fm = 200.
 duration = 4 #sec
 samplePoints = int(fm*duration)
 channels = 2
 
 subjects = [1]
-filenames = ["LucasB_10Hz(20Hz)"]
+filenames = ["LucasB_7Hz_14Hz_4"]
 allData = fa.loadData(path = path, filenames = filenames)
 
-name = "LucasB_10Hz(20Hz)" #nombre de los datos a analizar}
-stimuli = [8,10,14] #lista de estímulos
-estim = [10] #L7e pasamos un estímulo para que grafique una linea vertical
+name = "LucasB_7Hz_14Hz_4" #nombre de los datos a analizar}
+stimuli = [7,12,15] #lista de estímulos
+estim = [9] #L7e pasamos un estímulo para que grafique una linea vertical
 
-eeg = allData[name]['eeg'][:,1:2,:,:]
+frecStimulus = np.array([7,8,10])
+
+eeg = allData[name]['eeg'][:,:,:,:].mean(axis = 1)
+eeg = eeg.reshape(1,1,eeg.shape[1],eeg.shape[2])
+
 
 #Chequeamos información del registro eeg 1
 print(allData[name]["generalInformation"])
@@ -73,9 +77,9 @@ eeg = eeg - eeg.mean(axis = 2, keepdims=True)
 resolution = np.round(fm/eeg.shape[2], 4)
 
 PRE_PROCES_PARAMS = {
-                'lfrec': 4.,
+                'lfrec': 5.,
                 'hfrec': 30.,
-                'order': 6,
+                'order': 4,
                 'sampling_rate': fm,
                 'window': duration,
                 'shiftLen':duration
@@ -89,8 +93,8 @@ FFT_PARAMS = {
                 }
 
 window = duration #sec
-ti = 0.5 #en segundos
-tf = 0.5 #en segundos
+ti = 0.3 #en segundos
+tf = 0.1 #en segundos
 descarteInicial = int(fm*ti) #en segundos
 descarteFinal = int(window*fm)-int(tf*fm) #en segundos
 
@@ -129,12 +133,12 @@ nclases = eeg.shape[0]
 nchannels = eeg.shape[1]
 ntrials = eeg.shape[3]
 
-# for clase in range(nclases):
-#         for canal in range(nchannels):
-#                 for trial in range(ntrials):
-#                         eegVentaneados['eeg1'][clase, canal, :, trial] = eeg[clase, canal, :, trial]*ventanas['ventana1']
-#                         eegVentaneados['eeg2'][clase, canal, :, trial] = eeg[clase, canal, :, trial]*ventanas['ventana2']
-#                         eegVentaneados['eeg3'][clase, canal, :, trial] = eeg[clase, canal, :, trial]*ventanas['ventana3']
+for clase in range(nclases):
+        for canal in range(nchannels):
+                for trial in range(ntrials):
+                        eegVentaneados['eeg1'][clase, canal, :, trial] = eeg[clase, canal, :, trial]*ventanas['ventana1']
+                        eegVentaneados['eeg2'][clase, canal, :, trial] = eeg[clase, canal, :, trial]*ventanas['ventana2']
+                        eegVentaneados['eeg3'][clase, canal, :, trial] = eeg[clase, canal, :, trial]*ventanas['ventana3']
 
 # eegFiltered = filterEEG(eeg, PRE_PROCES_PARAMS["lfrec"],
 #                         PRE_PROCES_PARAMS["hfrec"],
@@ -195,7 +199,7 @@ listaVentanas = ["Hamming", "Chebwin", "blackman"]
 fig, plots = plt.subplots(1, 3, figsize=(12, 6), gridspec_kw=dict(hspace=0.45, wspace=0.3))
 fig.suptitle(title, fontsize = 12)
 fft_axis = np.arange(MSFs['eeg1'].shape[0]) * resolution
-trial = 3
+trial = 2
 for i, eegVentaneado in enumerate(eegVentaneados):
         print(eegVentaneado)
         plots[i].plot(fft_axis, MSFs[eegVentaneado][:,0,0,trial-1,0], label = listaVentanas[i], color = "#403e7d")
@@ -226,7 +230,7 @@ listaVentanas = ["Hamming", "Chebwin", "blackman"]
 fig, plots = plt.subplots(1, 3, figsize=(12, 6), gridspec_kw=dict(hspace=0.45, wspace=0.3))
 fig.suptitle(title, fontsize = 12)
 fft_axis = np.arange(MSFs['eeg1'].shape[0]) * resolution
-trial = 3
+trial = 1
 for i in range(len(signalPSDs)):
         plots[i].plot(samplesFrec[i][:120], signalPSDs[i][0,0,:,trial-1][:120], label = listaVentanas[i], color = "#403e7d")
         plots[i].set_ylabel('Amplitud [uV^2/Hz]')
@@ -240,7 +244,7 @@ plt.show()
 ###             Aplicamos banco de filtros
 ########################################################################
 
-frecStimulus = np.array([8,10,14])
+# frecStimulus = np.array([8,10,14])
 
 dataBanked = {}
 for eegVentaneado in eegVentaneados:
@@ -252,7 +256,7 @@ listaVentanas = ["Hamming", "Chebwin", "blackman"]
 fig, plots = plt.subplots(len(ventanas), len(frecStimulus), figsize=(12, 6), gridspec_kw=dict(hspace=0.45, wspace=0.3))
 fig.suptitle(title, fontsize = 12)
 t = np.arange(0,anchoVentana/fm,1/fm)
-trial = 5
+trial = 1
 for i, eeg in enumerate(dataBanked):
         plots[i][0].plot(t, dataBanked[eeg][0,:,trial-1], label = f'fc{frecStimulus[0]}')
         plots[i][1].plot(t, dataBanked[eeg][1,:,trial-1], label = f'fc{frecStimulus[1]}')
@@ -284,7 +288,7 @@ listaVentanas = ["Hamming", "Chebwin", "blackman"]
 fig, plots = plt.subplots(1, len(frecStimulus), figsize=(12, 6), gridspec_kw=dict(hspace=0.45, wspace=0.3))
 fig.suptitle(title, fontsize = 16)
 t = np.arange(0,anchoVentana/fm,1/fm)
-trial = 4
+trial = 1
 for i, signalPSD in enumerate(signalPSDs):
         plots[i].plot(signalSampleFrec1[:120], signalPSD[0,:120,trial-1], label = f'fc{frecStimulus[0]}')
         plots[i].plot(signalSampleFrec2[:120], signalPSD[1,:120,trial-1], label = f'fc{frecStimulus[1]}')
@@ -321,7 +325,7 @@ listaVentanas = ["Hamming", "Chebwin", "blackman"]
 fig, plots = plt.subplots(len(ventanas), len(armonic), figsize=(12, 6), gridspec_kw=dict(hspace=0.45, wspace=0.3))
 fig.suptitle(title, fontsize = 12)
 t = np.arange(0,anchoVentana/fm,1/fm)
-trial = 4
+trial = 1
 for i, eeg in enumerate(dataBanked):
         plots[i][0].plot(t, dataBanked2[eeg][0,:,trial-1], label = f'fc{armonic[0]}')
         plots[i][1].plot(t, dataBanked2[eeg][1,:,trial-1], label = f'fc{armonic[1]}')
@@ -348,16 +352,16 @@ signalSampleFrec3, signalPSD3armonic = computWelchPSD(dataBanked2['eeg3'], fm, v
 samplesFrec = [signalSampleFrec1, signalSampleFrec2, signalSampleFrec3]
 armonicSignalPSDs = [signalPSD1armonic, signalPSD2armonic, signalPSD3armonic]
 
-trial = 2
+trial = 1
 title = f"Espectro con método Welch y señales banqueadas para trial {trial}"
 listaVentanas = ["Hamming", "Chebwin", "blackman"]
 fig, plots = plt.subplots(1, len(armonic), figsize=(12, 6), gridspec_kw=dict(hspace=0.45, wspace=0.3))
 fig.suptitle(title, fontsize = 16)
 t = np.arange(0,anchoVentana/fm,1/fm)
 for i, signalPSD in enumerate(signalPSDs):
-        plots[i].plot(signalSampleFrec1[:120], signalPSD3armonic[0,:120,trial-1], label = f'fc{armonic[0]}')
-        plots[i].plot(signalSampleFrec2[:120], signalPSD3armonic[1,:120,trial-1], label = f'fc{armonic[1]}')
-        plots[i].plot(signalSampleFrec3[:120], signalPSD3armonic[2,:120,trial-1], label = f'fc{armonic[2]}')
+        plots[i].plot(signalSampleFrec1[:150], signalPSD1armonic[0,:150,trial-1], label = f'fc{armonic[0]}')
+        plots[i].plot(signalSampleFrec2[:150], signalPSD2armonic[1,:150,trial-1], label = f'fc{armonic[1]}')
+        plots[i].plot(signalSampleFrec3[:150], signalPSD3armonic[2,:150,trial-1], label = f'fc{armonic[2]}')
         plots[i].set_title(f'Potencia para {listaVentanas[i]}')
         plots[i].set_ylabel('Amplitud [uV^2/Hz]')
         plots[i].set_xlabel('Frecuencia [Hz]')
@@ -371,48 +375,48 @@ fig, plots = plt.subplots(trials, len(frecStimulus), gridspec_kw=dict(hspace=0.4
 fig.suptitle(title, fontsize = 10)
 for trial in range(trials):
         for i, signalPSD in enumerate(signalPSDs):
-                plots[trial][i].plot(signalSampleFrec1[:80], signalPSD3armonic[0,:80,trial], label = f'fc{frecStimulus[0]}')
-                plots[trial][i].plot(signalSampleFrec2[:80], signalPSD3armonic[1,:80,trial], label = f'fc{frecStimulus[1]}')
-                plots[trial][i].plot(signalSampleFrec3[:80], signalPSD3armonic[2,:80,trial], label = f'fc{frecStimulus[2]}')
+                plots[trial][i].plot(signalSampleFrec1[:150], signalPSD3armonic[0,:150,trial], label = f'fc{frecStimulus[0]}')
+                plots[trial][i].plot(signalSampleFrec2[:150], signalPSD3armonic[1,:150,trial], label = f'fc{frecStimulus[1]}')
+                plots[trial][i].plot(signalSampleFrec3[:150], signalPSD3armonic[2,:150,trial], label = f'fc{frecStimulus[2]}')
 plt.show()
 
 ########################################################################
 ###        Fusionando espectros
 ########################################################################
 
-completeSpectrum1 = np.sum((signalPSD1, signalPSD1armonic), axis = 1)
-test = np.array((signalPSD1, signalPSD1armonic))
+# completeSpectrum1 = np.sum((signalPSD1, signalPSD1armonic), axis = 1)
+# test = np.array((signalPSD1, signalPSD1armonic))
 
-spectrumFor12 = []
+# spectrumFor12 = []
 
-for signalPSD in signalPSDs:
-        aux = np.array((signalPSD1, signalPSD1armonic))
-        spectrumFor12.append(np.sum(aux, axis = 0))
+# for signalPSD in signalPSDs:
+#         aux = np.array((signalPSD1, signalPSD1armonic))
+#         spectrumFor12.append(np.sum(aux, axis = 0))
 
-trial = 3
-title = f"Espectros con frecuencia central y primer armónico para trial {trial}"
-listaVentanas = ["Hamming", "Chebwin", "blackman"]
-fig, plots = plt.subplots(1, len(spectrumFor12), figsize=(12, 6), gridspec_kw=dict(hspace=0.45, wspace=0.3))
-fig.suptitle(title, fontsize = 16)
-t = np.arange(0,anchoVentana/fm,1/fm)
-for i, signalPSD in enumerate(signalPSDs):
-        plots[i].plot(signalSampleFrec1[:120], spectrumFor12[0][0,:120,trial-1], label = f'fc{frecStimulus[0]}-fc{armonic[0]}')
-        plots[i].plot(signalSampleFrec2[:120], spectrumFor12[1][1,:120,trial-1], label = f'fc{frecStimulus[1]}-fc{armonic[0]}')
-        plots[i].plot(signalSampleFrec3[:120], spectrumFor12[2][2,:120,trial-1], label = f'fc{frecStimulus[2]}-fc{armonic[0]}')
-        plots[i].set_title(f'Potencia para {listaVentanas[i]}')
-        plots[i].set_ylabel('Amplitud [uV^2/Hz]')
-        plots[i].set_xlabel('Frecuencia [Hz]')
-        plots[i].legend()
-plt.show()
+# trial = 3
+# title = f"Espectros con frecuencia central y primer armónico para trial {trial}"
+# listaVentanas = ["Hamming", "Chebwin", "blackman"]
+# fig, plots = plt.subplots(1, len(spectrumFor12), figsize=(12, 6), gridspec_kw=dict(hspace=0.45, wspace=0.3))
+# fig.suptitle(title, fontsize = 16)
+# t = np.arange(0,anchoVentana/fm,1/fm)
+# for i, signalPSD in enumerate(signalPSDs):
+#         plots[i].plot(signalSampleFrec1[:120], spectrumFor12[0][0,:120,trial-1], label = f'fc{frecStimulus[0]}-fc{armonic[0]}')
+#         plots[i].plot(signalSampleFrec2[:120], spectrumFor12[1][1,:120,trial-1], label = f'fc{frecStimulus[1]}-fc{armonic[0]}')
+#         plots[i].plot(signalSampleFrec3[:120], spectrumFor12[2][2,:120,trial-1], label = f'fc{frecStimulus[2]}-fc{armonic[0]}')
+#         plots[i].set_title(f'Potencia para {listaVentanas[i]}')
+#         plots[i].set_ylabel('Amplitud [uV^2/Hz]')
+#         plots[i].set_xlabel('Frecuencia [Hz]')
+#         plots[i].legend()
+# plt.show()
 
-#### Espectros para todos los trials
-title = f"Espectros con frecuencia central y primer armónico para trial {trial} - Estímulo {estim}Hz"
-listaVentanas = ["Hamming", "Chebwin", "blackman"]
-fig, plots = plt.subplots(trials, len(frecStimulus), gridspec_kw=dict(hspace=0.45, wspace=0.3))
-fig.suptitle(title, fontsize = 10)
-for trial in range(trials):
-        for i, signalPSD in enumerate(signalPSDs):
-                plots[trial][i].plot(signalSampleFrec1[:80], spectrumFor12[0][0,:80,trial], label = f'fc{frecStimulus[0]}')
-                plots[trial][i].plot(signalSampleFrec2[:80], spectrumFor12[0][1,:80,trial], label = f'fc{frecStimulus[1]}')
-                plots[trial][i].plot(signalSampleFrec3[:80], spectrumFor12[0][2,:80,trial], label = f'fc{frecStimulus[2]}')
-plt.show()
+# #### Espectros para todos los trials
+# title = f"Espectros con frecuencia central y primer armónico para trial {trial} - Estímulo {estim}Hz"
+# listaVentanas = ["Hamming", "Chebwin", "blackman"]
+# fig, plots = plt.subplots(trials, len(frecStimulus), gridspec_kw=dict(hspace=0.45, wspace=0.3))
+# fig.suptitle(title, fontsize = 10)
+# for trial in range(trials):
+#         for i, signalPSD in enumerate(signalPSDs):
+#                 plots[trial][i].plot(signalSampleFrec1[:80], spectrumFor12[0][0,:80,trial], label = f'fc{frecStimulus[0]}')
+#                 plots[trial][i].plot(signalSampleFrec2[:80], spectrumFor12[0][1,:80,trial], label = f'fc{frecStimulus[1]}')
+#                 plots[trial][i].plot(signalSampleFrec3[:80], spectrumFor12[0][2,:80,trial], label = f'fc{frecStimulus[2]}')
+# plt.show()
