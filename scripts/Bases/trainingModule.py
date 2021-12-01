@@ -64,10 +64,10 @@ def main():
     path = "recordedEEG" #directorio donde se almacenan los registros de EEG.
 
     """Datos del sujeto, la sesión y la corrida"""
-    subject = "LucasB_8.5Hz_17Hz_4"
+    subject = "LucasBEsponja"
     date = '28/11/2021'
     generalInformation = f'Cyton. Probando con frec = 26 en arduino. Duración estímulos {stimuliDuration} y duración trial {trialDuration}'
-    stimFrec =  "LucasB_8.5Hz_17Hz_4"
+    stimFrec =  "LucasBEsponja"
     channelsRecorded = [1,2]
 
 
@@ -96,10 +96,10 @@ def main():
               "ganglion": BoardIds.GANGLION_BOARD.value, #IMPORTANTE: frecuencia muestro 200Hz
               "synthetic": BoardIds.SYNTHETIC_BOARD.value}
     
-    placa = placas["ganglion"]  
+    placa = placas["cyton"]  
     electrodos = "pasivos"
     
-    puerto = "COM5" #Chequear el puerto al cual se conectará la placa
+    puerto = "COM14" #Chequear el puerto al cual se conectará la placa
     
     parser = argparse.ArgumentParser()
     
@@ -159,7 +159,7 @@ def main():
     if placa == BoardIds.CYTON_BOARD.value:
         if electrodos == "pasivos":
             configCanalesCyton = {
-                "canal1": "x1060110X", #ON|Ganancia 24x|Normal input|Connect from Bias|
+                "canal1": "x1160110X", #ON|Ganancia 24x|Normal input|Connect from Bias|
                 "canal2": "x2060110X", #ON|Ganancia 24x|Normal input|Connect from Bias|
                 "canal3": "x3101000X", #Canal OFF
                 "canal4": "x4101000X", #Canal OFF
