@@ -5,7 +5,6 @@ import os
 from types import new_class
 from matplotlib import use
 import numpy as np
-import numpy.matlib as npm
 import pandas as pd
 import json
 
@@ -208,34 +207,36 @@ def main():
     """Empecemos"""
 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-    path = os.path.join(actualFolder,"recordedEEG\WM\ses1")
+    path = os.path.join(actualFolder,"recordedEEG")
 
-    frecStimulus = np.array([6, 7, 8])
+    frecStimulus = np.array([7, 8, 9])
     calc1stArmonic = False
     usePearson = True
 
-    trials = 15
-    fm = 200.
-    window = 5 #sec
-    samplePoints = int(fm*window)
-    channels = 4
+    trials = 5 #cantidad de trials
+    fm = 200. #frecuencia de muestreo
+    window = 4 #tiempo de estimulación
+    samplePoints = int(fm*window) #cantidad de muestras
+    numberChannels = 4 #cantidad de canales registrados por placa
+    selectedChannels = [1,1] #canales elegidos. Si queremos elegir el canal 1 hacemos [1,1], canal 2 [2,2].
 
-    filesRun1 = ["S3_R1_S2_E6","S3-R1-S1-E7", "S3-R1-S1-E8"]
+    filesRun1 = ["LucasB_7Hz_14Hz_4","LucasB_8Hz(16Hz)_4", "LucasB_9Hz_18Hz_4"]
     run1 = fa.loadData(path = path, filenames = filesRun1)
-    filesRun2 = ["S3_R2_S2_E6","S3-R2-S1-E7", "S3-R2-S1-E8"]
-    run2 = fa.loadData(path = path, filenames = filesRun2)
+    # filesRun2 = ["S3_R2_S2_E6","S3-R2-S1-E7", "S3-R2-S1-E8"]
+    # run2 = fa.loadData(path = path, filenames = filesRun2)
 
-    def joinData(allData, stimuli, channels, samples, trials):
-        joinedData = np.zeros((stimuli, channels, samples, trials))
+    def joinData(allData, stimuli, numberChannels, samples, trials):
+        joinedData = np.zeros((stimuli, numberChannels, samples, trials))
         for i, sujeto in enumerate(allData):
             joinedData[i] = allData[sujeto]["eeg"][0,:,:,:trials]
 
         return joinedData #la forma de joinedData es [estímulos, canales, muestras, trials]
 
-    run1JoinedData = joinData(run1, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
-    run2JoinedData = joinData(run2, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
+    run1JoinedData = joinData(run1, stimuli = len(frecStimulus), numberChannels = numberChannels, samples = samplePoints, trials = trials)
+    # run2JoinedData = joinData(run2, stimuli = len(frecStimulus), numberChannels = numberChannels, samples = samplePoints, trials = trials)
 
-    testSet = np.concatenate((run1JoinedData[:,:,:,12:], run2JoinedData[:,:,:,12:]), axis = 3) #últimos 3 tríals para testeo
+    # testSet = np.concatenate((run1JoinedData[:,:,:,12:], run2JoinedData[:,:,:,12:]), axis = 3) #últimos 3 tríals para testeo
+    testSet = run1JoinedData[:,selectedChannels[0]-1:selectedChannels[1],:,3:]
 
     #### definimos archivos para cargar modelo posteriormente #### 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
@@ -264,7 +265,7 @@ def main():
     trainingSignalPSD = svm.trainingSignalPSD
 
     clase = 1
-    trial = 6
+    trial = 1
 
     rawDATA = testSet[clase-1,:,trial-1]
 
@@ -277,7 +278,7 @@ def main():
     print("Freceuncia clasificada:", svm.getClassification(featureVector = featureVector))
 
     ### Realizamos clasificación sobre mis datos de testeo. Estos nunca fueron vistos por el clasificador ###
-    trials = 6 #cantidad de trials
+    trials = 2 #cantidad de trials
     predicciones = np.zeros((len(frecStimulus),trials)) #donde almacenaremos las predicciones
 
     for i, clase in enumerate(np.arange(len(frecStimulus))):
