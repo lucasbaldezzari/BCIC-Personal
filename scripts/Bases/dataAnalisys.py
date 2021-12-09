@@ -53,10 +53,10 @@ samplePoints = int(fm*duration)
 channels = 2
 
 subjects = [1]
-filenames = ["LucasB_8.5Hz_17Hz_4"]
+filenames = ["walter_s1_r1_10hz"]
 allData = fa.loadData(path = path, filenames = filenames)
 
-name = "LucasB_8.5Hz_17Hz_4" #nombre de los datos a analizar}
+name = "walter_s1_r1_10hz" #nombre de los datos a analizar}
 stimuli = [7,8.5,10] #lista de estímulos
 estim = [8.5] #L7e pasamos un estímulo para que grafique una linea vertical
 

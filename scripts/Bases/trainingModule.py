@@ -50,7 +50,7 @@ def main():
     
     trialsAPromediar = 3
     contadorTrials = 0
-    cantidadTrials = 5 #cantidad de trials. Sirve para la sesión de entrenamiento.
+    cantidadTrials = 6 #cantidad de trials. Sirve para la sesión de entrenamiento.
     trials = cantidadTrials * trialsAPromediar
     #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
     trialDuration = 6 #secs
@@ -64,10 +64,10 @@ def main():
     path = "recordedEEG" #directorio donde se almacenan los registros de EEG.
 
     """Datos del sujeto, la sesión y la corrida"""
-    subject = "LucasBEsponja"
-    date = '28/11/2021'
-    generalInformation = f'Cyton. Probando con frec = 26 en arduino. Duración estímulos {stimuliDuration} y duración trial {trialDuration}'
-    stimFrec =  "LucasBEsponja"
+    subject = "walter_s1_r1_10hz"
+    date = '9122021'
+    generalInformation = f'Ganglion. Estim 10Hz. Duración estímulos {stimuliDuration} y duración trial {trialDuration}'
+    stimFrec =  "10"
     channelsRecorded = [1,2]
 
 
@@ -75,7 +75,7 @@ def main():
     PASO 2: Iniciamos comunicación con Arduino
     ##########################################################################################"""
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
-    arduino = AC('COM15', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM10', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
     time.sleep(1) 
     
@@ -96,10 +96,10 @@ def main():
               "ganglion": BoardIds.GANGLION_BOARD.value, #IMPORTANTE: frecuencia muestro 200Hz
               "synthetic": BoardIds.SYNTHETIC_BOARD.value}
     
-    placa = placas["cyton"]  
+    placa = placas["ganglion"]  
     electrodos = "pasivos"
     
-    puerto = "COM14" #Chequear el puerto al cual se conectará la placa
+    puerto = "COM5" #Chequear el puerto al cual se conectará la placa
     
     parser = argparse.ArgumentParser()
     

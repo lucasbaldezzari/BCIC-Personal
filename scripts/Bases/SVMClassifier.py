@@ -63,7 +63,7 @@ class SVMClassifier():
         self.FFT_PARAMS = FFT_PARAMS
 
         #Tabla probabTableilidades movimientos
-        self.probabTable = {'000':np.array([1.2, 1.1, 1.1]),
+        self.probabTable = {'000':np.array([1.1, 1.1, 1.1]),
                             '001':np.array([0, 1.1, 1.1]),
                             '010':np.array([1.1, 0, 1.1]),
                             '100':np.array([1.1, 1.1, 0]),
@@ -155,7 +155,7 @@ class SVMClassifier():
         if self.obstacles in self.probabTable:
             probabTableVector = softmax(self.probabTable[self.obstacles])*self.pesosTable[self.obstacles]
         else:
-            probabTableVector = softmax(self.probabTable['0'])*self.pesosTable['0']
+            probabTableVector = softmax(self.probabTable['000'])*self.pesosTable['000']
 
         r_pearson = list(r_pearson*probabTableVector)
 
@@ -209,18 +209,18 @@ def main():
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join(actualFolder,"recordedEEG")
 
-    frecStimulus = np.array([7, 8, 9])
+    frecStimulus = np.array([7, 85, 10])
     calc1stArmonic = False
     usePearson = True
 
-    trials = 5 #cantidad de trials
+    trials = 6 #cantidad de trials
     fm = 200. #frecuencia de muestreo
     window = 4 #tiempo de estimulación
     samplePoints = int(fm*window) #cantidad de muestras
     numberChannels = 4 #cantidad de canales registrados por placa
     selectedChannels = [1,1] #canales elegidos. Si queremos elegir el canal 1 hacemos [1,1], canal 2 [2,2].
 
-    filesRun1 = ["LucasB_7Hz_14Hz_4","LucasB_8Hz(16Hz)_4", "LucasB_9Hz_18Hz_4"]
+    filesRun1 = ["walter_s1_r1_7hz","walter_s1_r1_10hz", "walter_s1_r1_85hz"]
     run1 = fa.loadData(path = path, filenames = filesRun1)
     # filesRun2 = ["S3_R2_S2_E6","S3-R2-S1-E7", "S3-R2-S1-E8"]
     # run2 = fa.loadData(path = path, filenames = filesRun2)
@@ -236,14 +236,14 @@ def main():
     # run2JoinedData = joinData(run2, stimuli = len(frecStimulus), numberChannels = numberChannels, samples = samplePoints, trials = trials)
 
     # testSet = np.concatenate((run1JoinedData[:,:,:,12:], run2JoinedData[:,:,:,12:]), axis = 3) #últimos 3 tríals para testeo
-    testSet = run1JoinedData[:,selectedChannels[0]-1:selectedChannels[1],:,3:]
+    testSet = run1JoinedData[:,selectedChannels[0]-1:selectedChannels[1],:,5:]
 
     #### definimos archivos para cargar modelo posteriormente #### 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join(actualFolder,"models")
 
     #Abrimos archivos
-    modelName = "SVM_test_linear"
+    modelName = "svm_walter_linear"
     modelFile = f"{modelName}.pkl" #nombre del modelo
     PRE_PROCES_PARAMS, FFT_PARAMS = fa.loadPArams(modelName = modelName, path = os.path.join(actualFolder,"models"))
 
@@ -278,7 +278,7 @@ def main():
     print("Freceuncia clasificada:", svm.getClassification(featureVector = featureVector))
 
     ### Realizamos clasificación sobre mis datos de testeo. Estos nunca fueron vistos por el clasificador ###
-    trials = 2 #cantidad de trials
+    trials = 1 #cantidad de trials
     predicciones = np.zeros((len(frecStimulus),trials)) #donde almacenaremos las predicciones
 
     for i, clase in enumerate(np.arange(len(frecStimulus))):

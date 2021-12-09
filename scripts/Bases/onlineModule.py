@@ -120,13 +120,13 @@ def main():
     cantCanalesAUsar = 2 #Cantidad de canales a utilizar
     canalesAUsar = [1,2] #Seleccionamos canal uno y dos. NOTA: Si quisieramos elegir el canal 2 solamente debemos hacer [2,2] o [1,1] para elegir el canal 1
 
-    trialsAPromediar = 2
+    trialsAPromediar = 3
     contadorTrials = 0
     flagConTrials = True
-    cantidadTrials = 1 #cantidad de trials. Sirve para la sesión de entrenamiento.
+    cantidadTrials = 4 #cantidad de trials. Sirve para la sesión de entrenamiento.
     trials = cantidadTrials * trialsAPromediar
-    trialDuration = 8 #secs #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
-    stimuliDuration = 5 #secs
+    trialDuration = 6 #secs #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
+    stimuliDuration = 4 #secs
 
     classifyData = True #True en caso de querer clasificar la señal de EEG
     fm = BoardShim.get_sampling_rate(placa)    
@@ -135,9 +135,9 @@ def main():
     equipo = "mentalink"
 
     if equipo == "mentalink":
-        frecStimulus = np.array([6, 7, 8])
+        frecStimulus = np.array([7, 85, 10])
         listaEstims = frecStimulus.copy().tolist()
-        movements = [b'1', b'2', b'3'] #1 adelante, 2 atrás, 3 derecha, 4 atrás
+        movements = [b'1', b'2', b'3'] #1 adelante, 2 izq, 3 derecha, 4 atrás
 
     if equipo == "neurorace":
         frecStimulus = np.array([11, 7, 9]) #11:adelante, 7:izquierda, 9:derecha, 13:atrás
@@ -155,8 +155,8 @@ def main():
 
     if modelo == "svm":
         #### Cargamos clasificador SVM ###
-        modelName = "SVM_test_linear" #Nombre archivo que contiene el modelo SVM
-        signalPSDName = "SVM_test_linear_signalPSD.txt"
+        modelName = "svm_walter_linear" #Nombre archivo que contiene el modelo SVM
+        signalPSDName = "svm_walter_linear_signalPSD.txt"
         modeloClasificador = "SVM"
 
         PRE_PROCES_PARAMS, FFT_PARAMS = fa.loadPArams(modelName = modelName, path = os.path.join(actualFolder,"models"))

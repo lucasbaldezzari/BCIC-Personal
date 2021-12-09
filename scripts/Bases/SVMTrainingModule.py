@@ -310,16 +310,16 @@ def main():
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join(actualFolder,"recordedEEG")
 
-    frecStimulus = np.array([7, 8, 9])
+    frecStimulus = np.array([7, 85, 10])
     calc1stArmonic = False
     filterBankVersion = "v1"
 
-    trials = 5 #cantidad de trials
+    trials = 6 #cantidad de trials
     fm = 200. #frecuencia de muestreo
     window = 4 #tiempo de estimulación
     samplePoints = int(fm*window) #cantidad de muestras
     numberChannels = 4 #cantidad de canales registrados por placa
-    selectedChannels = [1,1] #canales elegidos. Si queremos elegir el canal 1 hacemos [1,1], canal 2 [2,2].
+    selectedChannels = [1,2] #canales elegidos. Si queremos elegir el canal 1 hacemos [1,1], canal 2 [2,2].
 
     #Seteamos tiempos de descarte de señal
     ti = 0.3 #en segundos
@@ -327,7 +327,7 @@ def main():
     descarteInicial = int(fm*ti) #en segundos
     descarteFinal = int(window*fm)-int(tf*fm) #en segundos
 
-    filesRun1 = ["LucasB_7Hz_14Hz_4","LucasB_8Hz(16Hz)_4", "LucasB_9Hz_18Hz_4"]
+    filesRun1 = ["walter_s1_r1_7hz","walter_s1_r1_85hz", "walter_s1_r1_10hz"]
     run1 = fa.loadData(path = path, filenames = filesRun1)
     # filesRun2 = ["S3_R2_S2_E6","S3-R2-S1-E7", "S3-R2-S1-E8"]
     # run2 = fa.loadData(path = path, filenames = filesRun2)
@@ -367,7 +367,7 @@ def main():
     # run2JoinedData = joinData(run2, stimuli = len(frecStimulus), numberChannels = numberChannels, samples = samplePoints, trials = trials)
 
     # trainSet = np.concatenate((run1JoinedData[:,:,:,:12], run2JoinedData[:,:,:,:12]), axis = 3)
-    trainSet = run1JoinedData[:,:,:,:3]
+    trainSet = run1JoinedData[:,:,:,:5]
     trainSet = trainSet[:,selectedChannels[0]-1:selectedChannels[1], descarteInicial:descarteFinal,:] #nos quedamos con los primeros dos canales y descartamos muestras iniciales y algunas finales
 
     trainSet = np.mean(trainSet, axis = 1) #promedio sobre los canales. Forma datos ahora [clases, samples, trials]
@@ -478,11 +478,11 @@ def main():
     modeloSVM1 = clasificadoresSVM["linear"][3][1]
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join(actualFolder,"models")
-    modeloSVM1.saveModel(path, filename = "SVM_test_linear")
-    modeloSVM1.saveTrainingSignalPSD(signalPSD.mean(axis = 2), path = path, filename = "SVM_test_linear")
+    modeloSVM1.saveModel(path, filename = "svm_walter_linear")
+    modeloSVM1.saveTrainingSignalPSD(signalPSD.mean(axis = 2), path = path, filename = "svm_walter_linear")
     os.chdir(actualFolder)
 
-    gamma = "auto"
+    gamma = "scale"
     C = 100
 
     for values in clasificadoresSVM["rbf"]:
@@ -491,8 +491,8 @@ def main():
 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join(actualFolder, "models")
-    modeloSVM2.saveModel(path, filename = "SVM_test_rbf")
-    modeloSVM2.saveTrainingSignalPSD(signalPSD.mean(axis = 2), path = path, filename = "SVM_test_rbf")
+    modeloSVM2.saveModel(path, filename = "svm_walter_rbf")
+    modeloSVM2.saveTrainingSignalPSD(signalPSD.mean(axis = 2), path = path, filename = "svm_walter_rbf")
     os.chdir(actualFolder)
 
 if __name__ == "__main__":
