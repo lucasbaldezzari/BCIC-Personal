@@ -322,7 +322,7 @@ def main():
     try:
         while arduino.generalControl() == b"1":
 
-            if classifyData and arduino.systemControl[1] == b"0":
+            if classifyData and arduino.systemControl[1] == b"0": #se apagan los estímulos y chequeamos si estamos para clasificar la señal de eeg
                 contadorTrials += 1
                 currentData = data_thread.getData(stimuliDuration)
                 EEGTrialsAveraged.append(currentData)
@@ -331,7 +331,7 @@ def main():
                     rawEEG = rawEEG[canalesAUsar[0]-1:canalesAUsar[1], descarteInicial:descarteFinal]
                     rawEEG = rawEEG - rawEEG.mean(axis = 1, keepdims=True) #resto media la media a la señal
                     print("tipo",type(arduino.estadoRobot),arduino.estadoRobot)
-                    clasificador.obstacles = arduino.estadoRobot
+                    clasificador.obstacles = arduino.estadoRobot #actalizamos tabla de obstáculos
                     print(f'Obstaculos en: {arduino.estadoRobot}')
                     frecClasificada = clasificar(rawEEG, modeloClasificador, clasificador, anchoVentana = anchoVentana, bw = 2., order = 4, axis = 0)
                     print(f"Comando a enviar {movements[listaEstims.index(frecClasificada)]}. Frecuencia {frecClasificada}")
@@ -341,7 +341,8 @@ def main():
                     EEGTrialsAveraged = []
                 classifyData = False
 
-            elif classifyData == False and arduino.systemControl[1] == b"1":
+            elif classifyData == False and arduino.systemControl[1] == b"1": #Se encienden estímulos y se habilita para más adelante la clasificación
+                arduino.systemControl[2] = b'0' #cargamos movimiento STOP
                 classifyData = True
         
     except BaseException as e:
