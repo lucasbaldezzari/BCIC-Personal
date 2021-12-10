@@ -164,7 +164,7 @@ class SVMTrainingModule():
         return self.signalSampleFrec, self.signalPSD
 
 
-    def featuresExtraction(self, ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1, calc1stArmonic = False, filterBank = "v1"):
+    def featuresExtraction(self, ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1, calc1stArmonic = False, applybank = True, filterBank = "v1"):
         """EXtracción de características a partir de datos de EEG sin procesar"""
 
         filteredEEG = filterEEG(self.rawDATA, self.PRE_PROCES_PARAMS["lfrec"],
@@ -174,19 +174,31 @@ class SVMTrainingModule():
                                 self.PRE_PROCES_PARAMS["sampling_rate"],
                                 axis = axis)
 
-        if filterBank == "v1":
-            dataBanked = self.applyFilterBank(filteredEEG, bw=bw, order = 4, calc1stArmonic = calc1stArmonic) #Aplicamos banco de filtro
+        if applybank == True:
+            if filterBank == "v1":
+                dataBanked = self.applyFilterBank(filteredEEG, bw=bw, order = 4, calc1stArmonic = calc1stArmonic) #Aplicamos banco de filtro
 
-        if filterBank == "v2":
-            dataBanked = self.applyFilterBankv2(filteredEEG, bw=bw, order = 4, calc1stArmonic = calc1stArmonic) #Aplicamos banco de filtro
+            if filterBank == "v2":
+                dataBanked = self.applyFilterBankv2(filteredEEG, bw=bw, order = 4, calc1stArmonic = calc1stArmonic) #Aplicamos banco de filtro
 
-        anchoVentana = int(self.PRE_PROCES_PARAMS["sampling_rate"]*anchoVentana) #fm * segundos
-        ventana = ventana(anchoVentana)
+            anchoVentana = int(self.PRE_PROCES_PARAMS["sampling_rate"]*anchoVentana) #fm * segundos
+            ventana = ventana(anchoVentana)
 
-        self.signalSampleFrec, self.signalPSD = self.computWelchPSD(dataBanked,
-                                                fm = self.PRE_PROCES_PARAMS["sampling_rate"],
-                                                ventana = ventana, anchoVentana = anchoVentana,
-                                                average = "median", axis = axis)
+            self.signalSampleFrec, self.signalPSD = self.computWelchPSD(dataBanked,
+                                                    fm = self.PRE_PROCES_PARAMS["sampling_rate"],
+                                                    ventana = ventana, anchoVentana = anchoVentana,
+                                                    average = "median", axis = axis)
+        
+        else:
+
+            anchoVentana = int(self.PRE_PROCES_PARAMS["sampling_rate"]*anchoVentana) #fm * segundos
+            ventana = ventana(anchoVentana)
+
+            self.signalSampleFrec, self.signalPSD = self.computWelchPSD(filteredEEG,
+                                                    fm = self.PRE_PROCES_PARAMS["sampling_rate"],
+                                                    ventana = ventana, anchoVentana = anchoVentana,
+                                                    average = "median", axis = axis)
+
 
         return self.signalSampleFrec, self.signalPSD
 
@@ -310,11 +322,11 @@ def main():
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join(actualFolder,"recordedEEG")
 
-    frecStimulus = np.array([7, 8.5, 10])
+    frecStimulus = np.array([7, 85, 10])
     calc1stArmonic = False
     filterBankVersion = "v1"
 
-    trials = 6 #cantidad de trials
+    trials = 8 #cantidad de trials
     fm = 200. #frecuencia de muestreo
     window = 4 #tiempo de estimulación
     samplePoints = int(fm*window) #cantidad de muestras
@@ -327,7 +339,7 @@ def main():
     descarteInicial = int(fm*ti) #en segundos
     descarteFinal = int(window*fm)-int(tf*fm) #en segundos
 
-    filesRun1 = ["walter_s1_r1_7hz","walter_s1_r1_85hz", "walter_s1_r1_10hz"]
+    filesRun1 = ["walter_s2_r1_7hz","walter_s2_r1_85hz", "walter_s2_r1_10hz"]
     run1 = fa.loadData(path = path, filenames = filesRun1)
     # filesRun2 = ["S3_R2_S2_E6","S3-R2-S1-E7", "S3-R2-S1-E8"]
     # run2 = fa.loadData(path = path, filenames = filesRun2)
@@ -367,7 +379,7 @@ def main():
     # run2JoinedData = joinData(run2, stimuli = len(frecStimulus), numberChannels = numberChannels, samples = samplePoints, trials = trials)
 
     # trainSet = np.concatenate((run1JoinedData[:,:,:,:12], run2JoinedData[:,:,:,:12]), axis = 3)
-    trainSet = run1JoinedData[:,:,:,:6]
+    trainSet = run1JoinedData[:,:,:,:]
     trainSet = trainSet[:,selectedChannels[0]-1:selectedChannels[1], descarteInicial:descarteFinal,:] #nos quedamos con los primeros dos canales y descartamos muestras iniciales y algunas finales
 
     trainSet = np.mean(trainSet, axis = 1) #promedio sobre los canales. Forma datos ahora [clases, samples, trials]
@@ -391,7 +403,7 @@ def main():
     ventana = windows.hamming #Usamos ventana Hamming
 
     sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = anchoVentana, bw = 2.0, order = 6, axis = 1,
-                            calc1stArmonic = calc1stArmonic, filterBank = filterBankVersion)
+                            calc1stArmonic = calc1stArmonic, applybank = False, filterBank = filterBankVersion)
 
     metricas = svm.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2, randomSeed = seed)
     print(metricas)
@@ -428,7 +440,7 @@ def main():
                     modelo = svm.createSVM(kernel = kernel, gamma = gamma, C = C, probability = True, randomSeed = seed)
 
                     sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = anchoVentana, bw = 2.0, order = 6, axis = 1,
-                                            calc1stArmonic = calc1stArmonic, filterBank = filterBankVersion)
+                                            calc1stArmonic = calc1stArmonic, applybank = False, filterBank = filterBankVersion)
 
                     metricas = svm.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2, randomSeed = seed) #entrenamos el modelo y obtenemos las métricas
                     accu = metricas["modelo_testSVMv2"]["val"]["Acc"]
@@ -444,7 +456,7 @@ def main():
                 modelo = svm.createSVM(kernel = kernel, C = C, probability = True, randomSeed = seed)
 
                 sampleFrec, signalPSD  = svm.featuresExtraction(ventana = ventana, anchoVentana = anchoVentana, bw = 2.0, order = 6, axis = 1,
-                                            calc1stArmonic = calc1stArmonic, filterBank = filterBankVersion)
+                                            calc1stArmonic = calc1stArmonic, applybank = False, filterBank = filterBankVersion)
 
                 metricas = svm.trainAndValidateSVM(clases = np.arange(0,len(frecStimulus)), test_size = 0.2, randomSeed = seed)
 
@@ -482,7 +494,7 @@ def main():
     modeloSVM1.saveTrainingSignalPSD(signalPSD.mean(axis = 2), path = path, filename = "svm_walter_linear")
     os.chdir(actualFolder)
 
-    gamma = "scale"
+    gamma = "auto"
     C = 100
 
     for values in clasificadoresSVM["rbf"]:

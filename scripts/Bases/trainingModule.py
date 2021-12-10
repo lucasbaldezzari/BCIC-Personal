@@ -50,7 +50,7 @@ def main():
     
     trialsAPromediar = 3
     contadorTrials = 0
-    cantidadTrials = 6 #cantidad de trials. Sirve para la sesión de entrenamiento.
+    cantidadTrials = 8 #cantidad de trials. Sirve para la sesión de entrenamiento.
     trials = cantidadTrials * trialsAPromediar
     #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
     trialDuration = 6 #secs
@@ -64,8 +64,8 @@ def main():
     path = "recordedEEG" #directorio donde se almacenan los registros de EEG.
 
     """Datos del sujeto, la sesión y la corrida"""
-    subject = "walter_s1_r1_10hz"
-    date = '9122021'
+    subject = "walter_s2_r1_10hz"
+    date = '12122021'
     generalInformation = f'Ganglion. Estim 10Hz. Duración estímulos {stimuliDuration} y duración trial {trialDuration}'
     stimFrec =  "10"
     channelsRecorded = [1,2]

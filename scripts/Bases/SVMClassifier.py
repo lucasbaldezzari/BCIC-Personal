@@ -63,23 +63,23 @@ class SVMClassifier():
         self.FFT_PARAMS = FFT_PARAMS
 
         #Tabla probabTableilidades movimientos
-        self.probabTable = {'000':np.array([1.1, 1.1, 1.1]),
-                            '001':np.array([0, 1.1, 1.1]),
-                            '010':np.array([1.1, 0, 1.1]),
-                            '100':np.array([1.1, 1.1, 0]),
-                            '011':np.array([0, 0, 1]),
-                            '101':np.array([0, 1, 0]),
-                            '110':np.array([1, 0, 0]),}
+        self.probabTable = {'0000':np.array([1.1, 1.1, 1.1]),
+                            '0001':np.array([0, 1.1, 1.1]),
+                            '0010':np.array([1.1, 0, 1.1]),
+                            '0100':np.array([1.1, 1.1, 0]),
+                            '0011':np.array([0, 0, 1]),
+                            '0101':np.array([0, 1, 0]),
+                            '0110':np.array([1, 0, 0]),}
 
-        self.pesosTable = { '000':np.array([1, 1, 1]),
-                            '001':np.array([0, 1, 1]),
-                            '010':np.array([1, 0, 1]),
-                            '100':np.array([1, 1, 0]),
-                            '011':np.array([0, 0, 1]),
-                            '101':np.array([0, 1, 0]),
-                            '110':np.array([1, 0, 0]),}
+        self.pesosTable = { '0000':np.array([1, 1, 1]),
+                            '0001':np.array([0, 1, 1]),
+                            '0010':np.array([1, 0, 1]),
+                            '0100':np.array([1, 1, 0]),
+                            '0011':np.array([0, 0, 1]),
+                            '0101':np.array([0, 1, 0]),
+                            '0110':np.array([1, 0, 0]),}
         
-        self.obstacles = '000' #empezamos con ningún obstaculo detectado
+        self.obstacles = '0000' #empezamos con ningún obstaculo detectado
 
     def loadTrainingSignalPSD(self, filename = "", path = "models"):
 
@@ -155,7 +155,7 @@ class SVMClassifier():
         if self.obstacles in self.probabTable:
             probabTableVector = softmax(self.probabTable[self.obstacles])*self.pesosTable[self.obstacles]
         else:
-            probabTableVector = softmax(self.probabTable['000'])*self.pesosTable['000']
+            probabTableVector = softmax(self.probabTable['0000'])*self.pesosTable['0000']
 
         r_pearson = list(r_pearson*probabTableVector)
 
@@ -164,7 +164,7 @@ class SVMClassifier():
         return self.trainingSignalPSD[indexFfeature]
 
     def featuresExtraction(self, rawDATA, ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1,
-                            calc1stArmonic = False, usePearson = True):
+                            calc1stArmonic = False, usePearson = True, applybank = True, filterBank = "v1"):
 
         filteredEEG = filterEEG(rawDATA, self.PRE_PROCES_PARAMS["lfrec"],
                                 self.PRE_PROCES_PARAMS["hfrec"],
@@ -173,17 +173,31 @@ class SVMClassifier():
                                 self.PRE_PROCES_PARAMS["sampling_rate"],
                                 axis = axis)
 
-        dataBanked = self.applyFilterBank(filteredEEG, bw=bw, order = 4, calc1stArmonic = calc1stArmonic)
 
-        anchoVentana = int(self.PRE_PROCES_PARAMS["sampling_rate"]*anchoVentana) #fm * segundos
-        ventana = ventana(anchoVentana)
+        if applybank == True:
+            dataBanked = self.applyFilterBank(filteredEEG, bw=bw, order = 4, calc1stArmonic = calc1stArmonic)
 
-        self.signalSampleFrec, self.signalPSD = self.computWelchPSD(dataBanked,
-                                                fm = self.PRE_PROCES_PARAMS["sampling_rate"],
-                                                ventana = ventana, anchoVentana = anchoVentana,
-                                                average = "median", axis = 1)
+            anchoVentana = int(self.PRE_PROCES_PARAMS["sampling_rate"]*anchoVentana) #fm * segundos
+            ventana = ventana(anchoVentana)
 
-        self.signalPSD = self.signalPSD.mean(axis = 0) #Obtengo el espectro promedio de cada espectro de la señal banqueada
+            self.signalSampleFrec, self.signalPSD = self.computWelchPSD(dataBanked,
+                                                    fm = self.PRE_PROCES_PARAMS["sampling_rate"],
+                                                    ventana = ventana, anchoVentana = anchoVentana,
+                                                    average = "median", axis = 1)
+
+            self.signalPSD = self.signalPSD.mean(axis = 0) #Obtengo el espectro promedio de cada espectro de la señal banqueada
+
+        else:
+
+            anchoVentana = int(self.PRE_PROCES_PARAMS["sampling_rate"]*anchoVentana) #fm * segundos
+            ventana = ventana(anchoVentana)
+
+            self.signalSampleFrec, self.signalPSD = self.computWelchPSD(filteredEEG,
+                                                    fm = self.PRE_PROCES_PARAMS["sampling_rate"],
+                                                    ventana = ventana, anchoVentana = anchoVentana,
+                                                    average = "median", axis = 0)
+
+            #self.signalPSD = self.signalPSD.mean(axis = 0) #Obtengo el espectro promedio de cada espectro de la señal banqueada
 
         if usePearson == True:
             self.featureVector = self.pearsonFilter() #selector de características
@@ -213,14 +227,14 @@ def main():
     calc1stArmonic = False
     usePearson = True
 
-    trials = 6 #cantidad de trials
+    trials = 8 #cantidad de trials
     fm = 200. #frecuencia de muestreo
     window = 4 #tiempo de estimulación
     samplePoints = int(fm*window) #cantidad de muestras
     numberChannels = 4 #cantidad de canales registrados por placa
-    selectedChannels = [1,1] #canales elegidos. Si queremos elegir el canal 1 hacemos [1,1], canal 2 [2,2].
+    selectedChannels = [1,2] #canales elegidos. Si queremos elegir el canal 1 hacemos [1,1], canal 2 [2,2].
 
-    filesRun1 = ["walter_s1_r1_7hz","walter_s1_r1_10hz", "walter_s1_r1_85hz"]
+    filesRun1 = ["walter_s2_r1_7hz","walter_s2_r1_85hz", "walter_s2_r1_10hz"]
     run1 = fa.loadData(path = path, filenames = filesRun1)
     # filesRun2 = ["S3_R2_S2_E6","S3-R2-S1-E7", "S3-R2-S1-E8"]
     # run2 = fa.loadData(path = path, filenames = filesRun2)
@@ -236,7 +250,7 @@ def main():
     # run2JoinedData = joinData(run2, stimuli = len(frecStimulus), numberChannels = numberChannels, samples = samplePoints, trials = trials)
 
     # testSet = np.concatenate((run1JoinedData[:,:,:,12:], run2JoinedData[:,:,:,12:]), axis = 3) #últimos 3 tríals para testeo
-    testSet = run1JoinedData[:,selectedChannels[0]-1:selectedChannels[1],:,4:]
+    testSet = run1JoinedData[:,selectedChannels[0]-1:selectedChannels[1],:,6:]
 
     #### definimos archivos para cargar modelo posteriormente #### 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
@@ -260,11 +274,11 @@ def main():
     testSet = testSet - testSet.mean(axis = 1, keepdims=True)
 
     svm = SVMClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, nsamples = nsamples, path = path) #cargamos clasificador entrenado
-    svm.loadTrainingSignalPSD(filename = "SVM_test_linear_signalPSD.txt", path = path) #cargamos el PSD de mis datos de entrenamiento
+    svm.loadTrainingSignalPSD(filename = "svm_walter_linear_signalPSD.txt", path = path) #cargamos el PSD de mis datos de entrenamiento
 
     trainingSignalPSD = svm.trainingSignalPSD
 
-    clase = 3
+    clase = 2
     trial = 1
 
     rawDATA = testSet[clase-1,:,trial-1]
@@ -273,7 +287,7 @@ def main():
 
     featureVector = svm.featuresExtraction(rawDATA = rawDATA, ventana = windows.hamming,
                                             anchoVentana = anchoVentana, bw = 2.0, order = 4, axis = 0,
-                                            calc1stArmonic = calc1stArmonic, usePearson=usePearson)
+                                            calc1stArmonic = calc1stArmonic, usePearson=usePearson, applybank = False)
 
     print("Freceuncia clasificada:", svm.getClassification(featureVector = featureVector))
 
@@ -286,7 +300,7 @@ def main():
             data = testSet[clase, :, trial]
             featureVector = svm.featuresExtraction(rawDATA = data, ventana = windows.hamming,
                             anchoVentana = anchoVentana, bw = 2.0, order = 6, axis = 0,
-                            calc1stArmonic = calc1stArmonic, usePearson=usePearson)
+                            calc1stArmonic = calc1stArmonic, usePearson=usePearson, applybank = False)
 
             classification = svm.getClassification(featureVector = featureVector)
             if classification == frecStimulus[clase]:

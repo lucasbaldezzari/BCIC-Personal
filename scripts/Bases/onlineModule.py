@@ -120,10 +120,10 @@ def main():
     cantCanalesAUsar = 2 #Cantidad de canales a utilizar
     canalesAUsar = [1,2] #Seleccionamos canal uno y dos. NOTA: Si quisieramos elegir el canal 2 solamente debemos hacer [2,2] o [1,1] para elegir el canal 1
 
+    cantidadTrials = 4 #cantidad de trials. Sirve para la sesión de entrenamiento.
     trialsAPromediar = 3
     contadorTrials = 0
     flagConTrials = True
-    cantidadTrials = 4 #cantidad de trials. Sirve para la sesión de entrenamiento.
     trials = cantidadTrials * trialsAPromediar
     trialDuration = 6 #secs #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
     stimuliDuration = 4 #secs
@@ -155,8 +155,8 @@ def main():
 
     if modelo == "svm":
         #### Cargamos clasificador SVM ###
-        modelName = "svm_walter_linear" #Nombre archivo que contiene el modelo SVM
-        signalPSDName = "svm_walter_linear_signalPSD.txt"
+        modelName = "svm_walter_rbf" #Nombre archivo que contiene el modelo SVM
+        signalPSDName = "svm_walter_rbf_signalPSD.txt"
         modeloClasificador = "SVM"
 
         PRE_PROCES_PARAMS, FFT_PARAMS = fa.loadPArams(modelName = modelName, path = os.path.join(actualFolder,"models"))
@@ -331,7 +331,7 @@ def main():
                     rawEEG = rawEEG[canalesAUsar[0]-1:canalesAUsar[1], descarteInicial:descarteFinal]
                     rawEEG = rawEEG - rawEEG.mean(axis = 1, keepdims=True) #resto media la media a la señal
                     print("tipo",type(arduino.estadoRobot),arduino.estadoRobot)
-                    clasificador.obstacles = arduino.estadoRobot #actalizamos tabla de obstáculos
+                    clasificador.obstacles = str(arduino.estadoRobot) #actalizamos tabla de obstáculos
                     print(f'Obstaculos en: {arduino.estadoRobot}')
                     frecClasificada = clasificar(rawEEG, modeloClasificador, clasificador, anchoVentana = anchoVentana, bw = 2., order = 4, axis = 0)
                     print(f"Comando a enviar {movements[listaEstims.index(frecClasificada)]}. Frecuencia {frecClasificada}")
