@@ -236,7 +236,7 @@ def main():
     # run2JoinedData = joinData(run2, stimuli = len(frecStimulus), numberChannels = numberChannels, samples = samplePoints, trials = trials)
 
     # testSet = np.concatenate((run1JoinedData[:,:,:,12:], run2JoinedData[:,:,:,12:]), axis = 3) #últimos 3 tríals para testeo
-    testSet = run1JoinedData[:,selectedChannels[0]-1:selectedChannels[1],:,5:]
+    testSet = run1JoinedData[:,selectedChannels[0]-1:selectedChannels[1],:,4:]
 
     #### definimos archivos para cargar modelo posteriormente #### 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
@@ -264,7 +264,7 @@ def main():
 
     trainingSignalPSD = svm.trainingSignalPSD
 
-    clase = 1
+    clase = 3
     trial = 1
 
     rawDATA = testSet[clase-1,:,trial-1]

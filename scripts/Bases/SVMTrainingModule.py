@@ -310,7 +310,7 @@ def main():
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join(actualFolder,"recordedEEG")
 
-    frecStimulus = np.array([7, 85, 10])
+    frecStimulus = np.array([7, 8.5, 10])
     calc1stArmonic = False
     filterBankVersion = "v1"
 
@@ -367,7 +367,7 @@ def main():
     # run2JoinedData = joinData(run2, stimuli = len(frecStimulus), numberChannels = numberChannels, samples = samplePoints, trials = trials)
 
     # trainSet = np.concatenate((run1JoinedData[:,:,:,:12], run2JoinedData[:,:,:,:12]), axis = 3)
-    trainSet = run1JoinedData[:,:,:,:5]
+    trainSet = run1JoinedData[:,:,:,:6]
     trainSet = trainSet[:,selectedChannels[0]-1:selectedChannels[1], descarteInicial:descarteFinal,:] #nos quedamos con los primeros dos canales y descartamos muestras iniciales y algunas finales
 
     trainSet = np.mean(trainSet, axis = 1) #promedio sobre los canales. Forma datos ahora [clases, samples, trials]
