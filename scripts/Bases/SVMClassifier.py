@@ -63,21 +63,29 @@ class SVMClassifier():
         self.FFT_PARAMS = FFT_PARAMS
 
         #Tabla probabTableilidades movimientos
-        self.probabTable = {'0000':np.array([1.1, 1.1, 1.1]),
-                            '0001':np.array([0, 1.1, 1.1]),
-                            '0010':np.array([1.1, 0, 1.1]),
-                            '0100':np.array([1.1, 1.1, 0]),
-                            '0011':np.array([0, 0, 1]),
-                            '0101':np.array([0, 1, 0]),
-                            '0110':np.array([1, 0, 0]),}
+        self.probabTable = {'0000':np.array([1.3, 1.1, 1.1]), #[adelante, izquerda, derecha]
+                            '0001':np.array([0, 1.1, 1.1]), #[0, izquierda, derecha]
+                            '0010':np.array([1.1, 0, 1.1]), #[adelante, 0, derecha]
+                            '0100':np.array([1.1, 1.1, 0]), #[adelante, izquierda, 0]
+                            '0011':np.array([0, 0, 1]), #[0, 0, derecha]
+                            '0101':np.array([0, 1, 0]), #[0, izquierda, 0]
+                            '0110':np.array([1, 0, 0]), #[adelante, 0, 0]
+                            '0111':np.array([1, 1, 1]), #[sólo movimiento hacia atrás]
+                            '1011':np.array([0, 0, 1]), #[0, 0, derecha]
+                            '1101':np.array([0, 1, 0]), #[0, izquierda, 0]
+                            '1110':np.array([1, 0, 0])} #[adelante, 0, 0]
 
-        self.pesosTable = { '0000':np.array([1, 1, 1]),
-                            '0001':np.array([0, 1, 1]),
-                            '0010':np.array([1, 0, 1]),
-                            '0100':np.array([1, 1, 0]),
-                            '0011':np.array([0, 0, 1]),
-                            '0101':np.array([0, 1, 0]),
-                            '0110':np.array([1, 0, 0]),}
+        self.pesosTable = { '0000':np.array([1, 1, 1]), #[adelante, izquerda, derecha]
+                            '0001':np.array([0, 1, 1]), #[0, izquierda, derecha]
+                            '0010':np.array([1, 0, 1]), #[adelante, 0, derecha]
+                            '0100':np.array([1, 1, 0]), #[adelante, izquierda, 0]
+                            '0011':np.array([0, 0, 1]), #[0, 0, derecha]
+                            '0101':np.array([0, 1, 0]), #[0, 0, izquierda]
+                            '0110':np.array([1, 0, 0]), #[adelante, 0, 0]
+                            '0111':np.array([1, 1, 1]), #[sólo movimiento hacia atrás]
+                            '1011':np.array([0, 0, 1]), #[0, 0, derecha]
+                            '1101':np.array([0, 1, 0]), #[0, izquierda, 0]
+                            '1110':np.array([1, 0, 0])} #[adelante, 0, 0]
         
         self.obstacles = '0000' #empezamos con ningún obstaculo detectado
 
@@ -277,6 +285,8 @@ def main():
     svm.loadTrainingSignalPSD(filename = "svm_walter_linear_signalPSD.txt", path = path) #cargamos el PSD de mis datos de entrenamiento
 
     trainingSignalPSD = svm.trainingSignalPSD
+
+    # svm.obstacles = '1110'
 
     clase = 2
     trial = 1
