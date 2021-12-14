@@ -13,7 +13,7 @@
 #define   FORWARD_INDEX   0
 #define   LEFT_INDEX      1
 #define   RIGHT_INDEX     2
-#define   BEHIND_INDEX        3
+#define   BEHIND_INDEX    3
 
 #define   STOP            0
 #define   ADELANTE        1

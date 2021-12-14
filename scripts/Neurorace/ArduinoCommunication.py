@@ -66,6 +66,7 @@ class ArduinoCommunication:
         self.sessionStatus = b"1" #sesión en marcha
         self.stimuliStatus = b"0" #los estimulos empiezan apagados
         self.moveOrder = self.movements[0] #EL robot empieza en STOP
+        self.estadoRobot = 0
         # self.moveOrder = b'63' #El STOP de mentalink será self.moveOrder = b'63' (0b00111111)
         """
         self.moveOrder
@@ -112,10 +113,16 @@ class ArduinoCommunication:
         ----------
         message (byte):
             Byte que se desa enviar por puerto serie.
+
+        Cada vez que se envía un byte con write, se recibe un byte desde Arduino.
+
+        El orden de los byte es:
+        - Byte1: obstaculo adelante (1-Obstaculo /0-sin obstaculo)
+        - Byte2: obstaculo izquierda (1-Obstaculo /0-sin obstaculo)
+        - Byte3: obstaculo derecha (1-Obstaculo /0-sin obstaculo)
         """
         self.dev.write(byte)#.encode('ascii')) #enviamos byte por el puerto serie
         respuesta = self.dev.readline().decode('ascii').strip() #recibimos una respuesta desde Arduino
-        
         return respuesta
     
     def sendMessage(self, message):
@@ -127,7 +134,7 @@ class ArduinoCommunication:
         for byte in message:
             incomingData.append(self.query(byte))
             
-        return incomingData[-1] #Retorno los últimos bytes recibidos
+        return format(int(incomingData[0]), '04b')
 
     def close(self):
         """Cerramos comunicción serie"""
@@ -144,16 +151,11 @@ class ArduinoCommunication:
                              self.stimuliStatus,
                              self.moveOrder]
         
-        estadoRobot = self.sendMessage(self.systemControl)
-        print("Estado inicial del ROBOT:", estadoRobot)
+        self.estadoRobot = self.sendMessage(self.systemControl)
+        print("Obstáculos detectados por el ROBOT:", self.estadoRobot)
         
-        #Actualizamos archivo de estados
-        # estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
-        #             int(estadoRobot[0]),
-        #             int(estadoRobot[1]),
-        #             int(estadoRobot[2])]
-
-        estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2]]
+         #### Actualizamos archivo de estados #####
+        estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],self.estadoRobot]
 
         completeName = os.path.join(self.stateFilePath,self.stateFile)
         file = open(completeName, "w")
@@ -179,14 +181,10 @@ class ArduinoCommunication:
                              self.stimuliStatus,
                              self.moveOrder]
         
-        estadoRobot = self.sendMessage(self.systemControl)
+        self.estadoRobot = self.sendMessage(self.systemControl)
 
-        #Actualizamos archivo de estados
-        # estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
-        #             int(estadoRobot[0]),
-        #             int(estadoRobot[1]),
-        #             int(estadoRobot[2])]
-        estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2]]
+        #### Actualizamos archivo de estados #####
+        estados = [1,0,0,0,0]
 
         completeName = os.path.join(self.stateFilePath,self.stateFile)
         file = open(completeName, "w")
@@ -195,7 +193,7 @@ class ArduinoCommunication:
             file.write(str(estado))
         file.close()
 
-        print("Estado final del ROBOT:", estadoRobot)
+        print("Obstáculos detectados por ROBOT:", self.estadoRobot)
         print("Sesión Finalizada")
         print(f"Trial final {self.trial - 1}")
         
@@ -213,14 +211,10 @@ class ArduinoCommunication:
         if self.counter == self.stimONTime: #mandamos nuevo mensaje cuando comienza un trial
         
             self.systemControl[1] = b"0" #apagamos estímulos
-            estadoRobot = self.sendMessage(self.systemControl)
-            print("Estado ROBOT:", estadoRobot)
-            #Actualizamos archivo de estados
-            # estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
-            #             int(estadoRobot[0]),
-            #             int(estadoRobot[1]),
-            #             int(estadoRobot[2])]
-            estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2]]
+            self.estadoRobot = self.sendMessage(self.systemControl)
+            print("estado robot", self.estadoRobot)
+            #### Actualizamos archivo de estados #####
+            estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],self.estadoRobot]
 
             completeName = os.path.join(self.stateFilePath,self.stateFile)
             file = open(completeName, "w")
@@ -232,26 +226,18 @@ class ArduinoCommunication:
         if self.counter == self.trialDuration: 
             
             self.systemControl[1] = b"1"
-            estadoRobot = self.sendMessage(self.systemControl)
-            print("Estado ROBOT:", estadoRobot)
-
+            self.estadoRobot = self.sendMessage(self.systemControl)
+            print("estado robot", self.estadoRobot)
             #Actualizamos archivo de estados
-            # estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],
-            #             int(estadoRobot[0]),
-            #             int(estadoRobot[1]),
-            #             int(estadoRobot[2])]
-
-            estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2]]
+            estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],self.estadoRobot]
 
             completeName = os.path.join(self.stateFilePath,self.stateFile)
             file = open(completeName, "w")
             for estado in estados:
-                #file.write(str(estado) + "\n")
                 file.write(str(estado))
             file.close()
 
             print(f"Fin trial {self.trial}")
-            print("")
             self.trial += 1 #incrementamos un trial
             self.counter = 0 #reiniciamos timer
             
@@ -296,13 +282,13 @@ def main():
     #En el caso de querer ejecutar Trials de manera indeterminada,
     #debe hacerse trials = None (default)
     """
-    ard = ArduinoCommunication('COM6', trialDuration = 8, stimONTime = 4,
-                               timing = 100, ntrials = 1)
+    ard = ArduinoCommunication('COM13', trialDuration = 8, stimONTime = 4,
+                               timing = 100, ntrials = 2)
     time.sleep(1)
     ard.iniSesion()
 
-    #Simulamos que enviamos el comando de movimiento número cuatro
-    ard.systemControl[2] = ard.movements[3] #comando número 4 (b'1') [b'0',b'1',b'2',b'3',b'4',b'5']
+    #Simulamos que enviamos un comando de movimiento
+    ard.systemControl[2] = b'1'
     
     while ard.generalControl() == b"1":
         pass

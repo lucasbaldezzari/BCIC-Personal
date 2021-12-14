@@ -98,7 +98,7 @@ class LogRegTrainingModule():
 
         return trainingData, labels
         
-    def applyFilterBank(self, eeg, bw = 2.0, order = 4):
+    def applyFilterBank(self, eeg, bw = 2.0, order = 4, axis = 0, calc1stArmonic = False):
         """Aplicamos banco de filtro a nuestros datos.
         Se recomienda aplicar un notch en los 50Hz y un pasabanda en las frecuencias deseadas antes
         de applyFilterBank()
@@ -110,12 +110,30 @@ class LogRegTrainingModule():
             - order: orden del filtro. Default = 4"""
 
         nyquist = 0.5 * self.FFT_PARAMS["sampling_rate"]
-        signalFilteredbyBank = np.zeros((self.nclases,self.nsamples,self.ntrials))
+        #signalFilteredbyBank = np.zeros((self.nclases,self.nsamples,self.ntrials))
+        fcBanck = np.zeros((self.nclases,self.nsamples,self.ntrials))
+        firstArmonicBanck = np.zeros((self.nclases,self.nsamples,self.ntrials))
+
         for clase, frecuencia in enumerate(self.frecStimulus):   
             low = (frecuencia-bw/2)/nyquist
             high = (frecuencia+bw/2)/nyquist
             b, a = butter(order, [low, high], btype='band') #obtengo los parámetros del filtro
-            signalFilteredbyBank[clase] = filtfilt(b, a, eeg[clase], axis = 0) #filtramos
+            fcBanck[clase] = filtfilt(b, a, eeg[clase], axis = axis) #filtramos
+
+        if calc1stArmonic == True:
+            firstArmonicBanck = np.zeros((self.nclases,self.nsamples,self.ntrials))
+            armonics = self.frecStimulus*2
+            for clase, armonic in enumerate(armonics):   
+                low = (armonic-bw/2)/nyquist
+                high = (armonic+bw/2)/nyquist
+                b, a = butter(order, [low, high], btype='band') #obtengo los parámetros del filtro
+                firstArmonicBanck[clase] = filtfilt(b, a, eeg[clase], axis = axis) #filtramos
+
+            aux = np.array((fcBanck, firstArmonicBanck))
+            signalFilteredbyBank = np.sum(aux, axis = 0)
+
+        else:
+            signalFilteredbyBank = fcBanck
 
         self.dataBanked = signalFilteredbyBank
 
@@ -128,7 +146,7 @@ class LogRegTrainingModule():
         return self.signalSampleFrec, self.signalPSD
 
 
-    def featuresExtraction(self, ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1):
+    def featuresExtraction(self, ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1, calc1stArmonic = False):
 
         filteredEEG = filterEEG(self.rawDATA, self.PRE_PROCES_PARAMS["lfrec"],
                                 self.PRE_PROCES_PARAMS["hfrec"],
@@ -137,7 +155,7 @@ class LogRegTrainingModule():
                                 self.PRE_PROCES_PARAMS["sampling_rate"],
                                 axis = axis)
 
-        dataBanked = self.applyFilterBank(filteredEEG, bw=bw, order = 4)
+        dataBanked = self.applyFilterBank(filteredEEG, bw=bw, order = 4, calc1stArmonic = calc1stArmonic) #Aplicamos banco de filtro
 
         anchoVentana = int(self.PRE_PROCES_PARAMS["sampling_rate"]*anchoVentana) #fm * segundos
         ventana = ventana(anchoVentana)
@@ -241,12 +259,19 @@ def main():
     path = os.path.join(actualFolder,"recordedEEG\WM\ses1")
 
     frecStimulus = np.array([6, 7, 8, 9])
+    calc1stArmonic = False
 
     trials = 15
     fm = 200.
     window = 5 #sec
     samplePoints = int(fm*window)
     channels = 4
+
+    #Seteamos parámetros para 
+    ti = 0.5 #en segundos
+    tf = 0.5 #en segundos
+    descarteInicial = int(fm*ti) #en segundos
+    descarteFinal = int(window*fm)-int(tf*fm) #en segundos
 
     filesRun1 = ["S3_R1_S2_E6","S3-R1-S1-E7", "S3-R1-S1-E8","S3-R1-S1-E9"]
     run1 = fa.loadData(path = path, filenames = filesRun1)
@@ -261,7 +286,8 @@ def main():
                     'sampling_rate': fm,
                     'bandStop': 50.,
                     'window': window,
-                    'shiftLen':window
+                    'shiftLen':window,
+                    'ti': ti, 'tf':tf
                     }
 
     resolution = np.round(fm/samplePoints, 4)
@@ -284,23 +310,27 @@ def main():
     run2JoinedData = joinData(run2, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
 
     trainSet = np.concatenate((run1JoinedData[:,:,:,:12], run2JoinedData[:,:,:,:12]), axis = 3)
-    trainSet = trainSet[:,:2,:,:] #nos quedamos con los primeros dos canales
+    trainSet = trainSet[:,:2, descarteInicial:descarteFinal,:] #nos quedamos con los primeros dos canales y descartamos muestras iniciales y algunas finales
 
     trainSet = np.mean(trainSet, axis = 1) #promedio sobre los canales. Forma datos ahora [clases, samples, trials]
 
     nsamples = trainSet.shape[1]
     ntrials = trainSet.shape[2]
 
+    #Restamos la media de la señal
+    trainSet = trainSet - trainSet.mean(axis = 1, keepdims=True)
+
+    #Creo objeto LogRegTrainingModule
     logreg = LogRegTrainingModule(trainSet, PRE_PROCES_PARAMS, FFT_PARAMS, frecStimulus=frecStimulus,
             nchannels = 1, nsamples = nsamples, ntrials = ntrials, modelName = "LogReg_WM_testing")
 
     seed = np.random.randint(100)
     modelo = logreg.createLogReg(multi_class="ovr", solver = "saga", C = 100, randomSeed=seed)
 
-    anchoVentana = int(fm*5) #fm * segundos
+    anchoVentana = (window - ti - tf) #fm * segundos
     ventana = windows.hamming
 
-    sampleFrec, signalPSD  = logreg.featuresExtraction(ventana = ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1)
+    sampleFrec, signalPSD  = logreg.featuresExtraction(ventana = ventana, anchoVentana = anchoVentana, bw = 2.0, order = 4, axis = 1, calc1stArmonic = calc1stArmonic)
 
     metricas = logreg.trainAndValidateLogReg(clases = np.arange(0,len(frecStimulus)), test_size = 0.2) #entrenamos el modelo
 

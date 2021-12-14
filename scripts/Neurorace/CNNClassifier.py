@@ -67,7 +67,7 @@ class CNNClassifier():
         
         os.chdir(actualFolder)
 
-    def applyFilterBank(self, eeg, bw = 2.0, order = 4):
+    def applyFilterBank(self, eeg, bw = 2.0, order = 4, calc1stArmonic = False):
         """Aplicamos banco de filtro a nuestros datos.
         Se recomienda aplicar un notch en los 50Hz y un pasabanda en las frecuencias deseadas antes
         de applyFilterBank()
@@ -79,18 +79,33 @@ class CNNClassifier():
             - order: orden del filtro. Default = 4"""
 
         nyquist = 0.5 * self.FFT_PARAMS["sampling_rate"]
-        signalFilteredbyBank = np.zeros((self.nclases,self.nsamples))
+        fcBanck = np.zeros((self.nclases,self.nsamples))
+
         for clase, frecuencia in enumerate(self.frecStimulus):   
             low = (frecuencia-bw/2)/nyquist
             high = (frecuencia+bw/2)/nyquist
             b, a = butter(order, [low, high], btype='band') #obtengo los parámetros del filtro
-            signalFilteredbyBank[clase] = filtfilt(b, a, eeg) #filtramos
+            fcBanck[clase] = filtfilt(b, a, eeg) #filtramos
 
-        self.dataBanked = signalFilteredbyBank.mean(axis = 0)
+        if calc1stArmonic == True:
+            firstArmonicBanck = np.zeros((self.nclases,self.nsamples))
+            armonics = self.frecStimulus*2
+            for clase, armonic in enumerate(armonics):   
+                low = (armonic-bw/2)/nyquist
+                high = (armonic+bw/2)/nyquist
+                b, a = butter(order, [low, high], btype='band') #obtengo los parámetros del filtro
+                firstArmonicBanck[clase] = filtfilt(b, a, eeg) #filtramos
+
+            aux = np.array((fcBanck, firstArmonicBanck))
+            signalFilteredbyBank = np.sum(aux, axis = 0)
+
+        else:
+            signalFilteredbyBank = fcBanck #devuelvo señal filtrada solo en frecuencia central
+
+        self.dataBanked = signalFilteredbyBank#.mean(axis = 0)
         return self.dataBanked
 
     def computWelchPSD(self, signalBanked, fm, ventana, anchoVentana, average = "median", axis = 1):
-
         self.signalSampleFrec, self.signalPSD = welch(signalBanked, fs = fm, window = ventana, nperseg = anchoVentana, average='median',axis = axis)
 
         return self.signalSampleFrec, self.signalPSD
@@ -115,7 +130,8 @@ class CNNClassifier():
 
         return self.trainingSignalPSD[indexFfeature]
 
-    def extractFeatures(self, rawDATA, ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1):
+    def featuresExtraction(self, rawDATA, ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1,
+                            calc1stArmonic = False, usePearson = True):
 
         filteredEEG = filterEEG(rawDATA, self.PRE_PROCES_PARAMS["lfrec"],
                                 self.PRE_PROCES_PARAMS["hfrec"],
@@ -124,7 +140,7 @@ class CNNClassifier():
                                 self.PRE_PROCES_PARAMS["sampling_rate"],
                                 axis = axis)
 
-        dataBanked = self.applyFilterBank(filteredEEG, bw=bw, order = 4)
+        dataBanked = self.applyFilterBank(filteredEEG, bw=bw, order = 4, calc1stArmonic = calc1stArmonic)
 
         anchoVentana = int(self.PRE_PROCES_PARAMS["sampling_rate"]*anchoVentana) #fm * segundos
         ventana = ventana(anchoVentana)
@@ -132,9 +148,17 @@ class CNNClassifier():
         self.signalSampleFrec, self.signalPSD = self.computWelchPSD(dataBanked,
                                                 fm = self.PRE_PROCES_PARAMS["sampling_rate"],
                                                 ventana = ventana, anchoVentana = anchoVentana,
-                                                average = "median", axis = axis)
+                                                average = "median", axis = 1)
+
+        self.signalPSD = self.signalPSD.mean(axis = 0) #Obtengo el espectro promedio de cada espectro de la señal banqueada
 
         self.featureVector = self.pearsonFilter()
+
+        if usePearson == True:
+            self.featureVector = self.pearsonFilter() #selector de características
+
+        else:
+            self.featureVector = self.signalPSD
 
         numFeatures = self.featureVector.shape[0]
         self.featureVector = self.featureVector.reshape(1,1,numFeatures,1)
@@ -163,6 +187,8 @@ def main():
     path = os.path.join(actualFolder,"recordedEEG\WM\ses1")
 
     frecStimulus = np.array([6, 7, 8, 9])
+    calc1stArmonic = False
+    usePearson = False
 
     trials = 15
     fm = 200.
@@ -175,11 +201,6 @@ def main():
     filesRun2 = ["S3_R2_S2_E6","S3-R2-S1-E7", "S3-R2-S1-E8","S3-R2-S1-E9"]
     run2 = fa.loadData(path = path, filenames = filesRun2)
 
-    #Abrimos archivos
-    modelName = "cnntesting"
-    modelFile = f"{modelName}.h5" #nombre del modelo
-    PRE_PROCES_PARAMS, FFT_PARAMS = fa.loadPArams(modelName = modelName, path = os.path.join(actualFolder,"models"))
-
     def joinData(allData, stimuli, channels, samples, trials):
         joinedData = np.zeros((stimuli, channels, samples, trials))
         for i, sujeto in enumerate(allData):
@@ -191,15 +212,27 @@ def main():
     run2JoinedData = joinData(run2, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
 
     testSet = np.concatenate((run1JoinedData[:,:,:,12:], run2JoinedData[:,:,:,12:]), axis = 3) #últimos 3 tríals para testeo
-    testSet = testSet[:,:2,:,:] #nos quedamos con los primeros dos canales
+
+    #### definimos archivos para cargar modelo posteriormente #### 
+    #Abrimos archivos
+    modelName = "cnntesting"
+    modelFile = f"{modelName}.h5" #nombre del modelo
+    PRE_PROCES_PARAMS, FFT_PARAMS = fa.loadPArams(modelName = modelName, path = os.path.join(actualFolder,"models"))
+
+    descarteInicial = int(fm*PRE_PROCES_PARAMS['ti']) #en segundos
+    descarteFinal = int(window*fm)-int(fm*PRE_PROCES_PARAMS['tf']) #en segundos
+    
+    testSet = testSet[:,:2, descarteInicial:descarteFinal ,:] #nos quedamos con los primeros dos canales y descartamos muestras iniciales y algunas finales
 
     testSet = np.mean(testSet, axis = 1) #promedio sobre los canales. Forma datos ahora [clases, samples, trials]
 
     nsamples = testSet.shape[1]
     ntrials = testSet.shape[2]
 
+    #Restamos la media de la señal
+    testSet = testSet - testSet.mean(axis = 1, keepdims=True)
+
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-    
     path = os.path.join(actualFolder,"models")
 
     # Cargamos modelo previamente entrenado
@@ -215,7 +248,7 @@ def main():
 
     cnn.loadTrainingSignalPSD(filename = "cnntesting_signalPSD.txt", path = path) #cargamos el PSD de mis datos de entrenamiento
 
-    anchoVentana = int(fm*5) #fm * segundos
+    anchoVentana = (window - PRE_PROCES_PARAMS['ti'] - PRE_PROCES_PARAMS['tf']) #fm * segundos
     ventana = windows.hamming
 
     clase = 2
@@ -224,7 +257,8 @@ def main():
     rawDATA = testSet[clase-1,:,trial-1]
 
     #extrameos características
-    featureVector  = cnn.extractFeatures(rawDATA = rawDATA, ventana = ventana, anchoVentana = 5, bw = 1.0, order = 4, axis = 0)
+    featureVector  = cnn.featuresExtraction(rawDATA = rawDATA, ventana = ventana, anchoVentana = anchoVentana,
+                        bw = 2.0, order = 4, axis = 0, calc1stArmonic = calc1stArmonic, usePearson=usePearson)
 
     cnn.getClassification(featureVector = featureVector)
 
@@ -235,7 +269,10 @@ def main():
     for i, clase in enumerate(np.arange(len(frecStimulus))):
         for j, trial in enumerate(np.arange(trials)):
             rawDATA = testSet[clase, :, trial]
-            featureVector  = cnn.extractFeatures(rawDATA = rawDATA, ventana = ventana, anchoVentana = 5, bw = 1.0, order = 4, axis = 0)
+            featureVector  = cnn.featuresExtraction(rawDATA = rawDATA, ventana = ventana,
+                            anchoVentana = anchoVentana, bw = 1.0, order = 4, axis = 0,
+                            calc1stArmonic = calc1stArmonic, usePearson=usePearson)
+
             classification = cnn.getClassification(featureVector = featureVector)
             if classification == frecStimulus[clase]:
                 predicciones[i,j] = 1
@@ -250,8 +287,8 @@ def main():
     print(f"Predicciones usando el modelo SVM {modefile}")
     print(predictions)
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()
 
 
 

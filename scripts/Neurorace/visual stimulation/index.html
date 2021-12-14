@@ -33,9 +33,9 @@ console.log(x)
 
 var sesionEstatus = x.slice(0,1);
 var trials     = x.slice(1,2);          // Apaga y prende las flechitas 
-var adelante   = x.slice(2,3);
-var derecha    = x.slice(3,4);
-var izquierda  = x.slice(4,5);
+var adelante   = x.slice(4,5);
+var derecha    = x.slice(2,3);
+var izquierda  = x.slice(3,4);
            
 
            if(sesionEstatus == 0){
@@ -61,9 +61,9 @@ var izquierda  = x.slice(4,5);
            }
            else{
             box = document.getElementsByClassName('TopArray')[0];
-            box.style.width = '150px';
-            box.style.height = '150px';
-            box.style.left = '800px';
+            box.style.width = '0px';
+            box.style.height = '0px';
+            box.style.left = '0px';
            }
 
            // Derecha
@@ -75,9 +75,9 @@ var izquierda  = x.slice(4,5);
            }
            else{
             box = document.getElementsByClassName('RightArray')[0];
-            box.style.width = '150px';
-            box.style.height = '150px';
-            box.style.top = '340px';
+            box.style.width = '0px';
+            box.style.height = '0px';
+            box.style.top = '0px';
            }
 
            //Izquierda 
@@ -88,8 +88,8 @@ var izquierda  = x.slice(4,5);
            }
            else{
             box = document.getElementsByClassName('LeftArray')[0];
-            box.style.width = '150px';
-            box.style.height = '150px';
+            box.style.width = '0px';
+            box.style.height = '0px';
            }
 }
 setInterval(la,10);
@@ -216,7 +216,7 @@ setInterval(la,10);
 #videoElement {
   width: 500px;
   height: 375px;
-  background-color: #666;
+  background-color: #635552;
 }
 body{
   background: #635552;
@@ -231,19 +231,17 @@ body{
       <img class="RightArray" id="RA" src="IMG\Flecha_azul.png">
       <img class="LeftArray"  id="LA" src="IMG\Flecha_marillo.png">
       <img class="TopArray"   id="TA" src="IMG\Flecha_roja.png">
-      <img class="DownArray"  id="DA" src="IMG\Flecha_verde.png">
       <video autoplay="true" class="video" id="videoElement"></video> 
     </div>
     <div class="RestTime" id="RT">
         <img  class ="RightArrayinRestTime" id="RART"src="IMG\azulN.jpeg">
         <img class="LeftArrayinRestTime" id="LART" src="IMG\marilloN.jpeg">
         <img class="TopArrayinRestTime" id="TART"src="IMG\rojaN.jpeg">
-        <img class="DownArrayinRestTime" id="DART" src="IMG\verdeN.jpeg">
     </div>  
     <div id="demo"></div>
 <script>
   
-var video = document.querySelector("#videoElement");
+/*var video = document.querySelector("#videoElement");
 
 if (navigator.mediaDevices.getUserMedia) {
   navigator.mediaDevices.getUserMedia({ video: true })
@@ -253,7 +251,7 @@ if (navigator.mediaDevices.getUserMedia) {
     .catch(function (err0r) {
       console.log("Something went wrong!");
     });
-}
+}*/
 </script>
 </div>
 </body>

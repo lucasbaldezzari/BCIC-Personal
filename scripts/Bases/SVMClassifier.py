@@ -286,7 +286,7 @@ def main():
 
     trainingSignalPSD = svm.trainingSignalPSD
 
-    # svm.obstacles = '1110'
+    # svm.obstacles = '0011'
 
     clase = 2
     trial = 1

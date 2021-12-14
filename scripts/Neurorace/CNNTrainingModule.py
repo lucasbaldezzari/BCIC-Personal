@@ -164,7 +164,7 @@ class CNNTrainingModule():
         
         self.modelSummary = self.model.summary()
 
-    def applyFilterBank(self, eeg, bw = 2.0, order = 4):
+    def applyFilterBank(self, eeg, bw = 2.0, order = 4, axis = 0, calc1stArmonic = False):
         """Aplicamos banco de filtro a nuestros datos.
         Se recomienda aplicar un notch en los 50Hz y un pasabanda en las frecuencias deseadas antes
         de applyFilterBank()
@@ -176,15 +176,76 @@ class CNNTrainingModule():
             - order: orden del filtro. Default = 4"""
 
         nyquist = 0.5 * self.FFT_PARAMS["sampling_rate"]
-        signalFilteredbyBank = np.zeros((self.nclases,self.nsamples,self.ntrials))
+        #signalFilteredbyBank = np.zeros((self.nclases,self.nsamples,self.ntrials))
+        fcBanck = np.zeros((self.nclases,self.nsamples,self.ntrials))
+        firstArmonicBanck = np.zeros((self.nclases,self.nsamples,self.ntrials))
+
         for clase, frecuencia in enumerate(self.frecStimulus):   
             low = (frecuencia-bw/2)/nyquist
             high = (frecuencia+bw/2)/nyquist
             b, a = butter(order, [low, high], btype='band') #obtengo los parámetros del filtro
-            signalFilteredbyBank[clase] = filtfilt(b, a, eeg[clase], axis = 0) #filtramos
+            fcBanck[clase] = filtfilt(b, a, eeg[clase], axis = axis) #filtramos
+
+        if calc1stArmonic == True:
+            firstArmonicBanck = np.zeros((self.nclases,self.nsamples,self.ntrials))
+            armonics = self.frecStimulus*2
+            for clase, armonic in enumerate(armonics):   
+                low = (armonic-bw/2)/nyquist
+                high = (armonic+bw/2)/nyquist
+                b, a = butter(order, [low, high], btype='band') #obtengo los parámetros del filtro
+                firstArmonicBanck[clase] = filtfilt(b, a, eeg[clase], axis = axis) #filtramos
+
+            aux = np.array((fcBanck, firstArmonicBanck))
+            signalFilteredbyBank = np.sum(aux, axis = 0)
+
+        else:
+            signalFilteredbyBank = fcBanck
 
         self.dataBanked = signalFilteredbyBank
         return self.dataBanked
+
+    def applyFilterBankv2(self, eeg, bw = 2.0, order = 4, axis = 0, calc1stArmonic = False):
+            """Aplica banco de filtros en las frecuencias de estimulación.
+            
+            Devuelve el espectro promedio de las señales banqueadas.
+            """
+
+            nyquist = 0.5 * self.FFT_PARAMS["sampling_rate"]
+            #signalFilteredbyBank = np.zeros((self.nclases,self.nsamples,self.ntrials))
+            fcBanck = np.zeros((self.nclases,self.nsamples,self.ntrials))
+            firstArmonicBanck = np.zeros((self.nclases,self.nsamples,self.ntrials))
+
+            for clase in range(self.nclases):
+                for trial in range(self.ntrials):
+                    banks = np.zeros((self.nclases,self.nsamples))
+                    for i, frecuencia in enumerate(self.frecStimulus):   
+                        low = (frecuencia-bw/2)/nyquist
+                        high = (frecuencia+bw/2)/nyquist
+                        b, a = butter(order, [low, high], btype='band') #obtengo los parámetros del filtro
+                        banks[i] = filtfilt(b, a, eeg[clase, :, trial]) #filtramos
+                    fcBanck[clase, : , trial] = banks.mean(axis = 0)
+
+            if calc1stArmonic == True:
+                firstArmonicBanck = np.zeros((self.nclases,self.nsamples,self.ntrials))
+                armonics = self.frecStimulus*2
+                for clase in range(self.nclases):
+                    for trial in range(self.ntrials):
+                        banks = np.zeros((self.nclases,self.nsamples))
+                        for i, armonic in enumerate(armonics):   
+                            low = (armonic-bw/2)/nyquist
+                            high = (armonic+bw/2)/nyquist
+                            b, a = butter(order, [low, high], btype='band') #obtengo los parámetros del filtro
+                            banks[i] = filtfilt(b, a, eeg[clase, :, trial]) #filtramos
+                        firstArmonicBanck[clase, : , trial] = banks.mean(axis = 0)
+
+                aux = np.array((fcBanck, firstArmonicBanck))
+                signalFilteredbyBank = np.sum(aux, axis = 0) #devuelvo datos con frecuencia central y los primeros armónicos
+
+            else:
+                signalFilteredbyBank = fcBanck #sin armónicos
+
+            self.dataBanked = signalFilteredbyBank
+            return self.dataBanked
 
     def computWelchPSD(self, signalBanked, fm, ventana, anchoVentana, average = "median", axis = 1):
 
@@ -193,7 +254,7 @@ class CNNTrainingModule():
         return self.signalSampleFrec, self.signalPSD
 
 
-    def featuresExtraction(self, ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1):
+    def featuresExtraction(self, ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1, calc1stArmonic = False, filterBank = "v1"):
 
         filteredEEG = filterEEG(self.rawDATA, self.PRE_PROCES_PARAMS["lfrec"],
                                 self.PRE_PROCES_PARAMS["hfrec"],
@@ -202,7 +263,11 @@ class CNNTrainingModule():
                                 self.PRE_PROCES_PARAMS["sampling_rate"],
                                 axis = axis)
 
-        dataBanked = self.applyFilterBank(filteredEEG, bw=bw, order = 4)
+        if filterBank == "v1":
+            dataBanked = self.applyFilterBank(filteredEEG, bw=bw, order = 4, calc1stArmonic = calc1stArmonic) #Aplicamos banco de filtro
+
+        if filterBank == "v2":
+            dataBanked = self.applyFilterBankv2(filteredEEG, bw=bw, order = 4, calc1stArmonic = calc1stArmonic) #Aplicamos banco de filtro
 
         anchoVentana = int(self.PRE_PROCES_PARAMS["sampling_rate"]*anchoVentana) #fm * segundos
         ventana = ventana(anchoVentana)
@@ -362,12 +427,20 @@ def main():
     path = os.path.join(actualFolder,"recordedEEG\WM\ses1")
 
     frecStimulus = np.array([6, 7, 8, 9])
+    calc1stArmonic = False
+    filterBankVersion = "v1"
 
     trials = 15
     fm = 200.
     window = 5 #sec
     samplePoints = int(fm*window)
     channels = 4
+
+    #Seteamos parámetros para 
+    ti = 0.5 #en segundos
+    tf = 0.5 #en segundos
+    descarteInicial = int(fm*ti) #en segundos
+    descarteFinal = int(window*fm)-int(tf*fm) #en segundos
 
     filesRun1 = ["S3_R1_S2_E6","S3-R1-S1-E7", "S3-R1-S1-E8","S3-R1-S1-E9"]
     run1 = fa.loadData(path = path, filenames = filesRun1)
@@ -382,7 +455,10 @@ def main():
                     'sampling_rate': fm,
                     'bandStop': 50.,
                     'window': window,
-                    'shiftLen':window
+                    'shiftLen':window,
+                    'ti': ti, 'tf':tf,
+                    'calc1stArmonic': calc1stArmonic,
+                    'filterBank': filterBankVersion
                     }
 
     resolution = np.round(fm/samplePoints, 4)
@@ -416,7 +492,7 @@ def main():
     run2JoinedData = joinData(run2, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
 
     trainSet = np.concatenate((run1JoinedData[:,:,:,:12], run2JoinedData[:,:,:,:12]), axis = 3)
-    trainSet = trainSet[:,:2,:,:] #nos quedamos con los primeros dos canales
+    trainSet = trainSet[:,:2, descarteInicial:descarteFinal,:] #nos quedamos con los primeros dos canales y descartamos muestras iniciales y algunas finales
 
     trainSet = np.mean(trainSet, axis = 1) #promedio sobre los canales. Forma datos ahora [clases, samples, trials]
 
@@ -429,6 +505,9 @@ def main():
     nsamples = trainSet.shape[1]
     ntrials = trainSet.shape[2]
 
+    #Restamos la media de la señal
+    trainSet = trainSet - trainSet.mean(axis = 1, keepdims=True)
+
     #Make a CNNTrainingModule object in order to use the data's Magnitude Features
     cnn = CNNTrainingModule(trainSet, PRE_PROCES_PARAMS = PRE_PROCES_PARAMS, FFT_PARAMS = FFT_PARAMS, CNN_PARAMS = CNN_PARAMS,
                         frecStimulus = frecStimulus, nchannels = 1,nsamples = nsamples, ntrials = ntrials, modelName = "cnntesting")
@@ -439,10 +518,11 @@ def main():
     **********************************************************************
     """
 
-    anchoVentana = int(fm*5) #fm * segundos
+    anchoVentana = (window - ti - tf) #fm * segundos
     ventana = windows.hamming
 
-    sampleFrec, signalPSD  = cnn.featuresExtraction(ventana = ventana, anchoVentana = 5, bw = 1.0, order = 4, axis = 1)
+    sampleFrec, signalPSD  = cnn.featuresExtraction(ventana = ventana, anchoVentana = anchoVentana, bw = 2.0, order = 4, axis = 1,
+                            calc1stArmonic = calc1stArmonic, filterBank = filterBankVersion)
 
     trainingData, labels = cnn.getDataForTraining(signalPSD)
 
@@ -466,7 +546,7 @@ def main():
     """
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join(actualFolder, "models")
-    accu_CNN_using_MSF = cnn.trainCNN(trainingData, labels, nFolds = 5, path = path)
+    accu_CNN_using_MSF = cnn.trainCNN(trainingData, labels, nFolds = 10, path = path)
     print(f"Maxima accu {accu_CNN_using_MSF.max()}")
 
     #Guardamos modelo
