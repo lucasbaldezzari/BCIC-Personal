@@ -7,13 +7,13 @@
 #define  SESSION_RUNNING    1
 #define  SESSION_STOP       0
 
-#define   OBSTACULO_DETECTADO  'O' //79
-#define   SIN_OBSTACULO  'S' //83
+#define   OBSTACULO_DETECTADO  '1' //79
+#define   SIN_OBSTACULO  '0' //83
 
 #define   FORWARD_INDEX   0
 #define   LEFT_INDEX      1
 #define   RIGHT_INDEX     2
-#define   BEHIND_INDEX        3
+#define   BEHIND_INDEX    3
 
 #define   STOP            0
 #define   ADELANTE        1

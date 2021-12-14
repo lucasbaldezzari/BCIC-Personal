@@ -5,7 +5,6 @@ import os
 from types import new_class
 from matplotlib import use
 import numpy as np
-import numpy.matlib as npm
 import pandas as pd
 import json
 
@@ -64,23 +63,31 @@ class SVMClassifier():
         self.FFT_PARAMS = FFT_PARAMS
 
         #Tabla probabTableilidades movimientos
-        self.probabTable = {'000':np.array([1.2, 1.1, 1.1]),
-                            '001':np.array([0, 1.1, 1.1]),
-                            '010':np.array([1.1, 0, 1.1]),
-                            '100':np.array([1.1, 1.1, 0]),
-                            '011':np.array([0, 0, 1]),
-                            '101':np.array([0, 1, 0]),
-                            '110':np.array([1, 0, 0]),}
+        self.probabTable = {'0000':np.array([1.3, 1.1, 1.1]), #[adelante, izquerda, derecha]
+                            '0001':np.array([0, 1.1, 1.1]), #[0, izquierda, derecha]
+                            '0010':np.array([1.1, 0, 1.1]), #[adelante, 0, derecha]
+                            '0100':np.array([1.1, 1.1, 0]), #[adelante, izquierda, 0]
+                            '0011':np.array([0, 0, 1]), #[0, 0, derecha]
+                            '0101':np.array([0, 1, 0]), #[0, izquierda, 0]
+                            '0110':np.array([1, 0, 0]), #[adelante, 0, 0]
+                            '0111':np.array([1, 1, 1]), #[sólo movimiento hacia atrás]
+                            '1011':np.array([0, 0, 1]), #[0, 0, derecha]
+                            '1101':np.array([0, 1, 0]), #[0, izquierda, 0]
+                            '1110':np.array([1, 0, 0])} #[adelante, 0, 0]
 
-        self.pesosTable = { '000':np.array([1, 1, 1]),
-                            '001':np.array([0, 1, 1]),
-                            '010':np.array([1, 0, 1]),
-                            '100':np.array([1, 1, 0]),
-                            '011':np.array([0, 0, 1]),
-                            '101':np.array([0, 1, 0]),
-                            '110':np.array([1, 0, 0]),}
+        self.pesosTable = { '0000':np.array([1, 1, 1]), #[adelante, izquerda, derecha]
+                            '0001':np.array([0, 1, 1]), #[0, izquierda, derecha]
+                            '0010':np.array([1, 0, 1]), #[adelante, 0, derecha]
+                            '0100':np.array([1, 1, 0]), #[adelante, izquierda, 0]
+                            '0011':np.array([0, 0, 1]), #[0, 0, derecha]
+                            '0101':np.array([0, 1, 0]), #[0, 0, izquierda]
+                            '0110':np.array([1, 0, 0]), #[adelante, 0, 0]
+                            '0111':np.array([1, 1, 1]), #[sólo movimiento hacia atrás]
+                            '1011':np.array([0, 0, 1]), #[0, 0, derecha]
+                            '1101':np.array([0, 1, 0]), #[0, izquierda, 0]
+                            '1110':np.array([1, 0, 0])} #[adelante, 0, 0]
         
-        self.obstacles = '000' #empezamos con ningún obstaculo detectado
+        self.obstacles = '0000' #empezamos con ningún obstaculo detectado
 
     def loadTrainingSignalPSD(self, filename = "", path = "models"):
 
@@ -156,7 +163,7 @@ class SVMClassifier():
         if self.obstacles in self.probabTable:
             probabTableVector = softmax(self.probabTable[self.obstacles])*self.pesosTable[self.obstacles]
         else:
-            probabTableVector = softmax(self.probabTable['0'])*self.pesosTable['0']
+            probabTableVector = softmax(self.probabTable['0000'])*self.pesosTable['0000']
 
         r_pearson = list(r_pearson*probabTableVector)
 
@@ -165,7 +172,7 @@ class SVMClassifier():
         return self.trainingSignalPSD[indexFfeature]
 
     def featuresExtraction(self, rawDATA, ventana, anchoVentana = 5, bw = 2.0, order = 4, axis = 1,
-                            calc1stArmonic = False, usePearson = True):
+                            calc1stArmonic = False, usePearson = True, applybank = True, filterBank = "v1"):
 
         filteredEEG = filterEEG(rawDATA, self.PRE_PROCES_PARAMS["lfrec"],
                                 self.PRE_PROCES_PARAMS["hfrec"],
@@ -174,17 +181,31 @@ class SVMClassifier():
                                 self.PRE_PROCES_PARAMS["sampling_rate"],
                                 axis = axis)
 
-        dataBanked = self.applyFilterBank(filteredEEG, bw=bw, order = 4, calc1stArmonic = calc1stArmonic)
 
-        anchoVentana = int(self.PRE_PROCES_PARAMS["sampling_rate"]*anchoVentana) #fm * segundos
-        ventana = ventana(anchoVentana)
+        if applybank == True:
+            dataBanked = self.applyFilterBank(filteredEEG, bw=bw, order = 4, calc1stArmonic = calc1stArmonic)
 
-        self.signalSampleFrec, self.signalPSD = self.computWelchPSD(dataBanked,
-                                                fm = self.PRE_PROCES_PARAMS["sampling_rate"],
-                                                ventana = ventana, anchoVentana = anchoVentana,
-                                                average = "median", axis = 1)
+            anchoVentana = int(self.PRE_PROCES_PARAMS["sampling_rate"]*anchoVentana) #fm * segundos
+            ventana = ventana(anchoVentana)
 
-        self.signalPSD = self.signalPSD.mean(axis = 0) #Obtengo el espectro promedio de cada espectro de la señal banqueada
+            self.signalSampleFrec, self.signalPSD = self.computWelchPSD(dataBanked,
+                                                    fm = self.PRE_PROCES_PARAMS["sampling_rate"],
+                                                    ventana = ventana, anchoVentana = anchoVentana,
+                                                    average = "median", axis = 1)
+
+            self.signalPSD = self.signalPSD.mean(axis = 0) #Obtengo el espectro promedio de cada espectro de la señal banqueada
+
+        else:
+
+            anchoVentana = int(self.PRE_PROCES_PARAMS["sampling_rate"]*anchoVentana) #fm * segundos
+            ventana = ventana(anchoVentana)
+
+            self.signalSampleFrec, self.signalPSD = self.computWelchPSD(filteredEEG,
+                                                    fm = self.PRE_PROCES_PARAMS["sampling_rate"],
+                                                    ventana = ventana, anchoVentana = anchoVentana,
+                                                    average = "median", axis = 0)
+
+            #self.signalPSD = self.signalPSD.mean(axis = 0) #Obtengo el espectro promedio de cada espectro de la señal banqueada
 
         if usePearson == True:
             self.featureVector = self.pearsonFilter() #selector de características
@@ -208,41 +229,43 @@ def main():
     """Empecemos"""
 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
-    path = os.path.join(actualFolder,"recordedEEG\WM\ses1")
+    path = os.path.join(actualFolder,"recordedEEG")
 
-    frecStimulus = np.array([6, 7, 8])
+    frecStimulus = np.array([7, 85, 10])
     calc1stArmonic = False
     usePearson = True
 
-    trials = 15
-    fm = 200.
-    window = 5 #sec
-    samplePoints = int(fm*window)
-    channels = 4
+    trials = 8 #cantidad de trials
+    fm = 200. #frecuencia de muestreo
+    window = 4 #tiempo de estimulación
+    samplePoints = int(fm*window) #cantidad de muestras
+    numberChannels = 4 #cantidad de canales registrados por placa
+    selectedChannels = [1,2] #canales elegidos. Si queremos elegir el canal 1 hacemos [1,1], canal 2 [2,2].
 
-    filesRun1 = ["S3_R1_S2_E6","S3-R1-S1-E7", "S3-R1-S1-E8"]
+    filesRun1 = ["walter_s2_r1_7hz","walter_s2_r1_85hz", "walter_s2_r1_10hz"]
     run1 = fa.loadData(path = path, filenames = filesRun1)
-    filesRun2 = ["S3_R2_S2_E6","S3-R2-S1-E7", "S3-R2-S1-E8"]
-    run2 = fa.loadData(path = path, filenames = filesRun2)
+    # filesRun2 = ["S3_R2_S2_E6","S3-R2-S1-E7", "S3-R2-S1-E8"]
+    # run2 = fa.loadData(path = path, filenames = filesRun2)
 
-    def joinData(allData, stimuli, channels, samples, trials):
-        joinedData = np.zeros((stimuli, channels, samples, trials))
+    def joinData(allData, stimuli, numberChannels, samples, trials):
+        joinedData = np.zeros((stimuli, numberChannels, samples, trials))
         for i, sujeto in enumerate(allData):
             joinedData[i] = allData[sujeto]["eeg"][0,:,:,:trials]
 
         return joinedData #la forma de joinedData es [estímulos, canales, muestras, trials]
 
-    run1JoinedData = joinData(run1, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
-    run2JoinedData = joinData(run2, stimuli = len(frecStimulus), channels = channels, samples = samplePoints, trials = trials)
+    run1JoinedData = joinData(run1, stimuli = len(frecStimulus), numberChannels = numberChannels, samples = samplePoints, trials = trials)
+    # run2JoinedData = joinData(run2, stimuli = len(frecStimulus), numberChannels = numberChannels, samples = samplePoints, trials = trials)
 
-    testSet = np.concatenate((run1JoinedData[:,:,:,12:], run2JoinedData[:,:,:,12:]), axis = 3) #últimos 3 tríals para testeo
+    # testSet = np.concatenate((run1JoinedData[:,:,:,12:], run2JoinedData[:,:,:,12:]), axis = 3) #últimos 3 tríals para testeo
+    testSet = run1JoinedData[:,selectedChannels[0]-1:selectedChannels[1],:,6:]
 
     #### definimos archivos para cargar modelo posteriormente #### 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join(actualFolder,"models")
 
     #Abrimos archivos
-    modelName = "SVM_test_linear"
+    modelName = "svm_walter_linear"
     modelFile = f"{modelName}.pkl" #nombre del modelo
     PRE_PROCES_PARAMS, FFT_PARAMS = fa.loadPArams(modelName = modelName, path = os.path.join(actualFolder,"models"))
 
@@ -259,12 +282,14 @@ def main():
     testSet = testSet - testSet.mean(axis = 1, keepdims=True)
 
     svm = SVMClassifier(modelFile, frecStimulus, PRE_PROCES_PARAMS, FFT_PARAMS, nsamples = nsamples, path = path) #cargamos clasificador entrenado
-    svm.loadTrainingSignalPSD(filename = "SVM_test_linear_signalPSD.txt", path = path) #cargamos el PSD de mis datos de entrenamiento
+    svm.loadTrainingSignalPSD(filename = "svm_walter_linear_signalPSD.txt", path = path) #cargamos el PSD de mis datos de entrenamiento
 
     trainingSignalPSD = svm.trainingSignalPSD
 
-    clase = 1
-    trial = 6
+    # svm.obstacles = '0011'
+
+    clase = 2
+    trial = 1
 
     rawDATA = testSet[clase-1,:,trial-1]
 
@@ -272,12 +297,12 @@ def main():
 
     featureVector = svm.featuresExtraction(rawDATA = rawDATA, ventana = windows.hamming,
                                             anchoVentana = anchoVentana, bw = 2.0, order = 4, axis = 0,
-                                            calc1stArmonic = calc1stArmonic, usePearson=usePearson)
+                                            calc1stArmonic = calc1stArmonic, usePearson=usePearson, applybank = False)
 
     print("Freceuncia clasificada:", svm.getClassification(featureVector = featureVector))
 
     ### Realizamos clasificación sobre mis datos de testeo. Estos nunca fueron vistos por el clasificador ###
-    trials = 6 #cantidad de trials
+    trials = 1 #cantidad de trials
     predicciones = np.zeros((len(frecStimulus),trials)) #donde almacenaremos las predicciones
 
     for i, clase in enumerate(np.arange(len(frecStimulus))):
@@ -285,7 +310,7 @@ def main():
             data = testSet[clase, :, trial]
             featureVector = svm.featuresExtraction(rawDATA = data, ventana = windows.hamming,
                             anchoVentana = anchoVentana, bw = 2.0, order = 6, axis = 0,
-                            calc1stArmonic = calc1stArmonic, usePearson=usePearson)
+                            calc1stArmonic = calc1stArmonic, usePearson=usePearson, applybank = False)
 
             classification = svm.getClassification(featureVector = featureVector)
             if classification == frecStimulus[clase]:

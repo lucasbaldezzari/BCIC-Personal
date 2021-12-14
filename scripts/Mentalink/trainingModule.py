@@ -50,11 +50,11 @@ def main():
     
     trialsAPromediar = 2
     contadorTrials = 0
-    cantidadTrials = 2 #cantidad de trials. Sirve para la sesión de entrenamiento.
+    cantidadTrials = 8 #cantidad de trials. Sirve para la sesión de entrenamiento.
     trials = cantidadTrials * trialsAPromediar
     #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
-    trialDuration = 10 #secs
-    stimuliDuration = 5 #secs
+    trialDuration = 6 #secs
+    stimuliDuration = 4 #secs
 
     saveData = True
     
@@ -64,10 +64,10 @@ def main():
     path = "recordedEEG" #directorio donde se almacenan los registros de EEG.
 
     """Datos del sujeto, la sesión y la corrida"""
-    subject = "testing"
-    date = '9/11/2021'
-    generalInformation = 'Placa sintética.'
-    stimFrec =  "9"
+    subject = "walter_s4_r1_10hz"
+    date = '14122021'
+    generalInformation = f'Ganglion. Estim 10Hz. Duración estímulos {stimuliDuration} y duración trial {trialDuration}'
+    stimFrec =  "10"
     channelsRecorded = [1,2]
 
 
@@ -75,7 +75,7 @@ def main():
     PASO 2: Iniciamos comunicación con Arduino
     ##########################################################################################"""
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
-    arduino = AC('COM16', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM10', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
     time.sleep(1) 
     
@@ -96,7 +96,7 @@ def main():
               "ganglion": BoardIds.GANGLION_BOARD.value, #IMPORTANTE: frecuencia muestro 200Hz
               "synthetic": BoardIds.SYNTHETIC_BOARD.value}
     
-    placa = placas["synthetic"]  
+    placa = placas["ganglion"]  
     electrodos = "pasivos"
     
     puerto = "COM5" #Chequear el puerto al cual se conectará la placa
@@ -151,7 +151,7 @@ def main():
     """
 
     if placa == BoardIds.GANGLION_BOARD.value:
-        canalesAdesactivar = ["2","3","4"]
+        canalesAdesactivar = ["3","4"]
         for canal in canalesAdesactivar:
             board_shim.config_board(canal) #apagamos los canales 3 y 4
             time.sleep(1)
@@ -159,7 +159,7 @@ def main():
     if placa == BoardIds.CYTON_BOARD.value:
         if electrodos == "pasivos":
             configCanalesCyton = {
-                "canal1": "x1060110X", #ON|Ganancia 24x|Normal input|Connect from Bias|
+                "canal1": "x1160110X", #ON|Ganancia 24x|Normal input|Connect from Bias|
                 "canal2": "x2060110X", #ON|Ganancia 24x|Normal input|Connect from Bias|
                 "canal3": "x3101000X", #Canal OFF
                 "canal4": "x4101000X", #Canal OFF
@@ -217,8 +217,10 @@ def main():
                 'date': date,
                 'generalInformation': generalInformation,
                 'stimFrec': stimFrec,
+                'trialDuration': trialDuration,
+                'stimuliDuration': stimuliDuration,
                 'channelsRecorded': channelsRecorded, 
-                 'dataShape': [stimuli, channels, samplePoints, trials],
+                 'dataShape': [stimuli, channelsRecorded, samplePoints, trials],
                   'eeg': None
                     }
 
@@ -230,6 +232,7 @@ def main():
             if saveData and arduino.systemControl[1] == b"0":
                 contadorTrials +=1
                 currentData = data_thread.getData(stimuliDuration, channels = channels)
+                print(currentData.shape)
                 EEGTrialsAveraged.append(currentData)
                 if contadorTrials == trialsAPromediar:
                     EEGdata.append(np.asarray(EEGTrialsAveraged).mean(axis = 0))
@@ -246,6 +249,7 @@ def main():
         if board_shim.is_prepared():
             logging.info('Releasing session')
             board_shim.release_session()
+            arduino.close()
             
         arduino.close() #cierro comunicación serie para liberar puerto COM
         
@@ -255,7 +259,6 @@ def main():
         rawEEG = rawEEG.swapaxes(1,2).swapaxes(2,3)
         datosSession["eeg"] = rawEEG
         fa.saveData(path = path, dictionary = datosSession, fileName = datosSession["subject"])
-
 
 if __name__ == "__main__":
         main()

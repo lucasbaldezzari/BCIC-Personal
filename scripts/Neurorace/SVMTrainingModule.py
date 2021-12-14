@@ -339,7 +339,7 @@ def main():
     descarteInicial = int(fm*ti) #en segundos
     descarteFinal = int(window*fm)-int(tf*fm) #en segundos
 
-    filesRun1 = ["walter_s2_r1_7hz","walter_s2_r1_85hz", "walter_s2_r1_10hz"]
+    filesRun1 = ["walter_s4_r1_7hz","walter_s4_r1_85hz", "walter_s4_r1_10hz"]
     run1 = fa.loadData(path = path, filenames = filesRun1)
     # filesRun2 = ["S3_R2_S2_E6","S3-R2-S1-E7", "S3-R2-S1-E8"]
     # run2 = fa.loadData(path = path, filenames = filesRun2)
@@ -490,8 +490,8 @@ def main():
     modeloSVM1 = clasificadoresSVM["linear"][3][1]
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join(actualFolder,"models")
-    modeloSVM1.saveModel(path, filename = "svm_walter_linear")
-    modeloSVM1.saveTrainingSignalPSD(signalPSD.mean(axis = 2), path = path, filename = "svm_walter_linear")
+    modeloSVM1.saveModel(path, filename = "svm_waltertwo_linear")
+    modeloSVM1.saveTrainingSignalPSD(signalPSD.mean(axis = 2), path = path, filename = "svm_waltertwo_linear")
     os.chdir(actualFolder)
 
     gamma = "auto"
@@ -503,8 +503,8 @@ def main():
 
     actualFolder = os.getcwd()#directorio donde estamos actualmente. Debe contener el directorio dataset
     path = os.path.join(actualFolder, "models")
-    modeloSVM2.saveModel(path, filename = "svm_walter_rbf")
-    modeloSVM2.saveTrainingSignalPSD(signalPSD.mean(axis = 2), path = path, filename = "svm_walter_rbf")
+    modeloSVM2.saveModel(path, filename = "svm_waltertwo_rbf")
+    modeloSVM2.saveTrainingSignalPSD(signalPSD.mean(axis = 2), path = path, filename = "svm_waltertwo_rbf")
     os.chdir(actualFolder)
 
 if __name__ == "__main__":

@@ -43,6 +43,8 @@ from scipy.signal import windows
 
 import fileAdmin as fa
 
+from GraphModule import GraphModule as Graph
+
 def cargarClasificador(modelo, modelName, signalPSDName,frecStimulus, nsamples, path):
     """Cargamos clasificador que utilizaremos para clasificar nuestra señal"""
 
@@ -52,7 +54,7 @@ def cargarClasificador(modelo, modelName, signalPSDName,frecStimulus, nsamples, 
     os.chdir(path)
 
     if modelo == "SVM":
-        modelName = "SVM_test_linear"
+        modelName = modelName
         modelFile = f"{modelName}.pkl" #nombre del modelo
         PRE_PROCES_PARAMS, FFT_PARAMS = fa.loadPArams(modelName = modelName, path = path)
 
@@ -88,7 +90,7 @@ def clasificar(rawEEG, modelo, clasificador, anchoVentana = 5, bw = 2., order = 
 
     if modelo == "SVM":
         featureVector = clasificador.featuresExtraction(rawDATA = rawEEG, ventana = windows.hamming,
-                        anchoVentana = anchoVentana, bw = bw, order = order, axis = axis, usePearson=True)
+                        anchoVentana = anchoVentana, bw = bw, order = order, axis = axis, usePearson=True, applybank = False)
 
         comando = clasificador.getClassification(featureVector = featureVector)
 
@@ -120,8 +122,8 @@ def main():
     cantCanalesAUsar = 2 #Cantidad de canales a utilizar
     canalesAUsar = [1,2] #Seleccionamos canal uno y dos. NOTA: Si quisieramos elegir el canal 2 solamente debemos hacer [2,2] o [1,1] para elegir el canal 1
 
-    cantidadTrials = 4 #cantidad de trials. Sirve para la sesión de entrenamiento.
-    trialsAPromediar = 3
+    cantidadTrials = 6 #cantidad de trials. Sirve para la sesión de entrenamiento.
+    trialsAPromediar = 2
     contadorTrials = 0
     flagConTrials = True
     trials = cantidadTrials * trialsAPromediar
@@ -155,8 +157,8 @@ def main():
 
     if modelo == "svm":
         #### Cargamos clasificador SVM ###
-        modelName = "svm_walter_rbf" #Nombre archivo que contiene el modelo SVM
-        signalPSDName = "svm_walter_rbf_signalPSD.txt"
+        modelName = "svm_waltertwo_linear" #Nombre archivo que contiene el modelo SVM
+        signalPSDName = "svm_waltertwo_linear_signalPSD.txt"
         modeloClasificador = "SVM"
 
         PRE_PROCES_PARAMS, FFT_PARAMS = fa.loadPArams(modelName = modelName, path = os.path.join(actualFolder,"models"))
@@ -251,7 +253,7 @@ def main():
     """
 
     if placa == BoardIds.GANGLION_BOARD.value:
-        canalesAdesactivar = ["2","3","4"]
+        canalesAdesactivar = ["3","4"]
         for canal in canalesAdesactivar:
             board_shim.config_board(canal) #apagamos los canales 3 y 4
             time.sleep(1)
@@ -296,6 +298,7 @@ def main():
     
     """genero un objeto DataThread para extraer datos de la OpenBCI"""
     data_thread = DT(board_shim, args.board_id)
+    #graph = Graph(board_shim)
     time.sleep(1)
 
     """ ##########################################################################################
@@ -320,6 +323,7 @@ def main():
     EEGTrialsAveraged = []
 
     try:
+        #graph.start()
         while arduino.generalControl() == b"1":
 
             if classifyData and arduino.systemControl[1] == b"0": #se apagan los estímulos y chequeamos si estamos para clasificar la señal de eeg
@@ -359,6 +363,8 @@ def main():
 
         
     finally:
+        # graph.keep_alive = False
+        # graph.join()
         if board_shim.is_prepared():
             logging.info('Releasing session')
             board_shim.release_session()

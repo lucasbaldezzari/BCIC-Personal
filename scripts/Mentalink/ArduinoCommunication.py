@@ -134,7 +134,7 @@ class ArduinoCommunication:
         for byte in message:
             incomingData.append(self.query(byte))
             
-        return format(int(incomingData[0]), '03b')
+        return format(int(incomingData[0]), '04b')
 
     def close(self):
         """Cerramos comunicción serie"""
@@ -212,7 +212,7 @@ class ArduinoCommunication:
         
             self.systemControl[1] = b"0" #apagamos estímulos
             self.estadoRobot = self.sendMessage(self.systemControl)
-
+            print("estado robot", self.estadoRobot)
             #### Actualizamos archivo de estados #####
             estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],self.estadoRobot]
 
@@ -227,7 +227,7 @@ class ArduinoCommunication:
             
             self.systemControl[1] = b"1"
             self.estadoRobot = self.sendMessage(self.systemControl)
-
+            print("estado robot", self.estadoRobot)
             #Actualizamos archivo de estados
             estados = [str(self.systemControl[0])[2],str(self.systemControl[1])[2],self.estadoRobot]
 
@@ -238,7 +238,6 @@ class ArduinoCommunication:
             file.close()
 
             print(f"Fin trial {self.trial}")
-            print("")
             self.trial += 1 #incrementamos un trial
             self.counter = 0 #reiniciamos timer
             
@@ -283,8 +282,8 @@ def main():
     #En el caso de querer ejecutar Trials de manera indeterminada,
     #debe hacerse trials = None (default)
     """
-    ard = ArduinoCommunication('COM10', trialDuration = 2, stimONTime = 1,
-                               timing = 100, ntrials = 2)
+    ard = ArduinoCommunication('COM13', trialDuration = 5, stimONTime = 4,
+                               timing = 100, ntrials = 5)
     time.sleep(1)
     ard.iniSesion()
 
