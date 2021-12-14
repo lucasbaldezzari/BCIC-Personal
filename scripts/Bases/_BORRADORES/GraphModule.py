@@ -34,9 +34,9 @@ class GraphModule(threading.Thread):
 
         self.board_id = board_shim.get_board_id()
         self.board_shim = board_shim
-        self.exg_channels = BoardShim.get_exg_channels(self.board_id)[0:2]
+        self.exg_channels = BoardShim.get_exg_channels(self.board_id)[:2]
         self.sampling_rate = BoardShim.get_sampling_rate(self.board_id)
-        self.update_speed_ms = 1
+        self.update_speed_ms = 10
         self.window_size = 4
         self.num_points = self.window_size * self.sampling_rate
         
@@ -103,12 +103,13 @@ class GraphModule(threading.Thread):
         for count, channel in enumerate(self.exg_channels):
             # plot timeseries
             DataFilter.detrend(data[channel], DetrendOperations.LINEAR.value)
-            DataFilter.perform_bandpass(data[channel], self.sampling_rate, 15, 20, 4,
+            DataFilter.perform_bandpass(data[channel], self.sampling_rate, 7.0, 18.0, 4,
                                         FilterTypes.BUTTERWORTH.value, 0)
             DataFilter.perform_bandstop(data[channel], self.sampling_rate, 50.0, 4.0, 4,
                                         FilterTypes.BUTTERWORTH.value, 0)
             
             self.curves[count].setData(data[channel].tolist())
+            
             if data.shape[1] > self.psd_size:
                 # plot psd
                 psd_data = DataFilter.get_psd_welch(data[channel], self.psd_size, self.psd_size // 2, self.sampling_rate,
@@ -146,3 +147,6 @@ class GraphModule(threading.Thread):
         #         pass
         #     else:
         #         pg.QtGui.QApplication.quit()
+        
+        
+        
