@@ -53,14 +53,14 @@ samplePoints = int(fm*duration)
 channels = 2
 
 subjects = [1]
-filenames = ["walter_s4_r1_10hz"]
+filenames = ["tomyS_s1_r2_11hz"]
 allData = fa.loadData(path = path, filenames = filenames)
 
-name = "walter_s4_r1_10hz" #nombre de los datos a analizar}
-stimuli = [7,8.5,10] #lista de estímulos
-estim = [10] #L7e pasamos un estímulo para que grafique una linea vertical
+name = "tomyS_s1_r2_11hz" #nombre de los datos a analizar}
+stimuli = [11,7,9] #lista de estímulos
+estim = [11] #L7e pasamos un estímulo para que grafique una linea vertical
 
-frecStimulus = np.array([7,8.5,10])
+frecStimulus = np.array([11,7,9])
 
 eeg = allData[name]['eeg'][:,:,:,:]
 eegO1O2 = eeg.mean(axis = 1)
