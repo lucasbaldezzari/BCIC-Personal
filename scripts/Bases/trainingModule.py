@@ -48,7 +48,7 @@ def main():
 
     """Defino variables para control de Trials"""
     
-    trialsAPromediar = 3
+    trialsAPromediar = 2
     contadorTrials = 0
     cantidadTrials = 8 #cantidad de trials. Sirve para la sesión de entrenamiento.
     trials = cantidadTrials * trialsAPromediar
@@ -64,8 +64,8 @@ def main():
     path = "recordedEEG" #directorio donde se almacenan los registros de EEG.
 
     """Datos del sujeto, la sesión y la corrida"""
-    subject = "walter_s2_r1_10hz"
-    date = '12122021'
+    subject = "walter_s4_r1_10hz"
+    date = '14122021'
     generalInformation = f'Ganglion. Estim 10Hz. Duración estímulos {stimuliDuration} y duración trial {trialDuration}'
     stimFrec =  "10"
     channelsRecorded = [1,2]
