@@ -50,10 +50,11 @@ def main():
     
     trialsAPromediar = 3
     contadorTrials = 0
-    cantidadTrials = 6 #cantidad de trials. Sirve para la sesión de entrenamiento.
+    cantidadTrials = 8 #cantidad de trials. Sirve para la sesión de entrenamiento.
     trials = cantidadTrials * trialsAPromediar
     #IMPORTANTE: trialDuration SIEMPRE debe ser MAYOR a stimuliDuration
-
+                            
+    
     trialDuration = 6 #secs
     stimuliDuration = 4 #secs
 
@@ -65,10 +66,10 @@ def main():
     path = "recordedEEG" #directorio donde se almacenan los registros de EEG.
 
     """Datos del sujeto, la sesión y la corrida"""
-    subject = "tomyS_s1_r2_11hz"
-    date = '14122021'
-    generalInformation = f'Ganglion. Estim 11Hz. Duración estímulos {stimuliDuration} y duración trial {trialDuration}'
-    stimFrec =  "11"
+    subject = "tomy_s1_r3_7hz"
+    date = '15122021'
+    stimFrec =  "7"
+    generalInformation = f'Ganglion. Estim {stimFrec}Hz. Duración estímulos {stimuliDuration} y duración trial {trialDuration}'
     channelsRecorded = [1,2]
 
 
@@ -76,7 +77,7 @@ def main():
     PASO 2: Iniciamos comunicación con Arduino
     ##########################################################################################"""
     #IMPORTANTE: Chequear en qué puerto esta conectado Arduino.
-    arduino = AC('COM3', trialDuration = trialDuration, stimONTime = stimuliDuration,
+    arduino = AC('COM9', trialDuration = trialDuration, stimONTime = stimuliDuration,
              timing = 100, ntrials = trials)
     time.sleep(1) 
     

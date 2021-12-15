@@ -12,7 +12,7 @@
 /******************************************************************/
 
 char uno = 1;
-byte backMensaje = 0b00000000; 
+byte backMensaje = 0b00000110; //atras | derecha | izquierda | adelante 
 
 char inBuffDataFromPC = 3;
 unsigned char incDataFromPC[3]; //variable para almacenar datos provenientes de la PC
