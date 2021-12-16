@@ -283,7 +283,7 @@ def main():
     #debe hacerse trials = None (default)
     """
     ard = ArduinoCommunication('COM9', trialDuration = 6, stimONTime = 4,
-                               timing = 100, ntrials = 2)
+                               timing = 100, ntrials = 10)
     time.sleep(1)
     ard.iniSesion()
 
