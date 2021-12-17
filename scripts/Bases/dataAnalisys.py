@@ -53,12 +53,12 @@ samplePoints = int(fm*duration)
 channels = 2
 
 subjects = [1]
-filenames = ["tomy_s1_r3_7hz"]
+filenames = ["walter_s2_r1_10hz"]
 allData = fa.loadData(path = path, filenames = filenames)
 
-name = "tomy_s1_r3_7hz" #nombre de los datos a analizar}
+name = "walter_s2_r1_10hz" #nombre de los datos a analizar}
 stimuli = [11,7,9] #lista de estímulos
-estim = [7] #L7e pasamos un estímulo para que grafique una linea vertical
+estim = [10] #L7e pasamos un estímulo para que grafique una linea vertical
 
 frecStimulus = np.array([11,7,9])
 

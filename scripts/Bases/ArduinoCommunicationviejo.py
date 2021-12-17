@@ -282,13 +282,13 @@ def main():
     #En el caso de querer ejecutar Trials de manera indeterminada,
     #debe hacerse trials = None (default)
     """
-    ard = ArduinoCommunication('COM13', trialDuration = 5, stimONTime = 4,
-                               timing = 100, ntrials = 5)
+    ard = ArduinoCommunication('COM10', trialDuration = 4, stimONTime = 2,
+                               timing = 100, ntrials = 1)
     time.sleep(1)
     ard.iniSesion()
 
     #Simulamos que enviamos un comando de movimiento
-    ard.systemControl[2] = b'1'
+    ard.systemControl[2] = b'2'
     
     while ard.generalControl() == b"1":
         pass

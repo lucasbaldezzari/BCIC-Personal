@@ -116,7 +116,7 @@ def main():
               "ganglion": BoardIds.GANGLION_BOARD, #IMPORTANTE: frecuencia muestro 200Hz
               "synthetic": BoardIds.SYNTHETIC_BOARD}
     
-    placa = placas["ganglion"]
+    placa = placas["ganglion"] #7cd7
     electrodos = "pasivos"
 
     cantCanalesAUsar = 2 #Cantidad de canales a utilizar
