@@ -10,7 +10,12 @@ El objetivo principal del proyecto fue lograr que estudiantes de las carreras de
 
 ## Autor y director del proyecto
 
-- BALDEZZARI Lucas - MSc en Data Science y Bioingeniero - lucas.baldezzari@utec.edu.uy
+- Lucas BALDEZZARI - MSc en Data Science y Bioingeniero - lucas.baldezzari@utec.edu.uy
+
+## Docentes colaboradores
+
+- Taylor Baum - Graduate Student in Electrical Engineering and Computer Science - tbaum@mit.edu
+- Mateo Olivera - LABA - mateo.olivera@utec.edu.uy
 
 ## Estudiantes involucrados
 
