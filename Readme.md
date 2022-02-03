@@ -30,7 +30,18 @@ El objetivo principal del proyecto fue lograr que estudiantes de las carreras de
 - Guido Andreoli (Mecatrónica) - guido.andreoli@estudiantes.utec.edu.uy 
 - Giannina Bassi (Mecatrónica) - guido.andreoli@estudiantes.utec.edu.uy
 
-### Talleres vistos durante el proyecto
+### Equipo ganador - MENTALINK
+
+Formado por,
+
+- Emiliano Alvarez
+- Walter Mar
+- Maximiliano Galvan
+- Lucas Lopez
+- Tiziano Torterolo
+- Elias Hernandez
+
+## Talleres vistos durante el proyecto
 
 - [x] Taller 1: Introducción a las Interfaces Cerebro Computadora
 - [x] Taller 2: Introducción a la adquisición y procesamiento de SSVEP
