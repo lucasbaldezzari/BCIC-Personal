@@ -53,12 +53,12 @@ samplePoints = int(fm*duration)
 channels = 2
 
 subjects = [1]
-filenames = ["walter_s2_r1_10hz"]
+filenames = ["walter_s4_r1_7hz"]
 allData = fa.loadData(path = path, filenames = filenames)
 
-name = "walter_s2_r1_10hz" #nombre de los datos a analizar}
-stimuli = [11,7,9] #lista de estímulos
-estim = [10] #L7e pasamos un estímulo para que grafique una linea vertical
+name = "walter_s4_r1_7hz" #nombre de los datos a analizar}
+stimuli = [7,8.5,10] #lista de estímulos
+estim = [7] #L7e pasamos un estímulo para que grafique una linea vertical
 
 frecStimulus = np.array([11,7,9])
 
@@ -160,7 +160,7 @@ for i in range(len(listaeeg)):
         MSFs[subtitles[i]] = computeMagnitudSpectrum(eegSegmented[subtitles[i]], FFT_PARAMS)
 
 if plotFFT == True:
-    title = f"Espectro Fourier de señales de EEG trial - Trial {trial} - Datos sin banquear"
+    title = f"Espectro Fourier de señales de EEG trial - Trial {trial}"
     subtitles = ["O1 y O2 promediados", "O1", "O2"]
     fig, plots = plt.subplots(1, 3, figsize=(12, 6), gridspec_kw=dict(hspace=0.45, wspace=0.3))
     fig.suptitle(title, fontsize = 12)
